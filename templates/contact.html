@@ -1,0 +1,41 @@
+<!doctype html>  
+<html>  
+   <body>  
+      <h2 style = "text-align: center;">Registration Form</h2>  
+          
+      {% for message in form.name.errors %}  
+         <div>{{ message }}</div>  
+      {% endfor %}  
+        
+      {% for message in form.email.errors %}  
+         <div>{{ message }}</div>  
+      {% endfor %}  
+        
+      <form action = "http://localhost:5000/success" method = "POST">  
+           
+            {{ form.hidden_tag() }}  
+              
+            <div style = "font-size:18px;" font-weight:bold; margin-left:150px;>  
+               {{ form.name.label }}<br>  
+               {{ form.name }}  
+               <br>  
+               {{ form.Gender.label }} {{ form.Gender }}  
+               {{ form.Address.label }}<br>  
+               {{ form.Address }}  
+               <br>  
+               {{ form.email.label }}<br>  
+               {{ form.email }}  
+               <br>  
+               {{ form.Age.label }}<br>  
+               {{ form.Age }}  
+               <br>  
+               {{ form.language.label}}<br><br>  
+               {{ form.language }}  
+               <br><br>  
+               {{ form.submit }}  
+            </div>  
+              
+         </fieldset>  
+      </form>  
+   </body>  
+</html>
