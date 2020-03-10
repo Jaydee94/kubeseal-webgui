@@ -1,0 +1,23 @@
+<html>
+  <head>
+     <title>KubeSeal Web-Gui</title>
+  </head>
+  <body>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <ul>
+        {% for message in messages %}
+            <li>{ { message[1] }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+    {% endwith %}
+    <form action="" method="post">
+        &#123; &#123; form.csrf &#125;&#125;
+        <div class="input text">
+        { { form.name.label }} { { form.name }}</div>
+        <div class="input submit">
+        <input type="submit" value="Submit"></div>
+    </form>
+  </body>
+</html>
