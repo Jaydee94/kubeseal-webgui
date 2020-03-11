@@ -13,8 +13,10 @@ class kubeseal:
   def getControllernamespace(self):
     return self.controllernamespace
 
+  @staticmethod
   def getSealedSecretsControllerNamespace():
     return environmentVariables.getSealedSecretsControllerNamespace()
-
+  
+  @staticmethod
   def getSealedSecretsControllerName():
     return environmentVariables.getSealedSecretsControllerName()
