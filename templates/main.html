@@ -1,47 +1,26 @@
+{% extends "bootstrap/base.html" %}
+{% import "bootstrap/wtf.html" as wtf %}
 <html>
-    <head>
-       <title>KubeSeal-Web-Gui</title>
-       <link rel="stylesheet" media="screen" href="static/bootstrap.min.css">
-       <link rel="stylesheet" href="static/bootstrap-theme.min.css">
-       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
-    </head>
-    <body>
-  
-      <div class="container"><br>
-        <center>
-          <h2>KubeSeal-Web-Gui</h2>
-        </center>
-      </div>
-  
-      <div class=container"><br>
-      <div class="row align-items-center justify-content-center">
-      <div class="col-md-4">
-        <form  action="/output" method="POST" role="form">
-          {{ form.csrf }}
-          <div class="form-group">
-  
-            <label for="cleartextSecret">Klartext-Secret:</label>
-            <input type="text" class="form-control" id="cleartextSecret" name="cleartextSecret" placeholder="Klartext-Secret?">
-          <br>
-            <label for="secretName">Secret-Name:</label>
-            <input type="text" class="form-control" id="secretName" name="secretName" placeholder="Secret-Name?">
-          <br>
-            <label for="secretNamespace">Secret-Namespace:</label>
-            <input type="text" class="form-control" id="secretNamespace" name="secretNamespace" placeholder="Secret-Namespace.">
-  
-      </div>
-          <br>													   
-  
-          <center>
-            <button type="submit" class="btn btn-success">Verschlüsseln</button>
-          </center>
-        </form>
-  
-        <br>
-      </div>
-      <br>
-      </div>
-      </div>
-    </body>
-</html>   
+<body>
+{% block title %}
+KubeSeal-Web-Gui
+{% endblock %}
+
+{% block content %}
+<div align="center">
+<h1>
+  KubeSeal-Web-Gui
+</h1>
+<br>
+<div class="container">
+    <form method="POST" action="/">
+       <dl>
+       {{ wtf.quick_form(form)}}
+        <input class="btn btn-primary" type="submit" value="Verschlüsseln">
+        </dl>
+    </form>
+</div>
+</div>
+{% endblock %}
+</body>
+</html>
