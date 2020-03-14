@@ -1,6 +1,8 @@
 from os import environ
 from environmentvars import environmentVariables
 
+env = environmentVariables()
+
 class kubeseal:
   def __init__(self, controllername, controllernamespace):
     self.controllername = controllername
@@ -15,8 +17,8 @@ class kubeseal:
 
   @staticmethod
   def getSealedSecretsControllerNamespace():
-    return environmentVariables.getSealedSecretsControllerNamespace()
+    return env.getSealedSecretsControllerNamespace()
   
   @staticmethod
   def getSealedSecretsControllerName():
-    return environmentVariables.getSealedSecretsControllerName()
+    return env.getSealedSecretsControllerName()

@@ -1,20 +1,26 @@
-from flask import Flask, render_template, request, flash  
-from forms import KubesealForm
+from flask import Flask, render_template, flash, request
+from wtforms import TextField, TextAreaField, validators, StringField, SubmitField
+from flask_wtf import FlaskForm
 from kubeseal import kubeseal
 from environmentvars import environmentVariables
 import sys
 
-app = Flask(__name__)  
-app.secret_key = 'IOBHOqdsbsdaojub'  
-  
-@app.route('/', methods = ['GET', 'POST'])  
-def kubeseal_input():  
-   form = KubesealForm()  
-   if form.validate() == False:  
-      flash('All fields are required.')  
-   return render_template('main.html', form = form)  
-  
-  
+DEBUG = True
+app = Flask(__name__)
+app.config.from_object(__name__)
+app.config['SECRET_KEY'] = 'SjdnUends821Jsdlkvxh391ksdODnejdDw'
+
+class KubsealForm(FlaskForm):
+    cleartextSecret = TextField('Klartext-Secret:', validators=[validators.required()])
+    secretName = TextField('Secret-Name:', validators=[validators.required()])
+    secretNamespace = TextField('Secret-Namespace:', validators=[validators.required()])
+
+@app.route("/", methods=['GET', 'POST'])
+def run_kubeseal():
+    form = KubsealForm(request.form)
+
+    return render_template('main.html', form=form)
+
   
 @app.route('/output',methods = ['GET', 'POST'])
 

@@ -1,26 +1,47 @@
-<!doctype html>  
-<html>  
-   <body>  
-      <h2 style = "text-align: center;">KubeSeal Web-Gui</h2>  
-          
-      <form action = "http://localhost:5000/output" method = "POST">  
-           
-            {{ form.hidden_tag() }}  
-              
-            <div style = "font-size:18px;" font-weight:bold; margin:auto; align="center">  
-               {{ form.cleartextSecret.label }}<br>  
-               {{ form.cleartextSecret }}
-               <br><br>
-               {{ form.secretName.label }}<br>
-               {{ form.secretName }}
-               <br><br>
-               {{ form.secretNamespace.label }}<br>  
-               {{ form.secretNamespace }}  
-               <br><br>  
-               {{ form.submit }}  
-            </div>  
-              
-         </fieldset>  
-      </form>  
-   </body>  
-</html>
+<html>
+    <head>
+       <title>KubeSeal-Web-Gui</title>
+       <link rel="stylesheet" media="screen" href="static/bootstrap.min.css">
+       <link rel="stylesheet" href="static/bootstrap-theme.min.css">
+       <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+    </head>
+    <body>
+  
+      <div class="container"><br>
+        <center>
+          <h2>KubeSeal-Web-Gui</h2>
+        </center>
+      </div>
+  
+      <div class=container"><br>
+      <div class="row align-items-center justify-content-center">
+      <div class="col-md-4">
+        <form  action="/output" method="POST" role="form">
+          {{ form.csrf }}
+          <div class="form-group">
+  
+            <label for="cleartextSecret">Klartext-Secret:</label>
+            <input type="text" class="form-control" id="cleartextSecret" name="cleartextSecret" placeholder="Klartext-Secret?">
+          <br>
+            <label for="secretName">Secret-Name:</label>
+            <input type="text" class="form-control" id="secretName" name="secretName" placeholder="Secret-Name?">
+          <br>
+            <label for="secretNamespace">Secret-Namespace:</label>
+            <input type="text" class="form-control" id="secretNamespace" name="secretNamespace" placeholder="Secret-Namespace.">
+  
+      </div>
+          <br>													   
+  
+          <center>
+            <button type="submit" class="btn btn-success">Verschlüsseln</button>
+          </center>
+        </form>
+  
+        <br>
+      </div>
+      <br>
+      </div>
+      </div>
+    </body>
+</html>   
