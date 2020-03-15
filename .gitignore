@@ -1,1 +1,4 @@
 __pycache__/
+helm
+kubeseal
+kubectl

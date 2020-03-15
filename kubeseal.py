@@ -13,7 +13,7 @@ class Kubeseal:
   def getSealedSecretsControllerName():
     return env.getSealedSecretsControllerName()
 
-  def list_files():
-    test = process = subprocess.run('kubectl', shell=True, check=True, stdout=subprocess.PIPE, universal_newlines=True)
-    out = test.stdout
-    return  print(out)
+  def kubectlCMD():
+    test = subprocess.Popen(["echo -n foo | kubeseal --raw --from-file=/dev/stdin --namespace bar --name mysecret --controller-name sealed-secrets --controller-namespace sealed-secrets"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    output, errors = test.communicate()
+    return output.decode('utf-8').split('\n')
