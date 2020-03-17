@@ -4,7 +4,6 @@ from wtforms import TextField
 from wtforms.validators import InputRequired
 from flask_bootstrap import Bootstrap
 from kubeseal import Kubeseal
-from environmentvars import environmentVariables
 import sys
 import subprocess
 
@@ -35,14 +34,4 @@ def run_kubeseal():
 
 # Main Method 
 if __name__ == '__main__':
-
-    requiredEnvironmentVariables = ['KUBESEAL_CERT']
-    env = environmentVariables()
-
-    if env.checkRequiredEnvironmentVariables(requiredEnvironmentVariables) == True:
-        f=open("/app/kubeseal-cert.pem", "w")
-        f.write(env.getKubesealCert())
-        f.close()
-        app.run(debug = True)
-    else:
-        sys.exit('Stopping program because of missing environment variables.')
+    app.run(host='0.0.0.0', debug = True)
