@@ -27,4 +27,4 @@ G21tAE6ThydeuPQKlY8ZutadYb38nrqXDbL6x/csm110MmMiCyyxqm6FrquHAJbS
 mBk=
 -----END CERTIFICATE-----'
 
-python3 app.py
+python3 app/app.py
