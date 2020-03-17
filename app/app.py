@@ -26,8 +26,8 @@ def run_kubeseal():
         cltSecret = form.cleartextSecret.data
         sName = form.secretName.data
         sNamespace = form.secretNamespace.data
-        sealedSecret = Kubeseal.kubectlCMD()
-        
+        sealedSecret = Kubeseal.kubectlCMD(cltSecret,sNamespace,sName)
+        sys.stdout.write('Created Sealed-Secret %s for namespace %s\n'%(sName,sNamespace))
         #return output
         return render_template('output.html', sealedSecret=sealedSecret[0])
 
@@ -36,12 +36,13 @@ def run_kubeseal():
 # Main Method 
 if __name__ == '__main__':
 
-    requiredEnvironmentVariables = ['SEALED_SECRETS_CONTROLLER_NAME',
-                                    'SEALED_SECRETS_CONTROLLER_NAMESPACE',
-                                    'KUBERNETES_LOGIN_TOKEN']
+    requiredEnvironmentVariables = ['KUBESEAL_CERT']
     env = environmentVariables()
 
     if env.checkRequiredEnvironmentVariables(requiredEnvironmentVariables) == True:
+        f=open("/app/kubeseal-cert.pem", "w")
+        f.write(env.getKubesealCert())
+        f.close()
         app.run(debug = True)
     else:
         sys.exit('Stopping program because of missing environment variables.')

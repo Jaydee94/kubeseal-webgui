@@ -12,14 +12,6 @@ class environmentVariables:
                 sys.stdout.write('Environment variable %s not set!\n'%(env))
                 passed = False
         return passed
-
     @staticmethod
-    def getSealedSecretsControllerName():
-        return environ.get('SEALED_SECRETS_CONTROLLER_NAME')
-
-    @staticmethod
-    def getSealedSecretsControllerNamespace():
-        return environ.get('SEALED_SECRETS_CONTROLLER_NAMESPACE')
-    @staticmethod
-    def getKubernetesLoginToken():
-        return environ.get('KUBERNETES_LOGIN_TOKEN')        
+    def getKubesealCert():
+        return environ.get('KUBESEAL_CERT')        
