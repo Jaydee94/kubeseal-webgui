@@ -1,0 +1,24 @@
+replicaCount: 1
+image:
+  repository: jaydee94
+  image: kubeseal-webgui
+  tag: 1.0.0
+  pullPolicy: Always
+
+nameOverride: ""
+fullnameOverride: ""
+
+resources:
+  limits:
+    cpu: 100m
+    memory: 256Mi
+  requests:
+    cpu: 20m
+    memory: 256Mi
+
+sealedSecrets:
+  # Public Certificate of youre Sealed-Secrets Controller.
+  # Login to youre cluster with kubectl.
+  # Run kubeseal --fetch-cert --controller-name <your-sealed-secrets-controller> --controller-namespace <sealed-secrets-controller-namespace>
+  # Paste Cert as multiline YAML
+  cert: |

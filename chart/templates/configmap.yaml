@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "kubeseal-webgui.fullname" . }}
+  labels:
+  {{- include "kubeseal-webgui.labels" . | nindent 4 }}
+data:
+{{- toYaml .Values.sealedSecrets.cert | nindent 4 }}
