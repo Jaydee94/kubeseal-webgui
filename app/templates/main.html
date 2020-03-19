@@ -1,25 +1,28 @@
 {% import "bootstrap/wtf.html" as wtf %}
 <html>
-  <head>
-    <link href="static/bootstrap.min.css" rel="stylesheet">
-    <link rel="shortcut icon" href="static/favicon.ico"/>
-  </head>
+
+<head>
+  <link href="static/bootstrap.min.css" rel="stylesheet">
+  <link rel="shortcut icon" href="static/favicon.ico" />
+</head>
+
 <body>
-{% block content %}
-<div align="center">
-<h1>
-  KubeSeal-Web-Gui
-</h1>
-<br>
-<div class="container">
-    <form method="POST" action="/">
-       <dl>
-       {{ wtf.quick_form(form)}}
-        <input class="btn btn-primary" type="submit" value="Verschlüsseln">
+  {% block content %}
+  <div align="center">
+    <h1>
+      KubeSeal-Web-Gui
+    </h1>
+    <br>
+    <div class="container">
+      <form method="POST" action="/">
+        <dl>
+          {{ wtf.quick_form(form)}}
+          <input class="btn btn-primary" type="submit" value="Verschlüsseln">
         </dl>
-    </form>
-</div>
-</div>
-{% endblock %}
+      </form>
+    </div>
+  </div>
+  {% endblock %}
 </body>
+
 </html>
