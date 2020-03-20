@@ -5,4 +5,5 @@ metadata:
   labels:
   {{- include "kubeseal-webgui.labels" . | nindent 4 }}
 data:
+  kubeseal-cert.pem:
 {{- toYaml .Values.sealedSecrets.cert | nindent 4 }}

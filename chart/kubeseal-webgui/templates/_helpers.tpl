@@ -35,7 +35,7 @@ Create chart name and version as used by the chart label.
 Common labels
 */}}
 {{- define "kubeseal-webgui.labels" -}}
-app: {{ template "kubseal-webgui.name" . }}
+app: {{ template "kubeseal-webgui.name" . }}
 chart: {{ .Chart.Name }}
 release: {{ .Release.Name }}
 heritage: {{ .Release.Service }}

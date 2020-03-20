@@ -5,22 +5,27 @@ metadata:
   labels:
     {{- include "kubeseal-webgui.labels" . | nindent 4 }}
 spec:
-  replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      {{- include "kubeseal-webgui.selectorLabels" . | nindent 6 }}
+      app: {{ template "kubeseal-webgui.name" . }}
+  replicas: {{ .Values.replicaCount }}
   template:
     metadata:
       labels:
-        {{- include "kubeseal-webgui.selectorLabels" . | nindent 8 }}
+        {{- include "kubeseal-webgui.labels" . | nindent 8 }}
     spec:
       containers:
         - name: {{ .Chart.Name }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          image: "{{ .Values.image.image }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: [ "/usr/local/bin/python", "/app/app.py" ]
+          volumeMounts:
+          - name: sealed-secrets-cert
+            mountPath: /app/cert/kubeseal-cert.pem
+            subPath: kubeseal-cert.pem
           ports:
             - name: http
-              containerPort: 80
+              containerPort: 5000
               protocol: TCP
           livenessProbe:
             httpGet:
@@ -32,3 +37,7 @@ spec:
               port: http
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: sealed-secrets-cert
+          configMap:
+            name: {{ include "kubeseal-webgui.fullname" . }}

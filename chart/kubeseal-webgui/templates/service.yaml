@@ -5,6 +5,8 @@ metadata:
   labels:
     {{- include "kubeseal-webgui.labels" . | nindent 4 }}
 spec:
+  selector:
+    pp: {{ template "kubeseal-webgui.name" . }}
   type: ClusterIP
   ports:
     - port: 5000
