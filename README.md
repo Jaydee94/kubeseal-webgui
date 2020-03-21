@@ -14,6 +14,10 @@ The docker image can be found here: https://hub.docker.com/repository/docker/kub
 
 ![Farmers Market Finder Demo](demo/kubseal-demo-1.0.0.gif)
 
+## Prerequisites
+
+To use this Web-Gui u have to install [Bitnami-Sealed-Secrets](https://github.com/bitnami-labs/sealed-secrets) in your cluster first!
+
 ## Usage
 
 Mount the public certificate of your sealed secrets controller to **/app/cert/kubeseal-cert.pem** in the docker container.
