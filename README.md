@@ -6,7 +6,7 @@
 
 This is a python based webapp for using Bitnami-Sealed-Secrets in a web-gui.
 
-This app uses the kubseal binary of the original project: <https://github.com/bitnami-labs/sealed-secrets>
+This app uses the kubeseal binary of the original project: <https://github.com/bitnami-labs/sealed-secrets>
 
 ## Demo
 
