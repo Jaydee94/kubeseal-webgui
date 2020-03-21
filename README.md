@@ -8,7 +8,7 @@ This is a python based webapp for using Bitnami-Sealed-Secrets in a web-gui.
 
 This app uses the kubeseal binary of the original project: <https://github.com/bitnami-labs/sealed-secrets>
 
-The docker image can be founde here: https://hub.docker.com/repository/docker/kubesealwebgui/kubeseal-webgui
+The docker image can be found here: https://hub.docker.com/repository/docker/kubesealwebgui/kubeseal-webgui
 
 ## Demo
 
