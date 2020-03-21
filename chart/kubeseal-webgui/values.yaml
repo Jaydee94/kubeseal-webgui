@@ -1,12 +1,13 @@
 replicaCount: 1
 image:
-  image: kubesealwebgui/kubeseal-webgui
+  repository: kubesealwebgui/kubeseal-webgui
   tag: 1.0.0
   pullPolicy: Always
 
 nameOverride: ""
 fullnameOverride: ""
 
+# Setup resources for the pod
 resources:
   limits:
     cpu: 100m
@@ -15,19 +16,29 @@ resources:
     cpu: 20m
     memory: 256Mi
 
+
+# Optionally use a OpenShift-Route
+# If 'hostname' is an empty string "" OpenShift will create a hostname for you.
+route:
+  enabled: false
+  hostname: ""
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: None
+
 sealedSecrets:
-  # Public Certificate of youre Sealed-Secrets Controller.
-  # Login to youre cluster with kubectl.
-  # Run kubeseal --fetch-cert --controller-name <your-sealed-secrets-controller> --controller-namespace <sealed-secrets-controller-namespace>
-  # Paste Cert as multiline YAML
-  # cert: |
-  #   # -----BEGIN CERTIFICATE-----
-  #   # MIIErTCCApWgAwIBAgIQEy7GyHGVrJkLzLTdTVeqkDANBgkqhkiG9w0BAQsFADAA
-  #   # MB4XDTIwMDMxNTExNDMwOVoXDTMwMDMxMzExNDMwOVowADCCAiIwDQYJKoZIhvcN
-  #   # ...............................................................
-  #   #                          CONTENT
-  #   # ...............................................................
-  #   # yHmc4JBJc1FSR30TRUNvw+Kv+jnt3F0heWQIGDljKAZLYbc9JtIDOmPk8eYyMQWr
-  #   # Pw5O02WhtfTePesMmjsmzj4EGiE0cnsPJcNG99nHqWwvV2WF44HTzAW6rrW246Ys
-  #   # uw==
-  #   # -----END CERTIFICATE-----
+  ## Public Certificate of youre Sealed-Secrets Controller.
+  ## Login to youre cluster with kubectl.
+  ## Run kubeseal --fetch-cert --controller-name <your-sealed-secrets-controller> --controller-namespace <sealed-secrets-controller-namespace>
+  ## Paste Cert as multiline YAML
+  #cert: |
+  #  -----BEGIN CERTIFICATE-----
+  #  MIIErTCCApWgAwIBAgIQEy7GyHGVrJkLzLTdTVeqkDANBgkqhkiG9w0BAQsFADAA
+  #  MB4XDTIwMDMxNTExNDMwOVoXDTMwMDMxMzExNDMwOVowADCCAiIwDQYJKoZIhvcN
+  #  ...............................................................
+  #                           CONTENT
+  #  ...............................................................
+  #  yHmc4JBJc1FSR30TRUNvw+Kv+jnt3F0heWQIGDljKAZLYbc9JtIDOmPk8eYyMQWr
+  #  Pw5O02WhtfTePesMmjsmzj4EGiE0cnsPJcNG99nHqWwvV2WF44HTzAW6rrW246Ys
+  #  uw==
+  #  -----END CERTIFICATE-----
