@@ -4,12 +4,13 @@ from wtforms import TextField
 from wtforms.validators import InputRequired
 from flask_bootstrap import Bootstrap
 from kubeseal import Kubeseal
+from os import urandom
 import sys
 import subprocess
 
 app = Flask(__name__)
 Bootstrap(app)
-app.config['SECRET_KEY'] = 'SjdnUends821Jsdlkvxh391ksdODnejdDw'
+app.config['SECRET_KEY'] = urandom(24)
   
 # Defining the form
 class KubsealForm(FlaskForm):
