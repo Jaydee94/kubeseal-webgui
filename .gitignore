@@ -1,4 +1,8 @@
+.vscode/
 __pycache__/
+app/static/.webassets-cache/
+app/static/screen.css
+Pipfile.lock
 helm
 kubeseal
 kubectl
