@@ -1,28 +1,17 @@
-<!DOCTYPE html>
-<html>
-
-<head>
-    <link rel="stylesheet" type="text/css" href="static/output.css">
-    <link href="static/bootstrap.min.css" rel="stylesheet">
-    <link rel="shortcut icon" href="static/favicon.ico" />
-    <script src="static/copy.js"></script>
-</head>
-
-<body>
-    <div class="thing" ;>
-        <h2>Sealed-Secret:</h2>
-        <br>
-        <div id="div1">{{ sealedSecret }}</div>
+{% include 'header.html' without context %}
+<div class="container">
+    <div class="row">
+      <div class="col">
+          <div class="card">
+              <div class="card-body">
+                <h5>Encrypted secret</h5>
+                <div id="sealed-secret-content"><pre>{{ sealedSecret }}</pre></div>
+                <button id="copy-button" type="button" class="btn btn-link" onclick="CopyToClipboard('sealed-secret-content')"><i class="material-icons">insert_drive_file</i> copy secret to clipboard</button>
+              </div>
+          </div>            
+        <form action="/">
+            <input class="mt-4 btn btn-light btn-lg btn-block" type="submit" value="Encrypt another secret">
+        </form>
     </div>
-    <br> <br>
-    <button class="button" id="button1" onclick="CopyToClipboard('div1')">Kopieren</button>
-    <br>
-    <div class="container"></div>
-    <form action="/">
-        <br>
-        <dl>
-            <input class="btn btn-primary" type="submit" value="Neues Secret verschlüsseln">
-        </dl>
-    </form>
-    </div>
-</body>
+</div>
+{% include 'footer.html' without context %}
