@@ -3,19 +3,20 @@ RUN wget https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.11.
     mv kubeseal-linux-amd64 /tmp/kubeseal
 
 FROM python:3.8-alpine3.11
-RUN mkdir /app
-COPY --from=Downloader /tmp/kubeseal /app
-COPY app/ /app/
+RUN mkdir /kubeseal-webgui
+COPY --from=Downloader /tmp/kubeseal /kubeseal-webgui
+COPY . /kubeseal-webgui/
 
-RUN pip install flask flask_wtf wtforms wtforms.validators flask_bootstrap
+WORKDIR /kubeseal-webgui
 
-RUN chown -R 1001:1001 /app &&\
-    chmod +x /app/app.py &&\
-    chmod +x /app/kubeseal
+RUN pip install -r requirements.txt
+
+RUN chown -R 1001:1001 /kubeseal-webgui && \
+    chmod +x /kubeseal-webgui/app/app.py && \
+    chmod +x /kubeseal-webgui/kubeseal
 
 USER 1001
-WORKDIR /app
 
-CMD [ "python", "./app.py" ]
+CMD [ "python", "./app/app.py" ]
 
 
