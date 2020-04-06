@@ -2,6 +2,10 @@
 
 [![made-with-python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/) [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
+<p align="center">
+  <img src="demo/kubeseal-webgui-logo.jpg">
+</p>
+
 ## Description
 
 This is a python based webapp for using Bitnami-Sealed-Secrets in a web-gui.
@@ -12,7 +16,7 @@ The docker image can be found here: https://hub.docker.com/repository/docker/kub
 
 ## Demo
 
-![Farmers Market Finder Demo](demo/kubseal-demo-1.0.0.gif)
+![Farmers Market Finder Demo](demo/kubseal-demo-1.0.2.gif)
 
 ## Prerequisites
 
@@ -20,7 +24,7 @@ To use this Web-Gui you have to install [Bitnami-Sealed-Secrets](https://github.
 
 ## Usage
 
-Mount the public certificate of your sealed secrets controller to **/app/cert/kubeseal-cert.pem** in the docker container.
+Mount the public certificate of your sealed secrets controller to **/kubeseal-webgui/cert/kubeseal-cert.pem** in the docker container.
 
 Please use the [helm chart](https://github.com/Jaydee94/kubeseal-webgui/tree/master/chart/kubeseal-webgui) which is included in this repository.
 

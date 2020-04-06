@@ -21,7 +21,7 @@ spec:
           command: [ "/usr/local/bin/python", "/kubeseal-webgui/app.py" ]
           volumeMounts:
           - name: sealed-secrets-cert
-            mountPath: /app/cert/kubeseal-cert.pem
+            mountPath: /kubeseal-webgui/cert/kubeseal-cert.pem
             subPath: kubeseal-cert.pem
           ports:
             - name: http
