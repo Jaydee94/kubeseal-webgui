@@ -1,6 +1,6 @@
 from flask import Flask, render_template
 from flask_wtf import FlaskForm 
-from wtforms import TextField
+from wtforms import TextField, TextAreaField
 from wtforms.validators import InputRequired
 from flask_bootstrap import Bootstrap
 from flask import Flask
@@ -20,9 +20,9 @@ app.config['SECRET_KEY'] = urandom(24)
   
 # Defining the form
 class KubesealForm(FlaskForm):
-    cleartextSecret = TextField('Klartext-Secret:', validators=[InputRequired()])
-    secretName = TextField('Secret-Name:', validators=[InputRequired()])
-    secretNamespace = TextField('Secret-Namespace:', validators=[InputRequired()])            
+    cleartextSecret = TextAreaField('Cleartext secret:', validators=[InputRequired()])
+    secretName = TextField('Secret name:', validators=[InputRequired()])
+    secretNamespace = TextField('Secret namespace:', validators=[InputRequired()])            
 
 # Main Page
 @app.route("/", methods=['GET', 'POST'])

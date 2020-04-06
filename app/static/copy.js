@@ -1,14 +1,28 @@
-function CopyToClipboard(containerid) {
-    if (document.selection) {
-        var range = document.body.createTextRange();
-        range.moveToElementText(document.getElementById(containerid));
-        range.select().createTextRange();
-        document.execCommand("copy");
+$('#copy-button').tooltip({
+    trigger: 'click',
+    placement: 'bottom'
+});
 
-    } else if (window.getSelection) {
-        var range = document.createRange();
-        range.selectNode(document.getElementById(containerid));
-        window.getSelection().addRange(range);
-        document.execCommand("copy");
-    }
+function setTooltip(message) {
+    $('#copy-button').tooltip('hide')
+        .attr('data-original-title', message)
+        .tooltip('show');
 }
+
+function hideTooltip() {
+    setTimeout(function () {
+        $('#copy-button').tooltip('hide');
+    }, 1000);
+}
+
+var clipboard = new ClipboardJS('#copy-button');
+
+clipboard.on('success', function (e) {
+    setTooltip('Copied!');
+    hideTooltip();
+});
+
+clipboard.on('error', function (e) {
+    setTooltip('Failed!');
+    hideTooltip();
+});

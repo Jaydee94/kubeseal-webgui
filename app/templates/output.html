@@ -1,17 +1,23 @@
 {% include 'header.html' without context %}
 <div class="container">
-    <div class="row">
-      <div class="col">
-          <div class="card">
-              <div class="card-body">
-                <h5>Encrypted secret</h5>
-                <div id="sealed-secret-content"><pre>{{ sealedSecret }}</pre></div>
-                <button id="copy-button" type="button" class="btn btn-link" onclick="CopyToClipboard('sealed-secret-content')"><i class="material-icons">insert_drive_file</i> copy secret to clipboard</button>
-              </div>
-          </div>            
-        <form action="/">
-            <input class="mt-4 btn btn-light btn-lg btn-block" type="submit" value="Encrypt another secret">
-        </form>
+  <a href="/">
+    <p style="text-align:center;"><img src="static/kubeseal-webgui-logo.jpg"
+        onmouseover="this.src='static/kubeseal-webgui-logo-activated.jpg';"
+        onmouseout="this.src='static/kubeseal-webgui-logo.jpg';" /></p>
+  </a>
+  <div class="row">
+    <div class="col">
+      <div class="card">
+        <div class="card-body">
+          <h5>Encrypted secret</h5>
+          <div id="sealed-secret-content" class="mb-4">{{ sealedSecret }}</div>
+          <button type="button" class="btn btn-outline-primary" id="copy-button" data-clipboard-action="copy"
+            data-clipboard-target="#sealed-secret-content"><i class="material-icons">insert_drive_file</i>copy</button>
+        </div>
+      </div>
+      <form action="/">
+        <input class="mt-4 btn btn-light btn-lg btn-block" type="submit" value="Encrypt another secret">
+      </form>
     </div>
-</div>
-{% include 'footer.html' without context %}
+  </div>
+  {% include 'footer.html' without context %}
