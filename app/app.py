@@ -27,8 +27,6 @@ class KubesealForm(FlaskForm):
 # Main Page
 @app.route("/", methods=['GET', 'POST'])
 def run_kubeseal():
-
-
     """Runs the kubseal command and generates the flask form"""
     form = KubesealForm()
     if form.validate_on_submit():
