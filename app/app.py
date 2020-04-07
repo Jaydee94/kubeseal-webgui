@@ -3,12 +3,10 @@ from flask_wtf import FlaskForm
 from wtforms import TextField, TextAreaField
 from wtforms.validators import InputRequired
 from flask_bootstrap import Bootstrap
-from flask import Flask
 from flask_assets import Environment, Bundle
 from kubeseal import Kubeseal
 from os import urandom
 import sys
-import subprocess
 
 app = Flask(__name__)
 Bootstrap(app)

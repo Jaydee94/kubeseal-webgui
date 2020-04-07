@@ -1,4 +1,4 @@
-FROM abihf/wget AS Downloader
+FROM abihf/wget:latest AS Downloader
 RUN wget https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.11.0/kubeseal-linux-amd64 && \
     mv kubeseal-linux-amd64 /tmp/kubeseal
 

@@ -1,4 +1,3 @@
-from os import environ
 import subprocess
 class Kubeseal:
 
