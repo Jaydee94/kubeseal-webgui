@@ -36,7 +36,7 @@ def run_kubeseal():
         sName = form.secretName.data
         sNamespace = form.secretNamespace.data
         sealedSecret = Kubeseal.kubectlCMD(cltSecret, sNamespace, sName)
-        sys.stdout.write('Created Sealed-Secret %s for namespace %s \n'%(sName, sNamespace))
+        sys.stdout.write('Created Sealed-Secret %s for namespace %s \n' % (sName, sNamespace))
         return render_template('output.html', sealedSecret=sealedSecret[0])
 
     return render_template('main.html', form=form)
