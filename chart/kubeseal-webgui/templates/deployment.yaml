@@ -18,10 +18,10 @@ spec:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command: [ "/usr/local/bin/python", "/app/app.py" ]
+          command: [ "/usr/local/bin/python", "/kubeseal-webgui/app.py" ]
           volumeMounts:
           - name: sealed-secrets-cert
-            mountPath: /app/cert/kubeseal-cert.pem
+            mountPath: /kubeseal-webgui/cert/kubeseal-cert.pem
             subPath: kubeseal-cert.pem
           ports:
             - name: http

@@ -8,3 +8,4 @@ kubeseal
 kubectl
 chart/kubeseal-webgui/values-local.yaml
 test.sh
+test.yaml
