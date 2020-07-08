@@ -54,7 +54,7 @@ def run_kubeseal():
         kubernetesObject = template.render(sealedsecretName=sName,
                                            sealedsecretNamespace=sNamespace,
                                            encryptedSecret=sealedSecret[0])
-                                           
+
         return render_template('output.html', sealedSecret=sealedSecret[0],
                                kubernetesObject=kubernetesObject)
 
