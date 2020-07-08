@@ -11,8 +11,19 @@
         <div class="card-body">
           <h5>Encrypted secret</h5>
           <div id="sealed-secret-content" class="mb-4">{{ sealedSecret }}</div>
-          <button type="button" class="btn btn-outline-primary" id="copy-button" data-clipboard-action="copy"
+          <button class="btn btn-outline-primary" data-clipboard-action="copy"
             data-clipboard-target="#sealed-secret-content"><i class="material-icons">insert_drive_file</i>copy</button>
+        </div>
+      </div>
+      <br>
+      <div class="card">
+        <div class="card-body">
+          <h5>Kubernetes Object</h5>
+          <div class="mb-4">
+            <pre><code id="sealed-secret-kubernetes-object">{{ kubernetesObject }}</code></pre>
+          </div>
+          <button class="btn btn-outline-primary" data-clipboard-action="copy"
+            data-clipboard-target="#sealed-secret-kubernetes-object"><i class="material-icons">insert_drive_file</i>copy</button>
         </div>
       </div>
       <form action="/">
