@@ -42,13 +42,16 @@ def run_kubeseal():
         sName = form.secretName.data
         sNamespace = form.secretNamespace.data
         sealedSecret = Kubeseal.kubectlCMD(cltSecret, sNamespace, sName)
-        log.info('Created SealedSecret [%s] for Namespace[%s]' % (sName, sNamespace))
+        log.info('Created SealedSecret [%s] for Namespace[%s]', sName, sNamespace)
 
         # Load data from YAML into Python dictionary
-        env = jinja2.Environment(loader = jinja2.FileSystemLoader('./templates'), trim_blocks=True, lstrip_blocks=True)
+        env = jinja2.Environment(loader = jinja2.FileSystemLoader('./templates'),
+         trim_blocks=True, lstrip_blocks=True, autoescape=True)
         template = env.get_template('sealed-secret.yaml')
-        kubernetesObject = template.render(sealedsecretName=sName, sealedsecretNamespace=sNamespace, encryptedSecret=sealedSecret[0])
-        return render_template('output.html', sealedSecret=sealedSecret[0], kubernetesObject=kubernetesObject)
+        kubernetesObject = template.render(sealedsecretName=sName, sealedsecretNamespace=sNamespace,
+         encryptedSecret=sealedSecret[0])
+        return render_template('output.html', sealedSecret=sealedSecret[0],
+         kubernetesObject=kubernetesObject)
 
     return render_template('main.html', form=form)
 
