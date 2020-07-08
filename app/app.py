@@ -47,12 +47,16 @@ def run_kubeseal():
 
         # Load data from YAML into Python dictionary
         env = jinja2.Environment(loader=jinja2.FileSystemLoader('./templates'),
-            trim_blocks=True, lstrip_blocks=True, autoescape=True)
+                                 trim_blocks=True, lstrip_blocks=True, autoescape=True)
+
         template = env.get_template('sealed-secret.yaml')
-        kubernetesObject = template.render(sealedsecretName=sName, 
-            sealedsecretNamespace=sNamespace, encryptedSecret=sealedSecret[0])
+
+        kubernetesObject = template.render(sealedsecretName=sName,
+                                           sealedsecretNamespace=sNamespace,
+                                           encryptedSecret=sealedSecret[0])
+                                           
         return render_template('output.html', sealedSecret=sealedSecret[0],
-            kubernetesObject=kubernetesObject)
+                               kubernetesObject=kubernetesObject)
 
     return render_template('main.html', form=form)
 
