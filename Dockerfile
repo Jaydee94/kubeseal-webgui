@@ -2,7 +2,7 @@ FROM abihf/wget:latest AS Downloader
 RUN wget https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.11.0/kubeseal-linux-amd64 && \
     mv kubeseal-linux-amd64 /tmp/kubeseal
 
-FROM python:3.8-alpine3.11
+FROM python:3.8-alpine3.12
 RUN mkdir /kubeseal-webgui
 COPY --from=Downloader /tmp/kubeseal /kubeseal-webgui
 COPY app/ /kubeseal-webgui/
