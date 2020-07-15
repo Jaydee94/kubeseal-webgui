@@ -1,28 +1,30 @@
-$('#copy-button').tooltip({
+$('button').tooltip({
     trigger: 'click',
     placement: 'right'
 });
 
-function setTooltip(message) {
-    $('#copy-button').tooltip('hide')
+function setTooltip(btn, message) {
+    $(btn).tooltip('hide')
         .attr('data-original-title', message)
         .tooltip('show');
 }
 
-function hideTooltip() {
+function hideTooltip(btn) {
     setTimeout(function () {
-        $('#copy-button').tooltip('hide');
+        $(btn).tooltip('hide');
     }, 1000);
 }
 
-var clipboard = new ClipboardJS('#copy-button');
+var clipboard = new ClipboardJS('button');
 
-clipboard.on('success', function (e) {
-    setTooltip('Copied to clipboard!');
-    hideTooltip();
+clipboard.on('success', function(e) {
+    e.clearSelection();
+    setTooltip(e.trigger, 'Copied to clipboard!');
+    hideTooltip(e.trigger);
 });
 
-clipboard.on('error', function (e) {
-    setTooltip('Failed!');
-    hideTooltip();
+clipboard.on('error', function(e) {
+    e.clearSelection();
+    setTooltip(e.trigger, 'Failed!');
+    hideTooltip(e.trigger);
 });

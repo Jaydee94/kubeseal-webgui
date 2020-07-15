@@ -11,6 +11,7 @@ flask-wtf = "*"
 flask-bootstrap = "*"
 flask-assets = "*"
 cssmin = "*"
+jinja = "*"
 
 [requires]
 python_version = "3.8"
