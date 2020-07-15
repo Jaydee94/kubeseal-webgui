@@ -30,6 +30,7 @@ class KubesealForm(FlaskForm):
     cleartextSecret = TextAreaField('Cleartext secret:', validators=[InputRequired()])
     secretName = TextField('Secret name:', validators=[InputRequired()])
     secretNamespace = TextField('Secret namespace:', validators=[InputRequired()])
+    encryptedDataKeyName = TextField('EncryptedData key name:', validators=[InputRequired()])
 
 
 # Main Page
@@ -42,8 +43,9 @@ def run_kubeseal():
         cltSecret = form.cleartextSecret.data
         sName = form.secretName.data
         sNamespace = form.secretNamespace.data
+        sencryptedDataKeyName = form.encryptedDataKeyName.data
         sealedSecret = Kubeseal.kubectlCMD(cltSecret, sNamespace, sName)
-        log.info('Created SealedSecret [%s] for Namespace[%s]', sName, sNamespace)
+        log.info('Created SealedSecret [%s] for Namespace[%s] with Secret-Key-Name[%s]', sName, sNamespace,sencryptedDataKeyName)
 
         # Load data from YAML into Python dictionary
         env = jinja2.Environment(loader=jinja2.FileSystemLoader('./templates'),
@@ -53,7 +55,8 @@ def run_kubeseal():
 
         kubernetesObject = template.render(sealedsecretName=sName,
                                            sealedsecretNamespace=sNamespace,
-                                           encryptedSecret=sealedSecret[0])
+                                           encryptedSecret=sealedSecret[0],
+                                           secretKeyName=sencryptedDataKeyName)
 
         return render_template('output.html', sealedSecret=sealedSecret[0],
                                kubernetesObject=kubernetesObject)
