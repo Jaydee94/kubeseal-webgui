@@ -45,7 +45,7 @@ def run_kubeseal():
         sNamespace = form.secretNamespace.data
         sencryptedDataKeyName = form.encryptedDataKeyName.data
         sealedSecret = Kubeseal.kubectlCMD(cltSecret, sNamespace, sName)
-        log.info('Created SealedSecret [%s] for Namespace[%s] with Secret-Key-Name[%s]', sName, sNamespace,sencryptedDataKeyName)
+        log.info('Created SealedSecret [%s] for Namespace[%s] with EncryptedData-Key-Name[%s]', sName, sNamespace,sencryptedDataKeyName)
 
         # Load data from YAML into Python dictionary
         env = jinja2.Environment(loader=jinja2.FileSystemLoader('./templates'),
