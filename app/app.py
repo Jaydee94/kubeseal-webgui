@@ -9,11 +9,21 @@ from os import urandom
 import jinja2
 import sys
 import logging
+import json_log_formatter
+
+# Setup JSON handler for logging
+formatter = json_log_formatter.JSONFormatter()
+json_handler = logging.StreamHandler(stream=sys.stdout)
+json_handler.setFormatter(formatter)
 
 # Configure logging settings
-logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 log = logging.getLogger("kubseal-webgui")
+log.addHandler(json_handler)
+log.setLevel(logging.INFO)
+
+# Set flask werkzeug logger to ERROR
 flasklogger = logging.getLogger('werkzeug')
+flasklogger.addHandler(json_handler)
 flasklogger.setLevel(logging.ERROR)
 
 # Initialize flask app including bootstrap
@@ -30,6 +40,7 @@ class KubesealForm(FlaskForm):
     cleartextSecret = TextAreaField('Cleartext secret:', validators=[InputRequired()])
     secretName = TextField('Secret name:', validators=[InputRequired()])
     secretNamespace = TextField('Secret namespace:', validators=[InputRequired()])
+    encryptedDataKeyName = TextField('EncryptedData key name:', validators=[InputRequired()])
 
 
 # Main Page
@@ -42,8 +53,9 @@ def run_kubeseal():
         cltSecret = form.cleartextSecret.data
         sName = form.secretName.data
         sNamespace = form.secretNamespace.data
+        sEncryptedDataKeyName = form.encryptedDataKeyName.data
         sealedSecret = Kubeseal.kubectlCMD(cltSecret, sNamespace, sName)
-        log.info('Created SealedSecret [%s] for Namespace[%s]', sName, sNamespace)
+        log.info('Created SealedSecret [%s] for namespace [%s] with encrypted data key name: [%s].', sName, sNamespace,sEncryptedDataKeyName)
 
         # Load data from YAML into Python dictionary
         env = jinja2.Environment(loader=jinja2.FileSystemLoader('./templates'),
@@ -53,7 +65,8 @@ def run_kubeseal():
 
         kubernetesObject = template.render(sealedsecretName=sName,
                                            sealedsecretNamespace=sNamespace,
-                                           encryptedSecret=sealedSecret[0])
+                                           encryptedSecret=sealedSecret[0],
+                                           secretKeyName=sEncryptedDataKeyName)
 
         return render_template('output.html', sealedSecret=sealedSecret[0],
                                kubernetesObject=kubernetesObject)
