@@ -34,7 +34,7 @@ The command removes all the Kubernetes components associated with the chart and 
 |-------------------------------------------|------------------------------------------------|---------------------------------------------------------|
 | `replicaCount`                            | Number of nodes                                | `1`                                                     |
 | `image.repository`                        | Image-Repository and name                      | `kubesealwebgui/kubeseal-webgui`                        |
-| `image.tag`                               | Image Tag                                      | `1.0.2`                                                 |
+| `image.tag`                               | Image Tag                                      | `1.1.0`                                                 |
 | `image.pullPolicy`                        | Image Pull Policy                              | `Always`                                                |
 | `nameOverride`                            | Name-Override for the objects                  | `""`                                                    |
 | `fullnameOverride`                        | Fullname-Override for the objects              | `""`                                                    |
