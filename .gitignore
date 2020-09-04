@@ -1,0 +1,11 @@
+.vscode/
+__pycache__/
+app/static/.webassets-cache/
+app/static/screen.css
+Pipfile.lock
+helm
+kubeseal
+kubectl
+chart/kubeseal-webgui/values-local.yaml
+test.sh
+test.yaml

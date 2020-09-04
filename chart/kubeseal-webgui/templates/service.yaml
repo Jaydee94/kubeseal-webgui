@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "kubeseal-webgui.fullname" . }}
+  labels:
+    {{- include "kubeseal-webgui.labels" . | nindent 4 }}
+spec:
+  selector:
+    pp: {{ template "kubeseal-webgui.name" . }}
+  type: ClusterIP
+  ports:
+    - port: 5000
+      targetPort: http
+      protocol: TCP
+      name: http

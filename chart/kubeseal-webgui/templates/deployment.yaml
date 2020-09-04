@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "kubeseal-webgui.fullname" . }}
+  labels:
+    {{- include "kubeseal-webgui.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ template "kubeseal-webgui.name" . }}
+  replicas: {{ .Values.replicaCount }}
+  template:
+    metadata:
+      labels:
+        {{- include "kubeseal-webgui.labels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: [ "/usr/local/bin/python", "/kubeseal-webgui/app.py" ]
+          volumeMounts:
+          - name: sealed-secrets-cert
+            mountPath: /kubeseal-webgui/cert/kubeseal-cert.pem
+            subPath: kubeseal-cert.pem
+          ports:
+            - name: http
+              containerPort: 5000
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: sealed-secrets-cert
+          configMap:
+            name: {{ include "kubeseal-webgui.fullname" . }}

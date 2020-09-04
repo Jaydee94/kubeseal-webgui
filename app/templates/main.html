@@ -1,0 +1,18 @@
+{% import "bootstrap/wtf.html" as wtf %}
+{% include 'header.html' without context %}
+{% block content %}
+<div class="container">
+  <div class="row">
+    <div class="col">
+      <p class="banner"><img src="static/kubeseal-webgui-logo.jpg" /></p>
+      <form method="POST" action="/">
+        <dl>
+          {{ wtf.quick_form(form)}}
+          <button type="submit" class="btn btn-primary btn-lg btn-block" value="encrypt">Encrypt</button>
+        </dl>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% include 'footer.html' without context %}
