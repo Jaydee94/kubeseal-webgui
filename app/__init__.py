@@ -1,39 +1,31 @@
 from flask import Flask
-from flask_restful import Api, Resource, reqparse
+from flask_restful import Api
 from os import urandom
-import subprocess
+import sys
+import logging
+import json_log_formatter
+from .kubeseal import KubesealEndpoint
 
-class KubesealService(Resource):
-    def post(self):
-        parser = reqparse.RequestParser()
-        parser.add_argument('secret')
-        parser.add_argument('namespace')
-        parser.add_argument('secrets', action='append')
-        
-        args = parser.parse_args()
-        response_data = {'namespace': args['namespace'], 'secret': args['secret'], 'sealedSecrets': ['kauder', 'welsch']}
+# Setup JSON handler for logging
+formatter = json_log_formatter.JSONFormatter()
+json_handler = logging.StreamHandler(stream=sys.stdout)
+json_handler.setFormatter(formatter)
 
-        return response_data
+# Configure logging settings
+kubeseal_logger = logging.getLogger("kubeseal-webgui")
+kubeseal_logger.addHandler(json_handler)
+kubeseal_logger.setLevel(logging.INFO)
 
-def run_kubeseal(cleartextSecrets, secretNamespace, secretName):
-    sealedSecrets = []
-    for cleartextSecret in cleartextSecrets:
-        runKubesealCommand = "echo -n '%s' | /kubeseal-webgui/kubeseal --raw --from-file=/dev/stdin --namespace %s --name %s --cert /kubeseal-webgui/cert/kubeseal-cert.pem" % (cleartextSecret, secretNamespace, secretName)
-        kubesealSubprocess = subprocess.Popen([runKubesealCommand], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        output, error = kubesealSubprocess.communicate()
-
-        if error:
-            raise RuntimeError(f"Error in run_kubeseal: {error}")
-
-        sealedSecret = output.decode('utf-8').split('\n')
-        sealedSecrets.append(sealedSecret)
-    return sealedSecrets
+# Set flask werkzeug logger to ERROR
+flask_logger = logging.getLogger('werkzeug')
+flask_logger.addHandler(json_handler)
+flask_logger.setLevel(logging.INFO)
 
 def create_app(test_config=None):
     app = Flask(__name__)
     app.config['SECRET_KEY'] = urandom(24)
 
     api = Api(app)
-    api.add_resource(KubesealService, '/secrets')
+    api.add_resource(KubesealEndpoint, '/secrets')
 
     return app
