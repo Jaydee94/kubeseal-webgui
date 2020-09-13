@@ -33,3 +33,7 @@ Please use the [helm chart](https://github.com/Jaydee94/kubeseal-webgui/tree/mas
 (Login to your kubernetes cluster first)
 
 `kubeseal --fetch-cert --controller-name <your-sealed-secrets-controller> --controller-namespace <your-sealed-secrets-controller-namespace> > kubeseal-cert.pem`
+
+# Contribute
+
+Make sure you have Python 3.8 installed.

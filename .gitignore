@@ -1,5 +1,6 @@
 .vscode/
 __pycache__/
+venv/
 app/static/.webassets-cache/
 app/static/screen.css
 Pipfile.lock
@@ -9,3 +10,4 @@ kubectl
 chart/kubeseal-webgui/values-local.yaml
 test.sh
 test.yaml
+*.pyc
