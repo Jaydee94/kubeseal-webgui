@@ -37,6 +37,7 @@
       </b-row>
       <b-row class="secrets-form-row">
         <b-col><b-button block variant="primary" :pressed.sync="displaySecretForm">encrypt</b-button></b-col>
+        <b-col><b-button block variant="primary" v-on:click="decodeSealedSecret()">encrypt</b-button></b-col>
       </b-row>
     </b-form>
     </div>
@@ -54,8 +55,14 @@
 export default {
   name: 'Secrets',
   methods: {
-    decodeSealedSecret: function() {
-      return atob(this.sealedSecret)
+    decodeSealedSecret: async function() {
+      console.log("Hallo, Welt");
+      try {
+        let response = await fetch('/secrets');
+        console.log(response)
+      } catch(err) {
+        alert(err); // TypeError: failed to fetch
+      }
     }
   },
   data: function() {

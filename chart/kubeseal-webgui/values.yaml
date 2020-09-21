@@ -1,7 +1,14 @@
 replicaCount: 1
+
+api:
+  image:
+    repository: kubesealwebgui/api
+    tag: 2.0.0
+ui:
+  image:
+    repository: kubesealwebgui/ui
+    tag: 2.0.0
 image:
-  repository: kubesealwebgui/kubeseal-webgui
-  tag: 1.1.0
   pullPolicy: Always
 
 nameOverride: ""
@@ -15,7 +22,6 @@ resources:
   requests:
     cpu: 20m
     memory: 256Mi
-
 
 # Optionally use a OpenShift-Route
 # If 'hostname' is an empty string "" OpenShift will create a hostname for you.
@@ -31,14 +37,14 @@ sealedSecrets:
   ## Login to youre cluster with kubectl.
   ## Run kubeseal --fetch-cert --controller-name <your-sealed-secrets-controller> --controller-namespace <sealed-secrets-controller-namespace>
   ## Paste Cert as multiline YAML
-  #cert: |
-  #  -----BEGIN CERTIFICATE-----
-  #  MIIErTCCApWgAwIBAgIQEy7GyHGVrJkLzLTdTVeqkDANBgkqhkiG9w0BAQsFADAA
-  #  MB4XDTIwMDMxNTExNDMwOVoXDTMwMDMxMzExNDMwOVowADCCAiIwDQYJKoZIhvcN
-  #  ...............................................................
-  #                           CONTENT
-  #  ...............................................................
-  #  yHmc4JBJc1FSR30TRUNvw+Kv+jnt3F0heWQIGDljKAZLYbc9JtIDOmPk8eYyMQWr
-  #  Pw5O02WhtfTePesMmjsmzj4EGiE0cnsPJcNG99nHqWwvV2WF44HTzAW6rrW246Ys
-  #  uw==
-  #  -----END CERTIFICATE-----
+  cert: |
+   -----BEGIN CERTIFICATE-----
+   MIIErTCCApWgAwIBAgIQEy7GyHGVrJkLzLTdTVeqkDANBgkqhkiG9w0BAQsFADAA
+   MB4XDTIwMDMxNTExNDMwOVoXDTMwMDMxMzExNDMwOVowADCCAiIwDQYJKoZIhvcN
+   ...............................................................
+                            CONTENT
+   ...............................................................
+   yHmc4JBJc1FSR30TRUNvw+Kv+jnt3F0heWQIGDljKAZLYbc9JtIDOmPk8eYyMQWr
+   Pw5O02WhtfTePesMmjsmzj4EGiE0cnsPJcNG99nHqWwvV2WF44HTzAW6rrW246Ys
+   uw==
+   -----END CERTIFICATE-----

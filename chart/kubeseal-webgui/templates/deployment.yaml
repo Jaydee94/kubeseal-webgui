@@ -15,10 +15,9 @@ spec:
         {{- include "kubeseal-webgui.labels" . | nindent 8 }}
     spec:
       containers:
-        - name: {{ .Chart.Name }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        - name: "{{ .Chart.Name }}-api"
+          image: "{{ .Values.api.image.repository }}:{{ .Values.api.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command: [ "/usr/local/bin/python", "/kubeseal-webgui/app.py" ]
           volumeMounts:
           - name: sealed-secrets-cert
             mountPath: /kubeseal-webgui/cert/kubeseal-cert.pem
@@ -26,6 +25,23 @@ spec:
           ports:
             - name: http
               containerPort: 5000
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /secrets
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /secrets
+              port: http
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+        - name: "{{ .Chart.Name }}-ui"
+          image: "{{ .Values.ui.image.repository }}:{{ .Values.ui.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 80
               protocol: TCP
           livenessProbe:
             httpGet:
