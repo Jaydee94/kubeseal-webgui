@@ -56,10 +56,10 @@ export default {
   name: 'Secrets',
   methods: {
     decodeSealedSecret: async function() {
-      console.log("Hallo, Welt");
       try {
-        let response = await fetch('/secrets');
-        console.log(response)
+        let response = await fetch('/config.json');
+        let data = await response.json();
+        console.log(data);
       } catch(err) {
         alert(err); // TypeError: failed to fetch
       }

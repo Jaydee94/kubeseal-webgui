@@ -18,10 +18,6 @@ spec:
         - name: "{{ .Chart.Name }}-api"
           image: "{{ .Values.api.image.repository }}:{{ .Values.api.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          volumeMounts:
-          - name: sealed-secrets-cert
-            mountPath: /kubeseal-webgui/cert/kubeseal-cert.pem
-            subPath: kubeseal-cert.pem
           ports:
             - name: http
               containerPort: 5000
@@ -36,6 +32,10 @@ spec:
               port: http
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: sealed-secret-configmap
+              mountPath: /kubeseal-webgui/cert/kubeseal-cert.pem
+              subPath: kubeseal-cert.pem
         - name: "{{ .Chart.Name }}-ui"
           image: "{{ .Values.ui.image.repository }}:{{ .Values.ui.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
@@ -53,7 +53,11 @@ spec:
               port: http
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: sealed-secret-configmap
+              mountPath: /usr/share/nginx/html/config.json
+              subPath: config.json
       volumes:
-        - name: sealed-secrets-cert
+        - name: sealed-secret-configmap
           configMap:
             name: {{ include "kubeseal-webgui.fullname" . }}
