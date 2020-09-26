@@ -6,6 +6,7 @@ api:
     repository: kubesealwebgui/api
     tag: 2.0.0
 ui:
+  url: http://localhost:8080
   image:
     repository: kubesealwebgui/ui
     tag: 2.0.0

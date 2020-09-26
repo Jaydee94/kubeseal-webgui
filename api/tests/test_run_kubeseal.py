@@ -7,28 +7,28 @@ def test_run_kubeseal_with_with_empty_string_namespace():
     # when run_kubeseal is called
     # then raise ValueError
     with pytest.raises(ValueError):
-      sealedSecrets = run_kubeseal(["secret"], "", "secretName")
+      sealedSecrets = run_kubeseal([{ "key" : "foo", "value": "bar"}], "", "secretName")
 
 def test_run_kubeseal_with_with_none_namespace():
     # given a None secretNamespace
     # when run_kubeseal is called
     # then raise ValueError
     with pytest.raises(ValueError):
-      sealedSecrets = run_kubeseal(["secret"], None, "secretName")
+      sealedSecrets = run_kubeseal([{ "key" : "foo", "value": "bar"}], None, "secretName")
 
 def test_run_kubeseal_with_with_empty_string_secret_name():
     # given an empty string secretName
     # when run_kubeseal is called
     # then raise ValueError
     with pytest.raises(ValueError):
-      sealedSecrets = run_kubeseal(["secret"], "secretNamespace", "")
+      sealedSecrets = run_kubeseal([{ "key" : "foo", "value": "bar"}], "secretNamespace", "")
 
 def test_run_kubeseal_with_with_none_secret_name():
     # given a None secretName
     # when run_kubeseal is called
     # then raise ValueError
     with pytest.raises(ValueError):
-      sealedSecrets = run_kubeseal(["secret"], "secretNamespace", None)
+      sealedSecrets = run_kubeseal([{ "key" : "foo", "value": "bar"}], "secretNamespace", None)
 
 def test_run_kubeseal_with_with_empty_secrets_list_but_otherwise_valid_inputs():
     # given an empty list
@@ -51,7 +51,7 @@ def test_run_kubeseal_without_cli():
     # when run_kubeseal is called
     # then raise RuntimeError
     with pytest.raises(RuntimeError):
-        run_kubeseal(["secret"], "secretNamespace", "secretName")
+        run_kubeseal([{ "key" : "foo", "value": "bar"}], "secretNamespace", "secretName")
 
 @pytest.mark.container
 def test_run_kubeseal_without_k8s_cluster():
@@ -59,5 +59,5 @@ def test_run_kubeseal_without_k8s_cluster():
     # when run_kubeseal is called
     # then raise RuntimeError
     with pytest.raises(RuntimeError) as error_cert_missing:
-        run_kubeseal(["secret"], "secretNamespace", "secretName")
+        run_kubeseal([{ "key" : "foo", "value": "bar"}], "secretNamespace", "secretName")
     assert "/kubeseal-webgui/cert/kubeseal-cert.pem: no such file or directory" in str(error_cert_missing)

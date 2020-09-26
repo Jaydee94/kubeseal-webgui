@@ -59,9 +59,23 @@ export default {
       try {
         let response = await fetch('/config.json');
         let data = await response.json();
-        console.log(data);
-      } catch(err) {
-        alert(err); // TypeError: failed to fetch
+        let apiUrl = data["api_url"];
+        
+        response = await fetch(`${apiUrl}/secrets/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: {
+            "secret": this.secretName,
+            "namespace": this.namespaceName,
+            "secrets": this.secrets
+          }
+        });
+
+        this.sealedSecret = await response.json();
+      } catch(error) {
+        console.log(error)
       }
     }
   },

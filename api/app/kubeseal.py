@@ -1,28 +1,31 @@
-from flask import Flask
+from flask import Flask, request
 from flask import got_request_exception
 from flask_restful import Api, Resource, reqparse, abort
+
 import logging
 import subprocess
+import json
+import base64
 
-LOGGER = logging.getLogger(__name__)
+LOGGER = logging.getLogger("kubeseal-webgui")
 
 class KubesealEndpoint(Resource):
     def get(self):
         return "Use POST HTTP request to seal secret."
 
     def post(self):
-        parser = reqparse.RequestParser()
-        parser.add_argument('secret')
-        parser.add_argument('namespace')
-        parser.add_argument('secrets', action='append')
-        args = parser.parse_args()
+        if request.json is None:
+            raise RuntimeError("JSON Body was empty. Seal Request is required.")
+        sealing_request = request.json
+        LOGGER.info(sealing_request['secrets'])
 
         try: 
-            response = run_kubeseal(args['secrets'], args['namespace'], args['secret'])
+            response = run_kubeseal(sealing_request['secrets'], sealing_request['namespace'], sealing_request['secret'])
         except RuntimeError as error:
             abort(500)
         except ValueError as error:
             abort(500)
+
         return response
 
 def run_kubeseal(cleartextSecrets, secretNamespace, secretName):
@@ -32,18 +35,24 @@ def run_kubeseal(cleartextSecrets, secretNamespace, secretName):
         raise ValueError(error_message)
 
     if secretName == None or secretName == "":
-        error_message = "secretNamespace was not given"
+        error_message = "secretName was not given"
         LOGGER.error(error_message)
         raise ValueError(error_message)
 
+    # TODO assure that cleartextSecretTuple is list of dict
+
     sealedSecrets = []
-    for cleartextSecret in cleartextSecrets:
-        sealedSecret = run_kubeseal_command(cleartextSecret, secretNamespace, secretName)
+    for cleartextSecretTuple in cleartextSecrets:
+        sealedSecret = run_kubeseal_command(cleartextSecretTuple, secretNamespace, secretName)
         sealedSecrets.append(sealedSecret)
     return sealedSecrets
 
-def run_kubeseal_command(cleartextSecret, secretNamespace, secretName):
-    runKubesealCommand = f"echo -n '{cleartextSecret}' | /kubeseal-webgui/kubeseal --raw --from-file=/dev/stdin --namespace {secretNamespace} --name {secretName} --cert /kubeseal-webgui/cert/kubeseal-cert.pem"
+def run_kubeseal_command(cleartextSecretTuple, secretNamespace, secretName):
+    LOGGER.info(f"Sealing secret '{secretName}.{cleartextSecretTuple['key']}' for namespace '{secretNamespace}'.")
+    cleartextSecret = cleartextSecretTuple['value']
+    decodedSecret = base64.decodestring(cleartextSecret) 
+
+    runKubesealCommand = f"echo -n '{decodedSecret}' | /kubeseal-webgui/kubeseal --raw --from-file=/dev/stdin --namespace {secretNamespace} --name {secretName} --cert /kubeseal-webgui/cert/kubeseal-cert.pem"
     kubesealSubprocess = subprocess.Popen([runKubesealCommand], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     output, error = kubesealSubprocess.communicate()
 
@@ -52,4 +61,5 @@ def run_kubeseal_command(cleartextSecret, secretNamespace, secretName):
         LOGGER.error(error_message)
         raise RuntimeError(error_message)
 
-    sealedSecret = output.decode('utf-8').split('\n')
+    sealedSecret = "".join(output.decode('utf-8').split('\n'))
+    return { "key": cleartextSecretTuple['key'], "value": sealedSecret }
