@@ -36,14 +36,13 @@
         </b-col>
       </b-row>
       <b-row class="secrets-form-row">
-        <b-col><b-button block variant="primary" :pressed.sync="displaySecretForm">encrypt</b-button></b-col>
-        <b-col><b-button block variant="primary" v-on:click="decodeSealedSecret()">encrypt</b-button></b-col>
+        <b-col><b-button block variant="primary" v-on:click="fetchEncodedSecrets()">encrypt</b-button></b-col>
       </b-row>
     </b-form>
     </div>
     <div v-else>
       <b-card bg-variant="light" title="kubernetes secret" id="kubernetes-secret">
-        <pre><code>{{ decodeSealedSecret() }}</code></pre>
+        <pre><code>{{ sealedSecret }}</code></pre>
         <b-button variant="link">copy <b-icon icon="clipboard-check" aria-hidden="true"></b-icon></b-button>
       </b-card>
       <b-button block variant="primary" :pressed.sync="displaySecretForm">encrypt another secret </b-button>
@@ -55,25 +54,37 @@
 export default {
   name: 'Secrets',
   methods: {
-    decodeSealedSecret: async function() {
+    fetchEncodedSecrets: async function() {
       try {
+        var requestObject = {
+          secret: this.secretName,
+          namespace: this.namespaceName,
+          secrets: []
+        }
+
+        this.secrets.forEach(element => {
+          requestObject.secrets.push({key: element.key, value: btoa(element.value)})
+        });
+
+        let requestBody = JSON.stringify(requestObject, null, '\t')
+
         let response = await fetch('/config.json');
         let data = await response.json();
         let apiUrl = data["api_url"];
         
-        response = await fetch(`${apiUrl}/secrets/`, {
+        response = await fetch(`${apiUrl}/secrets`, {
           method: 'POST',
           headers: {
+            // 'Origin': 'http://localhost:8080',
             'Content-Type': 'application/json'
           },
-          body: {
-            "secret": this.secretName,
-            "namespace": this.namespaceName,
-            "secrets": this.secrets
-          }
+          body: requestBody
         });
 
-        this.sealedSecret = await response.json();
+        let sealedSecrets = await response.json();
+        
+        this.sealedSecret = sealedSecrets
+        this.displaySecretForm = false;
       } catch(error) {
         console.log(error)
       }
@@ -87,7 +98,7 @@ export default {
       secrets: [
         { key: "", value: "" }
       ],
-      sealedSecret: "YXBpVmVyc2lvbjogYml0bmFtaS5jb20vdjFhbHBoYTEKa2luZDogU2VhbGVkU2VjcmV0Cm1ldGFkYXRhOgogIG5hbWU6IG15c2VjcmV0CiAgbmFtZXNwYWNlOiBteW5hbWVzcGFjZQogIGFubm90YXRpb246CiAgICAia3ViZWN0bC5rdWJlcm5ldGVzLmlvL2xhc3QtYXBwbGllZC1jb25maWd1cmF0aW9uIjogLi4uLgpzcGVjOgogIGVuY3J5cHRlZERhdGE6CiAgICAuZG9ja2VyY2ZnOiBBZ0J5M2k0T0pTV0srUGlUeVNZWlpBOXJPNDNjR0RFcS4uLi4uCiAgdGVtcGxhdGU6CiAgICB0eXBlOiBrdWJlcm5ldGVzLmlvL2RvY2tlcmNmZwogICAgIyB0aGlzIGlzIGFuIGV4YW1wbGUgb2YgbGFiZWxzIGFuZCBhbm5vdGF0aW9ucyB0aGF0IHdpbGwgYmUgYWRkZWQgdG8gdGhlIG91dHB1dCBzZWNyZXQKICAgIG1ldGFkYXRhOgogICAgICBsYWJlbHM6CiAgICAgICAgImplbmtpbnMuaW8vY3JlZGVudGlhbHMtdHlwZSI6IHVzZXJuYW1lUGFzc3dvcmQKICAgICAgYW5ub3RhdGlvbnM6CiAgICAgICAgImplbmtpbnMuaW8vY3JlZGVudGlhbHMtZGVzY3JpcHRpb24iOiBjcmVkZW50aWFscyBmcm9tIEt1YmVybmV0ZXM="
+      sealedSecret: "blubb"
     }
   }
 }
