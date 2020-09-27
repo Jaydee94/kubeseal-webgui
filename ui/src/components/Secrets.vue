@@ -1,6 +1,6 @@
 <template>
   <div class="secrets-component">
-    <div class="secrets-form" v-if="displaySecretForm">
+    <div class="secrets-form" v-if="displayCreateSealedSecretForm">
     <b-row>
         <b-col>
           <p class="pre-form-text">Enter sensitive values for sealing in the form below. The cleartext values will be encrypted using the kubeseal-cli and displayed here afterwards.</p>
@@ -30,14 +30,25 @@
             <b-form-textarea rows="1" v-model="secret.value" :placeholder="'Secret value'" id="input-value"></b-form-textarea>
           </b-col>
           <b-col cols="1">
-            <b-button block variant="link"><b-icon icon="trash" font-scale="1.5" aria-hidden="true" v-on:click="secrets.splice(counter, 1)"></b-icon></b-button>
+            <b-button block variant="link"><b-icon icon="trash" font-scale="1.4" aria-hidden="true" v-on:click="secrets.splice(counter, 1)"></b-icon></b-button>
           </b-col>
         </b-form-row>
       </div>
+      <b-row>
+        <b-col>
+          <b-form-text block class="mb-3">
+            Specify sensitive value and corresponding key of the secret.
+          </b-form-text>
+        </b-col>
+      </b-row>
       <b-form-row>
-        <b-form-text id="password-help-block" class="mb-3">
-          Specify sensitive value and corresponding key of the secret.
-        </b-form-text>
+        <b-col>
+          <b-alert :show="!(!errorMessage || 0 === errorMessage.length)" dismissible variant="warning">
+            <p>Error while encoding sensitive data. Please contact your administrator and try again later.</p>
+            <b>Error message: </b>
+            <p class="mt-3"><code>{{errorMessage}}</code></p>
+          </b-alert>
+        </b-col>
       </b-form-row>
       <b-form-row class="mt-2">
         <b-col cols="6">
@@ -50,11 +61,22 @@
     </b-form>
     </div>
     <div v-else>
-      <b-card bg-variant="light" title="kubernetes secret" id="kubernetes-secret">
-        <pre><code>{{ sealedSecret }}</code></pre>
-        <b-button variant="link">copy <b-icon icon="clipboard-check" aria-hidden="true"></b-icon></b-button>
-      </b-card>
-      <b-button block variant="primary" :pressed.sync="displaySecretForm">encrypt another secret </b-button>
+      <div >
+        <pre id="sealed-secret-result" class="p-3">
+          <code>
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: {{ secretName }}
+  namespace: {{ namespaceName }}
+spec:
+  encryptedData:
+{{ renderedSecrets }}
+          </code>
+        </pre>
+        <b-button variant="link" class="mb-3">copy <b-icon icon="clipboard-check" aria-hidden="true"></b-icon></b-button>
+      </div>
+      <b-button block variant="primary" :pressed.sync="displayCreateSealedSecretForm">Encrypt more secrets </b-button>
     </div>
   </div>
 </template>
@@ -90,28 +112,40 @@ export default {
           body: requestBody
         });
 
-        let sealedSecrets = await response.json();
-        
-        this.sealedSecret = sealedSecrets
-        this.displaySecretForm = false;
+        let sealedSecrets = await response.json()
+        this.renderedSecrets = this.renderSecrets(sealedSecrets)
+        this.displayCreateSealedSecretForm = false;
       } catch(error) {
-        console.log(error)
+        this.errorMessage = error;
       }
+    },
+    renderSecrets: function(sealedSecrets) {
+      var dataEntries = [];
+      sealedSecrets.forEach(element => {
+        let entry = `    ${element['key']}: ${element['value']}`
+        dataEntries.push(entry);
+      });
+      return dataEntries.join("\n");
     }
   },
   data: function() {
     return {
-      displaySecretForm: true,
+      errorMessage: "",
+      displayCreateSealedSecretForm: true,
       secretName: "",
       namespaceName: "",
       secrets: [
         { key: "", value: "" }
       ],
-      sealedSecret: "blubb"
+      renderedSecrets: ""
     }
   }
 }
 </script>
 
 <style scoped>
+#sealed-secret-result {
+  background: #eeeeee;
+}
+
 </style>
