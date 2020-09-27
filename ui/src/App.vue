@@ -9,6 +9,8 @@
 <script>
 
 // import HelloWorld from './components/HelloWorld.vue'
+import './assets/custom.scss'
+
 import Secrets from './components/Secrets.vue'
 
 export default {
@@ -19,12 +21,12 @@ export default {
 }
 </script>
 
-<style>
+<style>  
 #app { 
   margin-top: 60px;
 }
 
-#logo {
+#logo img {
   text-align: center;
 }
 </style>
