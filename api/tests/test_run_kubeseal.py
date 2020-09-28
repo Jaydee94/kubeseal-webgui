@@ -1,6 +1,5 @@
 from app.kubeseal import run_kubeseal
 import pytest
-import logging
 
 def test_run_kubeseal_with_with_empty_string_namespace():
     # given an empty string secretNamespace
