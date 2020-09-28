@@ -2,26 +2,28 @@
   <div class="secrets-component">
     <div class="secrets-form" v-if="displayCreateSealedSecretForm">
     <b-row>
-        <b-col>
-          <p class="pre-form-text">Enter sensitive values for sealing in the form below. The cleartext values will be encrypted using the kubeseal-cli and displayed here afterwards.</p>
+        <b-col class="mb-3">
+            Enter sensitive values for sealing in the form below. The cleartext values will be encrypted using the kubeseal-cli and displayed here afterwards.
         </b-col>
     </b-row>
+
     <b-form>
       <b-form-row class="mt-2">
         <b-col cols="6">
           <b-form-input v-model="namespaceName" placeholder="Namespace name" id="input-secret-name"></b-form-input> 
           <b-form-text id="password-help-block">
-            Specify the target namespace where the sealed secret will be deployed.
+            Specify target namespace where the sealed secret will be deployed.
           </b-form-text>
         </b-col>
         <b-col cols="6">
           <b-form-input v-model="secretName" placeholder="Secret name" id="input-secret-name"></b-form-input>
           <b-form-text id="password-help-block">
-            Specify the name of the secret.
+            Specify name of the secret.
           </b-form-text>
         </b-col>
       </b-form-row>
-      <div bg-variant="light" class="mt-4" v-for="(secret, counter) in secrets" :key="counter">
+
+      <div class="mt-4" v-for="(secret, counter) in secrets" :key="counter">
         <b-form-row class="align-items-center">
           <b-col cols="3">
             <b-form-textarea v-model="secret.key" placeholder="Secret key" id="input-key"></b-form-textarea> 
@@ -30,7 +32,7 @@
             <b-form-textarea rows="1" v-model="secret.value" :placeholder="'Secret value'" id="input-value"></b-form-textarea>
           </b-col>
           <b-col cols="1">
-            <b-button block variant="link"><b-icon icon="trash" font-scale="1.4" aria-hidden="true" v-on:click="secrets.splice(counter, 1)"></b-icon></b-button>
+            <b-button block variant="link"><b-icon icon="trash" aria-hidden="true" v-on:click="secrets.splice(counter, 1)"></b-icon></b-button>
           </b-col>
         </b-form-row>
       </div>
@@ -61,9 +63,11 @@
     </b-form>
     </div>
     <div v-else>
-      <div >
-        <pre id="sealed-secret-result" class="p-3">
-          <code>
+      <b-row>
+        <b-col>
+          <div>
+            <pre id="sealed-secret-result" ref="sealedSecret" class="px-3">
+              <code>
 apiVersion: bitnami.com/v1alpha1
 kind: SealedSecret
 metadata:
@@ -71,12 +75,17 @@ metadata:
   namespace: {{ namespaceName }}
 spec:
   encryptedData:
-{{ renderedSecrets }}
-          </code>
-        </pre>
-        <b-button variant="link" class="mb-3">copy <b-icon icon="clipboard-check" aria-hidden="true"></b-icon></b-button>
-      </div>
-      <b-button block variant="primary" :pressed.sync="displayCreateSealedSecretForm">Encrypt more secrets </b-button>
+{{ renderedSecrets }}</code>
+            </pre>
+          </div>
+        </b-col>
+      </b-row>
+      <b-row>
+        <b-col>
+          <b-button block variant="link" class="mb-3" v-on:click="copyRenderedSecrets()">copy <b-icon icon="clipboard-check" aria-hidden="true"></b-icon></b-button>
+          <b-button block variant="primary" :pressed.sync="displayCreateSealedSecretForm">Encrypt more secrets </b-button>
+        </b-col>
+      </b-row>
     </div>
   </div>
 </template>
@@ -126,6 +135,11 @@ export default {
         dataEntries.push(entry);
       });
       return dataEntries.join("\n");
+    },
+    copyRenderedSecrets: function() {
+      let sealedSecretElement = this.$refs["sealedSecret"]
+      let sealedSecretContent = sealedSecretElement.innerText.trim()
+      navigator.clipboard.writeText(sealedSecretContent)
     }
   },
   data: function() {

@@ -1,7 +1,11 @@
 <template>
   <div id="app">
     <b-container>
-      <b-row id="logo"><b-col><img alt="Vue logo" src="./assets/kubeseal-webgui-logo.jpg"></b-col></b-row>
+      <b-row id="logo">
+        <b-col>
+          <img alt="Kubeseal-Webgui Logo" src="./assets/kubeseal-webgui-logo.jpg">
+        </b-col>
+      </b-row>
       <Secrets />
     </b-container>
   </div>
@@ -21,12 +25,8 @@ export default {
 }
 </script>
 
-<style>  
-#app { 
-  margin-top: 60px;
-}
-
-#logo img {
+<style> 
+#logo {
   text-align: center;
-}
+} 
 </style>

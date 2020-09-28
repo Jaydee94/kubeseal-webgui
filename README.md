@@ -36,7 +36,11 @@ Please use the [helm chart](https://github.com/Jaydee94/kubeseal-webgui/tree/mas
 
 # Contribute
 
-Make sure you have `Python 3.8` and the Python module `venv` installed.
+## Working on the API
+
+Requirements: 
+
+* Make sure you have Python 3.8 installed.
 
 Setup:
 
@@ -45,4 +49,7 @@ Setup:
 * `source venv/bin/activate` (to activate the virtual environment)
 * `python -m pip install -r requirements.txt` (to install all required packages for this project)
 * `pytest` (should run all tests successfully)
-* Pick an issue and start coding.
+
+## Working on the UI
+
+...
