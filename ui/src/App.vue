@@ -12,9 +12,7 @@
 </template>
 <script>
 
-// import HelloWorld from './components/HelloWorld.vue'
 import './assets/custom.scss'
-
 import Secrets from './components/Secrets.vue'
 
 export default {
