@@ -32,7 +32,7 @@ def test_post_api(client):
     data = {
         "secret": "test-secret",
         "namespace": "test-namespace",
-        "secrets": [{ "key" : "foo", "value": "bar"}, {"key": "bar", "value": "foo"}]
+        "secrets": [{"key": "foo", "value": "bar"}, {"key": "bar", "value": "foo"}]
     }
     res = client.post('/secrets', data=json.dumps(data), headers={"Content-Type": "application/json"})
     # then return non empty result

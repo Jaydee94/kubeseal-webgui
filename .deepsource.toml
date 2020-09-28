@@ -13,3 +13,8 @@ enabled = true
 
   [analyzers.meta]
   dockerfile_paths = ["Dockerfile"]
+
+test_patterns = [
+  "api/tests/**",
+  "test_*.py"
+]

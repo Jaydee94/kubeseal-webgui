@@ -25,11 +25,11 @@ flask_logger.setLevel(logging.INFO)
 
 def create_app(test_config=None):
     app = Flask(__name__)
-    
+
     if "ORIGIN_URL" not in environ:
         raise RuntimeError("Error: Environment variable ORIGIN_URL empty.")
-    
-    CORS(app, resources={ r"/secrets/*" : { "origins": environ['ORIGIN_URL'] } })
+
+    CORS(app, resources={r"/secrets/*": {"origins": environ['ORIGIN_URL']}})
 
     api = Api(app)
     api.add_resource(KubesealEndpoint, '/secrets')
