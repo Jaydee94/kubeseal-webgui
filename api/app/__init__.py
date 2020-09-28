@@ -25,6 +25,7 @@ flask_logger = logging.getLogger('werkzeug')
 flask_logger.addHandler(json_handler)
 flask_logger.setLevel(logging.INFO)
 
+
 def create_app(test_config=None):
     """ Initializes Flask application module. """
     app = Flask(__name__)

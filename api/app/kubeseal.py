@@ -6,8 +6,8 @@ import base64
 from flask import request
 from flask_restful import Resource, abort
 
-
 LOGGER = logging.getLogger("kubeseal-webgui")
+
 
 class KubesealEndpoint(Resource):
     """ Provides REST-API for sealing sensitive data. """
@@ -39,6 +39,7 @@ class KubesealEndpoint(Resource):
 
         return response
 
+
 def run_kubeseal(cleartext_secrets, secret_namespace, secret_name):
     """ Wrapper function for checking input and initiating kubeseal-cli call """
     if secret_namespace is None or secret_namespace == "":
@@ -59,6 +60,7 @@ def run_kubeseal(cleartext_secrets, secret_namespace, secret_name):
         sealed_secrets.append(sealed_secret)
     return sealed_secrets
 
+
 def run_kubeseal_command(cleartext_secret_tuple, secret_namespace, secret_name):
     """ Function for calling kubeseal-cli in subprocess. """
     LOGGER.info(f"Sealing secret '{secret_name}.{cleartext_secret_tuple['key']}' \
@@ -78,6 +80,7 @@ def run_kubeseal_command(cleartext_secret_tuple, secret_namespace, secret_name):
 
     sealed_secret = "".join(output.decode('utf-8').split('\n'))
     return {"key": cleartext_secret_tuple['key'], "value": sealed_secret}
+
 
 def decode_base64_string(base64_string_message):
     """ Decodes base64 ascii-encoded input """

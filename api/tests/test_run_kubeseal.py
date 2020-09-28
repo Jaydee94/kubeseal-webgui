@@ -1,6 +1,7 @@
 from app.kubeseal import run_kubeseal
 import pytest
 
+
 def test_run_kubeseal_with_with_empty_string_namespace():
     # given an empty string secretNamespace
     # when run_kubeseal is called
@@ -15,12 +16,14 @@ def test_run_kubeseal_with_with_none_namespace():
     with pytest.raises(ValueError):
         run_kubeseal([{"key": "foo", "value": "YmFy"}], None, "secretName")
 
+
 def test_run_kubeseal_with_with_empty_string_secret_name():
     # given an empty string secretName
     # when run_kubeseal is called
     # then raise ValueError
     with pytest.raises(ValueError):
         run_kubeseal([{"key": "foo", "value": "YmFy"}], "secretNamespace", "")
+
 
 def test_run_kubeseal_with_with_none_secret_name():
     # given a None secretName
@@ -29,12 +32,14 @@ def test_run_kubeseal_with_with_none_secret_name():
     with pytest.raises(ValueError):
         run_kubeseal([{"key": "foo", "value": "YmFy"}], "secretNamespace", None)
 
+
 def test_run_kubeseal_with_with_empty_secrets_list_but_otherwise_valid_inputs():
     # given an empty list
     # when run_kubeseal is called
     sealedSecrets = run_kubeseal([], "secretNamespace", "secretName")
     # then return empty list
     assert sealedSecrets == []
+
 
 @pytest.mark.container
 @pytest.mark.cluster
@@ -44,6 +49,7 @@ def test_run_kubeseal_with_cli():
     # then return valid encrypted secret
     pass
 
+
 @pytest.mark.cluster
 def test_run_kubeseal_without_cli():
     # given k8s cluster but no kubeseal cli
@@ -51,6 +57,7 @@ def test_run_kubeseal_without_cli():
     # then raise RuntimeError
     with pytest.raises(RuntimeError):
         run_kubeseal([{"key": "foo", "value": "YmFy"}], "secretNamespace", "secretName")
+
 
 @pytest.mark.container
 def test_run_kubeseal_without_k8s_cluster():
