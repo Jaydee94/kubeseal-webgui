@@ -56,7 +56,8 @@ def run_kubeseal(cleartext_secrets, secret_namespace, secret_name):
 
     sealed_secrets = []
     for cleartext_secret_tuple in cleartext_secrets:
-        sealed_secret = run_kubeseal_command(cleartext_secret_tuple, secret_namespace, secret_name)
+        sealed_secret = run_kubeseal_command(cleartext_secret_tuple,
+                secret_namespace, secret_name)
         sealed_secrets.append(sealed_secret)
     return sealed_secrets
 
