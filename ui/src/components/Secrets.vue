@@ -82,7 +82,7 @@ spec:
       </b-row>
       <b-row>
         <b-col>
-          <b-button block variant="link" class="mb-3" v-on:click="copyRenderedSecrets()">copy <b-icon icon="clipboard-check" aria-hidden="true"></b-icon></b-button>
+          <b-button block variant="link" class="mb-3" v-on:click="copyRenderedSecrets()">Copy <b-icon icon="clipboard-check" aria-hidden="true"></b-icon></b-button>
           <b-button block variant="primary" :pressed.sync="displayCreateSealedSecretForm">Encrypt more secrets </b-button>
         </b-col>
       </b-row>
