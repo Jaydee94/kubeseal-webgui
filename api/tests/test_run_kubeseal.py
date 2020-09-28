@@ -7,28 +7,28 @@ def test_run_kubeseal_with_with_empty_string_namespace():
     # when run_kubeseal is called
     # then raise ValueError
     with pytest.raises(ValueError):
-        sealedSecrets = run_kubeseal([{"key": "foo", "value": "YmFy"}], "", "secretName")
+        run_kubeseal([{"key": "foo", "value": "YmFy"}], "", "secretName")
 
 def test_run_kubeseal_with_with_none_namespace():
     # given a None secretNamespace
     # when run_kubeseal is called
     # then raise ValueError
     with pytest.raises(ValueError):
-        sealedSecrets = run_kubeseal([{"key": "foo", "value": "YmFy"}], None, "secretName")
+        run_kubeseal([{"key": "foo", "value": "YmFy"}], None, "secretName")
 
 def test_run_kubeseal_with_with_empty_string_secret_name():
     # given an empty string secretName
     # when run_kubeseal is called
     # then raise ValueError
     with pytest.raises(ValueError):
-        sealedSecrets = run_kubeseal([{"key": "foo", "value": "YmFy"}], "secretNamespace", "")
+        run_kubeseal([{"key": "foo", "value": "YmFy"}], "secretNamespace", "")
 
 def test_run_kubeseal_with_with_none_secret_name():
     # given a None secretName
     # when run_kubeseal is called
     # then raise ValueError
     with pytest.raises(ValueError):
-        sealedSecrets = run_kubeseal([{"key": "foo", "value": "YmFy"}], "secretNamespace", None)
+        run_kubeseal([{"key": "foo", "value": "YmFy"}], "secretNamespace", None)
 
 def test_run_kubeseal_with_with_empty_secrets_list_but_otherwise_valid_inputs():
     # given an empty list

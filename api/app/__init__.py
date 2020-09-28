@@ -23,7 +23,7 @@ flask_logger = logging.getLogger('werkzeug')
 flask_logger.addHandler(json_handler)
 flask_logger.setLevel(logging.INFO)
 
-def create_app(test_config=None):
+def create_app():
     app = Flask(__name__)
 
     if "ORIGIN_URL" not in environ:
