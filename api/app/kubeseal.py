@@ -41,7 +41,6 @@ class KubesealEndpoint(Resource):
 
 def run_kubeseal(cleartext_secrets, secret_namespace, secret_name):
     """ Wrapper function for checking input and initiating kubeseal-cli call """
-
     if secret_namespace is None or secret_namespace == "":
         error_message = "secret_namespace was not given"
         LOGGER.error(error_message)
@@ -67,7 +66,7 @@ def run_kubeseal_command(cleartext_secret_tuple, secret_namespace, secret_name):
     cleartext_secret = decode_base64_string(cleartext_secret_tuple['value'])
     exec_kubeseal_command = f"echo -n '{cleartext_secret}' \
         | /kubeseal-webgui/kubeseal --raw --from-file=/dev/stdin --namespace {secret_namespace} \
-            --name {secret_name} --cert /kubeseal-webgui/cert/kubeseal-cert.pem"
+        --name {secret_name} --cert /kubeseal-webgui/cert/kubeseal-cert.pem"
     kubeseal_subprocess = subprocess.Popen([exec_kubeseal_command], stdout=subprocess.PIPE, \
         stderr=subprocess.PIPE, shell=True)
     output, error = kubeseal_subprocess.communicate()

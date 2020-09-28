@@ -1,5 +1,10 @@
 version = 1
 
+test_patterns = [
+  "api/tests/**",
+  "test_*.py"
+]
+
 [[analyzers]]
 name = "python"
 enabled = true
@@ -13,8 +18,3 @@ enabled = true
 
   [analyzers.meta]
   dockerfile_paths = ["Dockerfile"]
-
-test_patterns = [
-  "api/tests/**",
-  "test_*.py"
-]
