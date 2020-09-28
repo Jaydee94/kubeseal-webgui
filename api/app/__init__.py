@@ -1,6 +1,4 @@
-"""
-    Module containing the API for encoding sensitive data via kubeseal-cli.
-"""
+""" Module containing the API for encoding sensitive data via kubeseal-cli. """
 from os import urandom, environ
 import sys
 import logging
