@@ -32,7 +32,7 @@ class KubesealEndpoint(Resource):
         try:
             response = run_kubeseal(
                 sealing_request['secrets'],
-                sealing_request['namespace'],  
+                sealing_request['namespace'],
                 sealing_request['secret'])
         except RuntimeError:
             abort(500)
@@ -60,7 +60,7 @@ def run_kubeseal(cleartext_secrets, secret_namespace, secret_name):
     for cleartext_secret_tuple in cleartext_secrets:
         sealed_secret = run_kubeseal_command(
             cleartext_secret_tuple,
-            secret_namespace, 
+            secret_namespace,
             secret_name)
         sealed_secrets.append(sealed_secret)
     return sealed_secrets
@@ -76,9 +76,9 @@ def run_kubeseal_command(cleartext_secret_tuple, secret_namespace, secret_name):
         {secret_namespace} --name {secret_name} \
         --cert /kubeseal-webgui/cert/kubeseal-cert.pem"
     kubeseal_subprocess = subprocess.Popen(
-        [exec_kubeseal_command], 
-        stdout=subprocess.PIPE, 
-        stderr=subprocess.PIPE, 
+        [exec_kubeseal_command],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
         shell=True)
     output, error = kubeseal_subprocess.communicate()
 
