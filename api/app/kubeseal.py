@@ -54,7 +54,11 @@ def run_kubeseal(cleartext_secrets, secret_namespace, secret_name):
         LOGGER.error(error_message)
         raise ValueError(error_message)
 
-    # TODO assure that cleartext_secrets is list of dictionaries
+    list_of_non_dict_inputs = [element for element in cleartext_secrets if not isinstance(element, dict)]
+    if cleartext_secrets and not list_of_non_dict_inputs:
+        error_message = "Input of cleartext_secrets was not a list of dicts."
+        LOGGER.error(error_message)
+        raise ValueError(error_message)
 
     sealed_secrets = []
     for cleartext_secret_tuple in cleartext_secrets:
