@@ -30,8 +30,10 @@ class KubesealEndpoint(Resource):
         LOGGER.info(sealing_request['secrets'])
 
         try:
-            response = run_kubeseal(sealing_request['secrets'],
-                    sealing_request['namespace'],  sealing_request['secret'])
+            response = run_kubeseal(
+                sealing_request['secrets'],
+                sealing_request['namespace'],  
+                sealing_request['secret'])
         except RuntimeError:
             abort(500)
         except ValueError:
@@ -56,8 +58,10 @@ def run_kubeseal(cleartext_secrets, secret_namespace, secret_name):
 
     sealed_secrets = []
     for cleartext_secret_tuple in cleartext_secrets:
-        sealed_secret = run_kubeseal_command(cleartext_secret_tuple,
-                secret_namespace, secret_name)
+        sealed_secret = run_kubeseal_command(
+            cleartext_secret_tuple,
+            secret_namespace, 
+            secret_name)
         sealed_secrets.append(sealed_secret)
     return sealed_secrets
 
@@ -71,8 +75,11 @@ def run_kubeseal_command(cleartext_secret_tuple, secret_namespace, secret_name):
         | /kubeseal-webgui/kubeseal --raw --from-file=/dev/stdin --namespace \
         {secret_namespace} --name {secret_name} \
         --cert /kubeseal-webgui/cert/kubeseal-cert.pem"
-    kubeseal_subprocess = subprocess.Popen([exec_kubeseal_command], 
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    kubeseal_subprocess = subprocess.Popen(
+        [exec_kubeseal_command], 
+        stdout=subprocess.PIPE, 
+        stderr=subprocess.PIPE, 
+        shell=True)
     output, error = kubeseal_subprocess.communicate()
 
     if error:
