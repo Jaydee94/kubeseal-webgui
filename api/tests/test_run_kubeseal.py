@@ -33,6 +33,7 @@ def test_run_kubeseal_with_with_none_secret_name():
         run_kubeseal([{"key": "foo", "value": "YmFy"}], "secretNamespace", None)
 
 
+
 def test_run_kubeseal_with_with_empty_secrets_list_but_otherwise_valid_inputs():
     # given an empty list
     # when run_kubeseal is called
@@ -57,6 +58,14 @@ def test_run_kubeseal_without_cli():
     # then raise RuntimeError
     with pytest.raises(RuntimeError):
         run_kubeseal([{"key": "foo", "value": "YmFy"}], "secretNamespace", "secretName")
+
+
+def test_run_kubeseal_with_invalid_secrets_list_but_otherwise_valid_inputs():
+    # given a secret list with string element
+    # when run_kubeseal is called
+    # then raise ValueError
+    with pytest.raises(ValueError):
+        run_kubeseal(["this-should-be-a-dict-object"], "secretNamespace", "secretName")
 
 
 @pytest.mark.container
