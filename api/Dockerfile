@@ -1,5 +1,5 @@
 FROM abihf/wget:latest AS kubeseal-downloader
-RUN wget https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.11.0/kubeseal-linux-amd64 && \
+RUN wget https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.12.6/kubeseal-linux-amd64 && \
     mv kubeseal-linux-amd64 /tmp/kubeseal
 
 FROM python:3.8-alpine3.12
