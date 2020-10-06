@@ -1,0 +1,32 @@
+name: CI
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Contains application version'     
+        required: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Login to DockerHub
+        uses: docker/login-action@v1 
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build and push
+        id: docker_build_api
+        uses: docker/build-push-action@v2
+        with:
+          push: true
+          context: api
+          tags: kubesealwebgui/api:latest
+      - name: Build and push
+        id: docker_build_ui
+        uses: docker/build-push-action@v2
+        with:
+          push: true
+          context: ui
+          tags: kubesealwebgui/ui:latest
