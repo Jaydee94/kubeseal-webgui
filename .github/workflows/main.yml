@@ -23,7 +23,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           push: true
-          context: api
+          file: api/Dockerfile
           tags: |
             kubesealwebgui/api:latest
             kubesealwebgui/api:${{ github.event.inputs.version }}
@@ -32,7 +32,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           push: true
-          context: ui
+          file: ui/Dockerfile
           tags: |
             kubesealwebgui/ui:latest
             kubesealwebgui/ui:${{ github.event.inputs.version }}
