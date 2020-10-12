@@ -11,8 +11,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-        with:
-          path: api
       - name: Login to DockerHub
         uses: docker/login-action@v1 
         with:
@@ -25,7 +23,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           push: true
-          file: ./Dockerfile
+          file: Dockerfile-API
           tags: |
             kubesealwebgui/api:latest
             kubesealwebgui/api:${{ github.event.inputs.version }}
@@ -34,7 +32,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           push: true
-          file: ui/Dockerfile
+          file: Dockerfile-UI
           tags: |
             kubesealwebgui/ui:latest
             kubesealwebgui/ui:${{ github.event.inputs.version }}
