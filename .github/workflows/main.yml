@@ -18,14 +18,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
-      - name: Build and push
-        id: docker_build_test
-        uses: docker/build-push-action@v2
-        with:
-          push: true
-          tags: |
-            kubesealwebgui/test:${{ github.event.inputs.version }}
-      - name: Build and push
+      - name: Build and push API
         id: docker_build_api
         uses: docker/build-push-action@v2
         with:
@@ -34,7 +27,7 @@ jobs:
           tags: |
             kubesealwebgui/api:latest
             kubesealwebgui/api:${{ github.event.inputs.version }}
-      - name: Build and push
+      - name: Build and push UI
         id: docker_build_ui
         uses: docker/build-push-action@v2
         with:
