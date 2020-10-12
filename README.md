@@ -24,7 +24,7 @@ To use this Web-Gui you have to install [Bitnami-Sealed-Secrets](https://github.
 
 ## Usage
 
-Mount the public certificate of your sealed secrets controller to **/kubeseal-webgui/cert/kubeseal-cert.pem** in the docker container.
+Mount the public certificate of your sealed secrets controller to `/kubeseal-webgui/cert/kubeseal-cert.pem` in the Docker container.
 
 Please use the [helm chart](https://github.com/Jaydee94/kubeseal-webgui/tree/master/chart/kubeseal-webgui) which is included in this repository.
 
@@ -33,3 +33,23 @@ Please use the [helm chart](https://github.com/Jaydee94/kubeseal-webgui/tree/mas
 (Login to your kubernetes cluster first)
 
 `kubeseal --fetch-cert --controller-name <your-sealed-secrets-controller> --controller-namespace <your-sealed-secrets-controller-namespace> > kubeseal-cert.pem`
+
+# Contribute
+
+## Working on the API
+
+Requirements: 
+
+* Make sure you have Python 3.8 installed.
+
+Setup:
+
+* Clone this repository and use `cd api`.
+* `python3 -m venv venv` (to create a virtual environment called `venv` that doesn't interfere with other projects)
+* `source venv/bin/activate` (to activate the virtual environment)
+* `python -m pip install -r requirements.txt` (to install all required packages for this project)
+* `pytest` (should run all tests successfully)
+
+## Working on the UI
+
+...

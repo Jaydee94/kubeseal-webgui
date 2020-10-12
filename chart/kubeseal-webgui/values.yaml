@@ -1,8 +1,21 @@
 replicaCount: 1
+
+api:
+  # api.url will be generated into config.json ConfigMap of the UI. This statically served JSON file 
+  # is used by the UI to locate the API. 
+  url: http://localhost:5000
+  # api.accessControlAllowOrigin determines the value that is returned by the API for the respective
+  # HTTP-Header.
+  accessControlAllowOrigin: "*"
+  image:
+    repository: kubesealwebgui/api
+    tag: 2.0.0
+ui:
+  image:
+    repository: kubesealwebgui/ui
+    tag: 2.0.0
 image:
-  repository: kubesealwebgui/kubeseal-webgui
-  tag: 1.1.0
-  pullPolicy: Always
+  pullPolicy: IfNotPresent
 
 nameOverride: ""
 fullnameOverride: ""
@@ -15,7 +28,6 @@ resources:
   requests:
     cpu: 20m
     memory: 256Mi
-
 
 # Optionally use a OpenShift-Route
 # If 'hostname' is an empty string "" OpenShift will create a hostname for you.
@@ -31,14 +43,32 @@ sealedSecrets:
   ## Login to youre cluster with kubectl.
   ## Run kubeseal --fetch-cert --controller-name <your-sealed-secrets-controller> --controller-namespace <sealed-secrets-controller-namespace>
   ## Paste Cert as multiline YAML
-  #cert: |
-  #  -----BEGIN CERTIFICATE-----
-  #  MIIErTCCApWgAwIBAgIQEy7GyHGVrJkLzLTdTVeqkDANBgkqhkiG9w0BAQsFADAA
-  #  MB4XDTIwMDMxNTExNDMwOVoXDTMwMDMxMzExNDMwOVowADCCAiIwDQYJKoZIhvcN
-  #  ...............................................................
-  #                           CONTENT
-  #  ...............................................................
-  #  yHmc4JBJc1FSR30TRUNvw+Kv+jnt3F0heWQIGDljKAZLYbc9JtIDOmPk8eYyMQWr
-  #  Pw5O02WhtfTePesMmjsmzj4EGiE0cnsPJcNG99nHqWwvV2WF44HTzAW6rrW246Ys
-  #  uw==
-  #  -----END CERTIFICATE-----
+  cert: |
+    -----BEGIN CERTIFICATE-----
+    MIIErjCCApagAwIBAgIRAM5gtpf74S6mYr/FZfnM7jIwDQYJKoZIhvcNAQELBQAw
+    ADAeFw0yMDA5MjIxNzI5MTdaFw0zMDA5MjAxNzI5MTdaMAAwggIiMA0GCSqGSIb3
+    DQEBAQUAA4ICDwAwggIKAoICAQDDWKl1PV+s6tuMDloSHxgJF65xzLmN7o9TF00N
+    fCPgmkso2ev9OisBsUw87JrQPZVRFf2KpzN0L91EtLHj9HhPi3VlTjIk05AUweqq
+    AHdKqvw0mkWmwcEngZhULUoJ8jGk2S5hDpitRMjXmYmfLjxyabY+Kd4waIwAKlLF
+    onrBosMhIOvsIU+FwgZpo4OF7br7xCwdP9ZS9fZukqoXIDyOc1I/auDM1BWUi7I6
+    zZ7kFXtY1E0Yv5tCj6U6Si6i3T7omzirphtnNktn3knCtNfkbfbk24OmwpH5RlOT
+    8V6VtO0u7QOqKdt9XJD3c+dumMQAwYWMjSUrEkmNXGOyXCcI/jwb2QR/kAPNFyKB
+    wrAS+2f+lFnWhbqWU1jX4kr00zST6mAxL4QbGOmGUDYzVCmF1bFJ9nKnFbDc8Ssy
+    H22Wn1iZjcrHj62WnPnUFRDnF4/CDa8royDEF0BvwSziOOq96/80MlHfEiMRZzuJ
+    gbL7MNo1bWYsMyiwCNM/zen4Ob+T6coKZxJsJMEPAuSakvAC/L9lvsLRm4iPBhxk
+    cODMWaHOUeKYXhwOGKXGgYw4/xec/y+Xv1z7XiYL4Es72K72sKLOWdIjous1fHcD
+    OQbGHMjQZPaMcS73x9E5onm8QyvXa9zEbe4/e2uIjIXgPs9DhtjN4BB69D9qIbsi
+    b7AR2wIDAQABoyMwITAOBgNVHQ8BAf8EBAMCAAEwDwYDVR0TAQH/BAUwAwEB/zAN
+    BgkqhkiG9w0BAQsFAAOCAgEAneBJD7v+p9DrFgjnoAuHJRuPoxksgU0EbAOnaMWG
+    eutuHa6xztZZoufNSFAQrspWCnni5nbmHltpORP+JT+FAEb+iFeg7YsBr1gbTzxC
+    mcl812El6/Vcec7TP1SVWfrcvYaITfZvKEhgMUhSguvCRAkFcuwJ319qrGcclX2F
+    p6TLrnI5xzNjhCNTwDC+MtQXPNIUHNZgJbIbyJu267c4iQqfIp116rSmWcBxazqx
+    XsQfVty+NyBZ3rPQc6HY/vYG0Fms34fSGJOd/0PTINE1USv2qt7hRhVxwU2pl1LO
+    TToKGg/lniIfBLQKozIeeLsPm2/sXhm0aLskbyi6X1+bQzb0QDz+LSkvvlTi52Ay
+    h55MnD9OslzvIk7h/WhYXcj4vpHPAcAGzbY+rVZKQfU1eA8AIjr6QjX8ndWNLexw
+    yqi1hH0PRSSYPToIDQUrMm1aBlEgMDhjuNs7eQGDvIGRIg7wckEWEcbIsbvJoubG
+    iaGs6/SY1jYoRPaPoiiBT0Ns3F3WthypK+a77WLq4weCpnF4fEE9f/5Uc6t/nYP7
+    fZgxSAO2xSR1wszRWwwH+rKkh2bhqwdDCo5mKqZF5PLcdgypBQRIMMqjQO1qZG7t
+    REt3DXiF9j6RyxP53tLAdVpuCvMaw2LRqPln4jbERLwx2ckjtvDhNJiEo0+k4NJV
+    120=
+    -----END CERTIFICATE-----

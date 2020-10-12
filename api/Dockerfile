@@ -1,0 +1,24 @@
+FROM abihf/wget:latest AS kubeseal-downloader
+RUN wget https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.12.6/kubeseal-linux-amd64 && \
+    mv kubeseal-linux-amd64 /tmp/kubeseal
+
+FROM python:3.8-alpine3.12
+
+ENV PORT 5000
+ENV HOST 0.0.0.0
+
+RUN mkdir /kubeseal-webgui
+COPY --from=kubeseal-downloader /tmp/kubeseal /kubeseal-webgui
+
+COPY . /kubeseal-webgui/
+RUN chown -R 1001:1001 /kubeseal-webgui && \
+    chmod +x /kubeseal-webgui/kubeseal
+
+WORKDIR /kubeseal-webgui
+RUN pip install -r requirements.txt
+
+USER 1001
+
+RUN pytest -m "not cluster"
+
+CMD [ "sh", "-c", "flask run --port $PORT --host $HOST" ]

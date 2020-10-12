@@ -12,4 +12,8 @@ spec:
     - port: 5000
       targetPort: http
       protocol: TCP
-      name: http
+      name: api
+    - port: 80
+      targetPort: http
+      protocol: TCP
+      name: ui
