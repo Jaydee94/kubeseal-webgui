@@ -17,7 +17,7 @@ spec:
     name: {{ include "kubeseal-webgui.fullname" . }}
     weight: 100
   port:
-    targetPort: http
+    targetPort: ui
   tls:
     termination: {{ .Values.route.tls.termination }}
     insecureEdgeTerminationPolicy: {{ .Values.route.tls.insecureEdgeTerminationPolicy }}
