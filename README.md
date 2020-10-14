@@ -44,12 +44,18 @@ Requirements:
 
 Setup:
 
-* Clone this repository and use `cd api`.
+* Clone this repository and run `cd api`.
 * `python3 -m venv venv` (to create a virtual environment called `venv` that doesn't interfere with other projects)
 * `source venv/bin/activate` (to activate the virtual environment)
 * `python -m pip install -r requirements.txt` (to install all required packages for this project)
 * `pytest` (should run all tests successfully)
 
 ## Working on the UI
+
+Setup:
+
+* Clone this repository and run `cd ui`.
+* `yarn install` to install all dependencies
+* `yarn serve` to compile and start HTTP server with hot-reloads for development
 
 ...
