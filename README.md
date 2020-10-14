@@ -55,7 +55,8 @@ Setup:
 Setup:
 
 * Clone this repository and run `cd ui`.
-* `yarn install` to install all dependencies
+* You can either use `yarn` or `npm` for the following commands.
+* `yarn install` to install all dependencies 
 * `yarn serve` to compile and start HTTP server with hot-reloads for development
 
 ...
