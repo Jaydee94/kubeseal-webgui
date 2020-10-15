@@ -27,7 +27,7 @@ class KubesealEndpoint(Resource):
         if request.json is None:
             raise RuntimeError("JSON Body was empty. Seal Request is required.")
         sealing_request = request.json
-        LOGGER.info(sealing_request['secrets'])
+        LOGGER.debug(sealing_request['secrets'])
 
         try:
             response = run_kubeseal(
