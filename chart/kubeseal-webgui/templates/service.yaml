@@ -10,10 +10,10 @@ spec:
   type: ClusterIP
   ports:
     - port: 5000
-      targetPort: http
+      targetPort: api
       protocol: TCP
       name: api
     - port: 8080
-      targetPort: http
+      targetPort: ui
       protocol: TCP
       name: ui
