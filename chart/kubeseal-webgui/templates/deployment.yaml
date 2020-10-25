@@ -20,7 +20,11 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
             - name: ORIGIN_URL
-              value: "{{ .Values.api.accessControlAllowOrigin }}"
+              value: {{ .Values.api.accessControlAllowOrigin | quote }}
+          {{- if .Values.instanceName }}
+            - name: INSTANCE_NAME
+              value: {{ .Values.instanceName }}
+          {{- end }}
           ports:
             - name: api
               containerPort: 5000

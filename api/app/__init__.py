@@ -7,6 +7,7 @@ from flask_restful import Api
 from flask_cors import CORS
 import json_log_formatter
 from .kubeseal import KubesealEndpoint
+from .appconfig import AppConfigEndpoint
 
 # Setup JSON handler for logging
 formatter = json_log_formatter.JSONFormatter()
@@ -38,9 +39,14 @@ def create_app(test_config=None):
     if "ORIGIN_URL" not in environ:
         raise RuntimeError("Error: Environment variable ORIGIN_URL empty.")
 
-    CORS(app, resources={r"/secrets/*": {"origins": environ['ORIGIN_URL']}})
+    if 'INSTANCE_NAME' in environ:
+        instance_name = environ.get('INSTANCE_NAME')
+        LOGGER.info("Found Environment variable INSTANCE_NAME. Setting instance name to <%s>" % (instance_name))
+
+    CORS(app, resources={r"/secrets/*":{"origins": environ['ORIGIN_URL']},r"/appconfig/*":{"origins": environ['ORIGIN_URL']}})
 
     api = Api(app)
     api.add_resource(KubesealEndpoint, '/secrets')
+    api.add_resource(AppConfigEndpoint, '/appconfig')
 
     return app

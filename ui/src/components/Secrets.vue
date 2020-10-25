@@ -10,7 +10,7 @@
     <b-form>
       <b-form-row class="mt-2">
         <b-col cols="6">
-          <b-form-input v-model="namespaceName" placeholder="Namespace name" id="input-secret-name"></b-form-input> 
+          <b-form-input v-model="namespaceName" placeholder="Namespace name" id="input-secret-name"></b-form-input>
           <b-form-text id="password-help-block">
             Specify target namespace where the sealed secret will be deployed.
           </b-form-text>
@@ -26,7 +26,7 @@
       <div class="mt-4" v-for="(secret, counter) in secrets" :key="counter">
         <b-form-row class="align-items-center">
           <b-col cols="3">
-            <b-form-textarea v-model="secret.key" placeholder="Secret key" id="input-key"></b-form-textarea> 
+            <b-form-textarea v-model="secret.key" placeholder="Secret key" id="input-key"></b-form-textarea>
           </b-col>
           <b-col cols="8">
             <b-form-textarea rows="1" v-model="secret.value" :placeholder="'Secret value'" id="input-value"></b-form-textarea>
@@ -111,7 +111,7 @@ export default {
         let response = await fetch('/config.json');
         let data = await response.json();
         let apiUrl = data["api_url"];
-        
+
         response = await fetch(`${apiUrl}/secrets`, {
           method: 'POST',
           headers: {
@@ -151,7 +151,7 @@ export default {
       secrets: [
         { key: "", value: "" }
       ],
-      renderedSecrets: ""
+      renderedSecrets: "",
     }
   }
 }

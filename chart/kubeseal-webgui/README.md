@@ -38,6 +38,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `image.pullPolicy`                        | Image Pull Policy                              | `Always`                                                |
 | `nameOverride`                            | Name-Override for the objects                  | `""`                                                    |
 | `fullnameOverride`                        | Fullname-Override for the objects              | `""`                                                    |
+| `instanceName`                            | Optionally name your instance                  | `""`                                                    |
 | `resources.limits.cpu`                    | Limits CPU                                     | `100m`                                                  |
 | `resources.limits.memory`                 | Limits memory                                  | `256Mi`                                                 |
 | `resources.requests.cpu`                  | Requests CPU                                   | `20m`                                                   |

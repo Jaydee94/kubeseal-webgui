@@ -9,16 +9,19 @@ api:
   accessControlAllowOrigin: "*"
   image:
     repository: kubesealwebgui/api
-    tag: 2.0.0
+    tag: 2.0.2
 ui:
   image:
     repository: kubesealwebgui/ui
-    tag: 2.0.0
+    tag: 2.0.2
 image:
   pullPolicy: IfNotPresent
 
 nameOverride: ""
 fullnameOverride: ""
+
+# optionally setup a instance name for your kubeseal-webgui application
+instanceName:
 
 # Setup resources for the pod
 resources:
