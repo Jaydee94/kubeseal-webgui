@@ -1,4 +1,4 @@
-""" Module containing the API for encoding sensitive data via kubeseal-cli. """
+"""Module containing the API for encoding sensitive data via kubeseal-cli."""
 from os import urandom, environ
 import sys
 import logging
@@ -26,7 +26,7 @@ flask_logger.setLevel(logging.INFO)
 
 
 def create_app(test_config=None):
-    """ Initializes Flask application module. """
+    """Initialize Flask application module."""
     app = Flask(__name__)
 
     if test_config is None:
@@ -41,9 +41,11 @@ def create_app(test_config=None):
 
     if 'INSTANCE_NAME' in environ:
         instance_name = environ.get('INSTANCE_NAME')
-        LOGGER.info("Found Environment variable INSTANCE_NAME. Setting instance name to <%s>" % (instance_name))
+        LOGGER.info("Found Environment variable INSTANCE_NAME. Setting instance name to <%s>",
+         instance_name)
 
-    CORS(app, resources={r"/secrets/*":{"origins": environ['ORIGIN_URL']},r"/appconfig/*":{"origins": environ['ORIGIN_URL']}})
+    CORS(app, resources={r"/secrets/*":{"origins": environ['ORIGIN_URL']},
+     r"/appconfig/*":{"origins": environ['ORIGIN_URL']}})
 
     api = Api(app)
     api.add_resource(KubesealEndpoint, '/secrets')
