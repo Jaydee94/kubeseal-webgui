@@ -14,6 +14,9 @@ spec:
       labels:
         {{- include "kubeseal-webgui.labels" . | nindent 8 }}
     spec:
+      {{- if .Values.serviceaccount.create }}
+      serviceAccountName: kubeseal-webgui
+      {{- end }}
       containers:
         - name: "api"
           image: "{{ .Values.api.image.repository }}:{{ .Values.api.image.tag }}"

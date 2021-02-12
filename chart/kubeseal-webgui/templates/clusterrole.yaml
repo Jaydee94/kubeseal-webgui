@@ -1,0 +1,16 @@
+{{- if .Values.serviceaccount.create }}
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: kubeseal-webgui-list-namespaces
+  labels:
+    {{- include "kubeseal-webgui.labels" . | nindent 4 }}
+{{- with .Values.route.annotations }}
+  annotations:
+{{ toYaml . | indent 4 }}
+{{- end }}
+rules:
+- apiGroups: [""]
+  resources: ["namespaces"]
+  verbs: ["list"]
+{{- end }}
