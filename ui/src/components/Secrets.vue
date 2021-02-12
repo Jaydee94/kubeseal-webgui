@@ -94,6 +94,26 @@ spec:
 export default {
   name: 'Secrets',
   methods: {
+    fetchNamespaces: async function() {
+      try {
+        let response = await fetch('/config.json');
+        let data = await response.json();
+        let apiUrl = data["api_url"];
+        
+        response = await fetch(`${apiUrl}/namespaces`, {
+          method: 'GET',
+          headers: {
+            // 'Origin': 'http://localhost:8080',
+            'Content-Type': 'application/json'
+          }
+        });
+
+        let availableNamespaces = await response.json()
+        this.namespaces = this.renderNamespaces(availableNamespaces)
+      } catch(error) {
+        this.errorMessage = error;
+      }
+    },
     fetchEncodedSecrets: async function() {
       try {
         var requestObject = {
@@ -144,6 +164,7 @@ export default {
   },
   data: function() {
     return {
+      namespaces: [],
       errorMessage: "",
       displayCreateSealedSecretForm: true,
       secretName: "",
