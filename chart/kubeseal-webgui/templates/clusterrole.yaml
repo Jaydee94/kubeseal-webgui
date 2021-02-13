@@ -14,3 +14,4 @@ rules:
   resources: ["namespaces"]
   verbs: ["list"]
 {{- end }}
+

@@ -18,3 +18,4 @@ roleRef:
   name: kubeseal-webgui-list-namespaces
   apiGroup: rbac.authorization.k8s.io
 {{- end }}
+

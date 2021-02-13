@@ -10,11 +10,10 @@
     <b-form>
       <b-form-row class="mt-2">
         <b-col cols="6">
-          <!-- <b-form-input v-model="namespaceName" placeholder="Namespace name" id="input-secret-name"></b-form-input> 
+          <b-form-select v-model="namespaceName" :options="namespaces" :select-size="1"></b-form-select>
           <b-form-text id="password-help-block">
             Specify target namespace where the sealed secret will be deployed.
           </b-form-text> -->
-          <b-form-select v-model="namespaceName" :options="namespaces" :select-size="1"></b-form-select>
         </b-col>
         <b-col cols="6">
           <b-form-input v-model="secretName" placeholder="Secret name" id="input-secret-name"></b-form-input>
