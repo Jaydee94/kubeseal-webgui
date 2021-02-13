@@ -1,5 +1,6 @@
 """ Provides REST-API and kubeseal-cli specific functionality. """
 import logging
+import json
 
 from kubernetes import client, config
 from flask_restful import Resource, abort
@@ -29,4 +30,4 @@ def get_incluster_namespaces():
         namespaces_list.append(ns.metadata.name)
 
     LOGGER.debug("Namespaces list %s" % namespaces_list)
-    return namespaces_list
+    return json.dumps(namespaces_list)

@@ -10,10 +10,11 @@
     <b-form>
       <b-form-row class="mt-2">
         <b-col cols="6">
-          <b-form-input v-model="namespaceName" placeholder="Namespace name" id="input-secret-name"></b-form-input> 
+          <!-- <b-form-input v-model="namespaceName" placeholder="Namespace name" id="input-secret-name"></b-form-input> 
           <b-form-text id="password-help-block">
             Specify target namespace where the sealed secret will be deployed.
-          </b-form-text>
+          </b-form-text> -->
+          <b-form-select v-model="namespaceName" :options="namespaces" :select-size="1"></b-form-select>
         </b-col>
         <b-col cols="6">
           <b-form-input v-model="secretName" placeholder="Secret name" id="input-secret-name"></b-form-input>
@@ -100,16 +101,10 @@ export default {
         let data = await response.json();
         let apiUrl = data["api_url"];
         
-        response = await fetch(`${apiUrl}/namespaces`, {
-          method: 'GET',
-          headers: {
-            // 'Origin': 'http://localhost:8080',
-            'Content-Type': 'application/json'
-          }
-        });
+        response = await fetch(`${apiUrl}/namespaces`);
 
-        let availableNamespaces = await response.json()
-        this.namespaces = this.renderNamespaces(availableNamespaces)
+        let availableNamespaces = await response.json();
+        this.namespaces = JSON.parse(availableNamespaces);
       } catch(error) {
         this.errorMessage = error;
       }
@@ -161,6 +156,9 @@ export default {
       let sealedSecretContent = sealedSecretElement.innerText.trim()
       navigator.clipboard.writeText(sealedSecretContent)
     }
+  },
+  beforeMount(){
+    this.fetchNamespaces()
   },
   data: function() {
     return {
