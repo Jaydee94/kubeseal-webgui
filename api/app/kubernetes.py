@@ -1,4 +1,4 @@
-""" Provides REST-API and kubeseal-cli specific functionality. """
+"""Provides REST-API and kubeseal-cli specific functionality."""
 import logging
 import json
 
@@ -9,17 +9,19 @@ LOGGER = logging.getLogger("kubeseal-webgui")
 
 
 class KubernetesNamespacesEndpoint(Resource):
-    """ Provides REST-API for sealing sensitive data. """
+    """Provides REST-API for sealing sensitive data."""
 
     @classmethod
     def get(cls):
-        """ Provides a method to get a list of incluster namespaces. """
+        """References GET method. Used for retrieving cluster namespaces."""
         try:
             return get_incluster_namespaces()
         except RuntimeError:
             abort(500)
 
+
 def get_incluster_namespaces():
+"""Function for retrieving all namespaces from current kubernetes cluster as JSON-Array"""
     config.load_incluster_config()
     namespaces_list = []
 
@@ -29,5 +31,5 @@ def get_incluster_namespaces():
     for ns in namespaces.items:
         namespaces_list.append(ns.metadata.name)
 
-    LOGGER.debug("Namespaces list %s" % namespaces_list)
+    LOGGER.debug("Namespaces list %s" namespaces_list)
     return json.dumps(namespaces_list)

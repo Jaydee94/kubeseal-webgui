@@ -1,4 +1,4 @@
-""" Provides REST-API and kubeseal-cli specific functionality. """
+"""Provides REST-API and kubeseal-cli specific functionality."""
 import logging
 import subprocess
 import base64
@@ -10,11 +10,11 @@ LOGGER = logging.getLogger("kubeseal-webgui")
 
 
 class KubesealEndpoint(Resource):
-    """ Provides REST-API for sealing sensitive data. """
+    """Provides REST-API for sealing sensitive data."""
 
     @classmethod
     def get(cls):
-        """ References POST method. Used for health checks. """
+        """References POST method. Used for health checks."""
         return "Use POST HTTP request to seal secret."
 
     @classmethod
@@ -43,7 +43,7 @@ class KubesealEndpoint(Resource):
 
 
 def run_kubeseal(cleartext_secrets, secret_namespace, secret_name):
-    """ Wrapper function for checking input and initiating kubeseal-cli call """
+    """Wrapper function for checking input and initiating kubeseal-cli call"""
     if secret_namespace is None or secret_namespace == "":
         error_message = "secret_namespace was not given"
         LOGGER.error(error_message)
@@ -72,7 +72,7 @@ def run_kubeseal(cleartext_secrets, secret_namespace, secret_name):
 
 
 def run_kubeseal_command(cleartext_secret_tuple, secret_namespace, secret_name):
-    """ Function for calling kubeseal-cli in subprocess. """
+    """Function for calling kubeseal-cli in subprocess."""
     LOGGER.info(f"Sealing secret '{secret_name}.{cleartext_secret_tuple['key']}' \
         for namespace '{secret_namespace}'.")
     cleartext_secret = decode_base64_string(cleartext_secret_tuple['value'])
