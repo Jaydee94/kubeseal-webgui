@@ -1,5 +1,6 @@
 <template>
   <div class="secrets-component">
+    <h2 align="center" v-if="displayName">{{ displayName }}</h2>
     <div class="secrets-form" v-if="displayCreateSealedSecretForm">
     <b-row>
         <b-col class="mb-3">
@@ -13,7 +14,7 @@
           <b-form-select v-model="namespaceName" :options="namespaces" :select-size="1"></b-form-select>
           <b-form-text id="password-help-block">
             Specify target namespace where the sealed secret will be deployed.
-          </b-form-text> -->
+          </b-form-text>
         </b-col>
         <b-col cols="6">
           <b-form-input v-model="secretName" placeholder="Secret name" id="input-secret-name"></b-form-input>
@@ -108,6 +109,12 @@ export default {
         this.errorMessage = error;
       }
     },
+    fetchDisplayName: async function() {
+      let response = await fetch('/config.json');
+      let data = await response.json();
+      let dName = data["display_name"];
+      this.displayName = dName;
+    },
     fetchEncodedSecrets: async function() {
       try {
         var requestObject = {
@@ -158,11 +165,13 @@ export default {
   },
   beforeMount(){
     this.fetchNamespaces()
+    this.fetchDisplayName()
   },
   data: function() {
     return {
       namespaces: [],
       errorMessage: "",
+      displayName: "",
       displayCreateSealedSecretForm: true,
       secretName: "",
       namespaceName: "",

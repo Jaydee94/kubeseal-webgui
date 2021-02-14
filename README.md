@@ -28,6 +28,12 @@ Mount the public certificate of your sealed secrets controller to `/kubeseal-web
 
 Please use the [helm chart](https://github.com/Jaydee94/kubeseal-webgui/tree/master/chart/kubeseal-webgui) which is included in this repository.
 
+## Upgrade from 2.0.X to 2.1.0
+
+When you upgrade to `2.1.0` make sure that you also update the helm chart for installing kubeseal-webgui.
+The application reads namespaces from current kubernetes cluster and needs to have access to list namespaces.
+If your default serviceaccount has this RBAC rule already you could disable `serviceaccount.create` in the `values.yaml` of the helm chart.
+
 ### Get Public-Cert from sealed-secrets controller
 
 (Login to your kubernetes cluster first)

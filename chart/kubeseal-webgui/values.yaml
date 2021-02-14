@@ -20,6 +20,9 @@ image:
 nameOverride: ""
 fullnameOverride: ""
 
+# Optionally setup a display name for your kubeseal-webgui instance.
+displayName: ""
+
 # Set this value to false if you already have a default serviceaccount who is allowed to list namespaces.
 serviceaccount:
   create: true

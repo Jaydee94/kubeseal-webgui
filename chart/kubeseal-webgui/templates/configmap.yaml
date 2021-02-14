@@ -9,5 +9,6 @@ data:
 {{- toYaml .Values.sealedSecrets.cert | nindent 4 }}
   config.json: |-
     { 
-      "api_url": {{.Values.api.url | quote }} 
+      "api_url": {{ .Values.api.url | quote }},
+      "display_name": {{ .Values.displayName | quote }}
     }
