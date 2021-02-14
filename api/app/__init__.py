@@ -1,4 +1,4 @@
-""" Module containing the API for encoding sensitive data via kubeseal-cli. """
+"""Module containing the API for encoding sensitive data via kubeseal-cli."""
 from os import urandom, environ
 import sys
 import logging
@@ -7,6 +7,7 @@ from flask_restful import Api
 from flask_cors import CORS
 import json_log_formatter
 from .kubeseal import KubesealEndpoint
+from .kubernetes import KubernetesNamespacesEndpoint
 
 # Setup JSON handler for logging
 formatter = json_log_formatter.JSONFormatter()
@@ -25,7 +26,7 @@ flask_logger.setLevel(logging.INFO)
 
 
 def create_app(test_config=None):
-    """ Initializes Flask application module. """
+    """Initializes Flask application module."""
     app = Flask(__name__)
 
     if test_config is None:
@@ -39,8 +40,10 @@ def create_app(test_config=None):
         raise RuntimeError("Error: Environment variable ORIGIN_URL empty.")
 
     CORS(app, resources={r"/secrets/*": {"origins": environ['ORIGIN_URL']}})
+    CORS(app, resources={r"/namespaces/*": {"origins": environ['ORIGIN_URL']}})
 
     api = Api(app)
     api.add_resource(KubesealEndpoint, '/secrets')
+    api.add_resource(KubernetesNamespacesEndpoint, '/namespaces')
 
     return app

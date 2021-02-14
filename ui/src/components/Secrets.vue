@@ -1,5 +1,6 @@
 <template>
   <div class="secrets-component">
+    <h2 align="center" v-if="displayName">{{ displayName }}</h2>
     <div class="secrets-form" v-if="displayCreateSealedSecretForm">
     <b-row>
         <b-col class="mb-3">
@@ -10,7 +11,7 @@
     <b-form>
       <b-form-row class="mt-2">
         <b-col cols="6">
-          <b-form-input v-model="namespaceName" placeholder="Namespace name" id="input-secret-name"></b-form-input> 
+          <b-form-select v-model="namespaceName" :options="namespaces" :select-size="1"></b-form-select>
           <b-form-text id="password-help-block">
             Specify target namespace where the sealed secret will be deployed.
           </b-form-text>
@@ -94,6 +95,26 @@ spec:
 export default {
   name: 'Secrets',
   methods: {
+    fetchNamespaces: async function() {
+      try {
+        let response = await fetch('/config.json');
+        let data = await response.json();
+        let apiUrl = data["api_url"];
+        
+        response = await fetch(`${apiUrl}/namespaces`);
+
+        let availableNamespaces = await response.json();
+        this.namespaces = JSON.parse(availableNamespaces);
+      } catch(error) {
+        this.errorMessage = error;
+      }
+    },
+    fetchDisplayName: async function() {
+      let response = await fetch('/config.json');
+      let data = await response.json();
+      let dName = data["display_name"];
+      this.displayName = dName;
+    },
     fetchEncodedSecrets: async function() {
       try {
         var requestObject = {
@@ -142,9 +163,15 @@ export default {
       navigator.clipboard.writeText(sealedSecretContent)
     }
   },
+  beforeMount(){
+    this.fetchNamespaces()
+    this.fetchDisplayName()
+  },
   data: function() {
     return {
+      namespaces: [],
       errorMessage: "",
+      displayName: "",
       displayCreateSealedSecretForm: true,
       secretName: "",
       namespaceName: "",

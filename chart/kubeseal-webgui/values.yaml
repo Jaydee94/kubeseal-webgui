@@ -9,16 +9,23 @@ api:
   accessControlAllowOrigin: "*"
   image:
     repository: kubesealwebgui/api
-    tag: 2.0.0
+    tag: 2.1.0
 ui:
   image:
     repository: kubesealwebgui/ui
-    tag: 2.0.0
+    tag: 2.1.0
 image:
   pullPolicy: IfNotPresent
 
 nameOverride: ""
 fullnameOverride: ""
+
+# Optionally setup a display name for your kubeseal-webgui instance.
+displayName: ""
+
+# Set this value to false if you already have a default serviceaccount who is allowed to list namespaces.
+serviceaccount:
+  create: true
 
 # Setup resources for the pod
 resources:
