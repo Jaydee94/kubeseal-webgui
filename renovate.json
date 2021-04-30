@@ -4,5 +4,9 @@
   ],
   "schedule": [
     "every weekend"
-  ]
+  ],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "automerge": true
+  }
 }
