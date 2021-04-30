@@ -9,7 +9,7 @@ flask-wtf==0.14.3
 Flask-RESTful==0.3.8
 flask==1.1.2
 pytest==6.2.3
-pylint==2.6.2
+pylint==2.8.2
 itsdangerous==1.1.0
 json_log_formatter==0.3.1
 jinja2==2.11.3
