@@ -9,6 +9,7 @@ def test_run_kubeseal_with_with_empty_string_namespace():
     with pytest.raises(ValueError):
         run_kubeseal([{"key": "foo", "value": "YmFy"}], "", "secretName")
 
+
 def test_run_kubeseal_with_with_none_namespace():
     # given a None secretNamespace
     # when run_kubeseal is called
@@ -31,7 +32,6 @@ def test_run_kubeseal_with_with_none_secret_name():
     # then raise ValueError
     with pytest.raises(ValueError):
         run_kubeseal([{"key": "foo", "value": "YmFy"}], "secretNamespace", None)
-
 
 
 def test_run_kubeseal_with_with_empty_secrets_list_but_otherwise_valid_inputs():
@@ -75,4 +75,6 @@ def test_run_kubeseal_without_k8s_cluster():
     # then raise RuntimeError
     with pytest.raises(RuntimeError) as error_cert_missing:
         run_kubeseal([{"key": "foo", "value": "YmFy"}], "secretNamespace", "secretName")
-    assert "/kubeseal-webgui/cert/kubeseal-cert.pem: no such file or directory" in str(error_cert_missing)
+    assert "/kubeseal-webgui/cert/kubeseal-cert.pem: no such file or directory" in str(
+        error_cert_missing
+    )

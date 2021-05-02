@@ -1,5 +1,5 @@
 """Module containing the API for encoding sensitive data via kubeseal-cli."""
-from os import urandom, environ
+from os import environ
 import sys
 import logging
 from flask import Flask
@@ -20,7 +20,7 @@ LOGGER.addHandler(json_handler)
 LOGGER.setLevel(logging.INFO)
 
 # Set flask werkzeug logger to ERROR
-flask_logger = logging.getLogger('werkzeug')
+flask_logger = logging.getLogger("werkzeug")
 flask_logger.addHandler(json_handler)
 flask_logger.setLevel(logging.INFO)
 
@@ -31,7 +31,7 @@ def create_app(test_config=None):
 
     if test_config is None:
         # load the instance config, if it exists, when not testing
-        app.config.from_pyfile('config.py', silent=True)
+        app.config.from_pyfile("config.py", silent=True)
     else:
         # load the test config if passed in
         app.config.from_mapping(test_config)
@@ -39,11 +39,11 @@ def create_app(test_config=None):
     if "ORIGIN_URL" not in environ:
         raise RuntimeError("Error: Environment variable ORIGIN_URL empty.")
 
-    CORS(app, resources={r"/secrets/*": {"origins": environ['ORIGIN_URL']}})
-    CORS(app, resources={r"/namespaces/*": {"origins": environ['ORIGIN_URL']}})
+    CORS(app, resources={r"/secrets/*": {"origins": environ["ORIGIN_URL"]}})
+    CORS(app, resources={r"/namespaces/*": {"origins": environ["ORIGIN_URL"]}})
 
     api = Api(app)
-    api.add_resource(KubesealEndpoint, '/secrets')
-    api.add_resource(KubernetesNamespacesEndpoint, '/namespaces')
+    api.add_resource(KubesealEndpoint, "/secrets")
+    api.add_resource(KubernetesNamespacesEndpoint, "/namespaces")
 
     return app
