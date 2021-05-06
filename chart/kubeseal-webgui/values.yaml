@@ -9,11 +9,11 @@ api:
   accessControlAllowOrigin: "*"
   image:
     repository: kubesealwebgui/api
-    tag: 2.1.0
+    tag: 2.1.1
 ui:
   image:
     repository: kubesealwebgui/ui
-    tag: 2.1.0
+    tag: 2.1.1
 image:
   pullPolicy: IfNotPresent
 
