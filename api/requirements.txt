@@ -18,4 +18,4 @@ visitor==0.1.3
 webassets==2.0
 werkzeug==1.0.1
 wtforms==2.3.3
-kubernetes==12.0.1
+kubernetes==17.17.0
