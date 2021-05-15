@@ -7,7 +7,7 @@ flask-bootstrap==3.3.7.1
 Flask-Cors==3.0.10
 flask-wtf==0.14.3
 Flask-RESTful==0.3.8
-flask==1.1.2
+flask==1.1.4
 pytest==6.2.3
 pylint==2.8.2
 itsdangerous==1.1.0
