@@ -10,7 +10,7 @@ Flask-RESTful==0.3.8
 flask==1.1.2
 pytest==6.2.3
 pylint==2.8.2
-itsdangerous==1.1.0
+itsdangerous==2.0.1
 json_log_formatter==0.3.1
 jinja2==2.11.3
 markupsafe==1.1.1
