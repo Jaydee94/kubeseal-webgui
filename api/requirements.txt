@@ -1,5 +1,5 @@
 -i https://pypi.org/simple
-click==7.1.2
+click==8.0.1
 cssmin==0.2.0
 dominate==2.6.0
 flask-assets==2.0
