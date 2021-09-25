@@ -21,7 +21,9 @@ class KubernetesNamespacesEndpoint(Resource):
 
 
 def get_incluster_namespaces():
-    """Function for retrieving all namespaces from current kubernetes cluster as JSON-Array"""
+    """
+    Function for retrieving all namespaces from current kubernetes cluster as JSON-Array
+    """
     config.load_incluster_config()
     namespaces_list = []
 
