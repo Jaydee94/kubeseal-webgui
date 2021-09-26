@@ -1,4 +1,3 @@
-.vscode/
 __pycache__/
 venv/
 app/static/.webassets-cache/
