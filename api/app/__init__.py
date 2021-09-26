@@ -26,14 +26,14 @@ flask_logger.setLevel(logging.INFO)
 
 
 def create_app(test_config=None):
-    """Initializes Flask application module."""
+    """Initialize Flask application module."""
     app = Flask(__name__)
 
     if test_config is None:
         # when not testing, load the instance config if it exists
         app.config.from_pyfile("config.py", silent=True)
     else:
-        # load the test config if passed in
+        # when testing, load the test config
         app.config.from_mapping(test_config)
 
     if "ORIGIN_URL" not in environ:
