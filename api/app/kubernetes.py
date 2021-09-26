@@ -25,8 +25,8 @@ def get_incluster_namespaces():
     config.load_incluster_config()
     namespaces_list = []
 
-    v1 = client.CoreV1Api()
     LOGGER.info("Resolving in-cluster Namespaces")
+    v1 = client.CoreV1Api()
     namespaces = v1.list_namespace()
     for ns in namespaces.items:
         namespaces_list.append(ns.metadata.name)
