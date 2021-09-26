@@ -10,6 +10,7 @@ flake8 = "*"
 black = "*"
 pre-commit = "*"
 pydocstyle = "*"
+isort = "*"
 
 [packages]
 flask = "*"

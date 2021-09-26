@@ -1,19 +1,19 @@
 """Provides REST-API and kubeseal-cli specific functionality."""
-import logging
 import json
+import logging
 
-from kubernetes import client, config
 from flask_restful import Resource, abort
+from kubernetes import client, config
 
 LOGGER = logging.getLogger("kubeseal-webgui")
 
 
 class KubernetesNamespacesEndpoint(Resource):
-    """Provides REST-API for sealing sensitive data."""
+    """Provide REST-API for sealing sensitive data."""
 
     @classmethod
     def get(cls):
-        """References GET method. Used for retrieving cluster namespaces."""
+        """Retrieve cluster namespaces."""
         try:
             return get_incluster_namespaces()
         except RuntimeError:
@@ -21,9 +21,7 @@ class KubernetesNamespacesEndpoint(Resource):
 
 
 def get_incluster_namespaces():
-    """
-    Function for retrieving all namespaces from current kubernetes cluster as JSON-Array
-    """
+    """Retrieve all namespaces from current kubernetes cluster as JSON-Array."""
     config.load_incluster_config()
     namespaces_list = []
 
