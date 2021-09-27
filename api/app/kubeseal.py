@@ -1,7 +1,7 @@
 """Provides REST-API and kubeseal-cli specific functionality."""
+import base64
 import logging
 import subprocess
-import base64
 
 from flask import request
 from flask_restful import Resource, abort
@@ -20,7 +20,8 @@ class KubesealEndpoint(Resource):
     @classmethod
     def post(cls):
         """
-        Provides sealing functionality via kubseal-cli.
+        Provide sealing functionality via kubseal-cli.
+
         Requires input of secretName, namespaceName and sensitive data in
         key-value format.
         """

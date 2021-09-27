@@ -1,13 +1,15 @@
 """Module containing the API for encoding sensitive data via kubeseal-cli."""
-from os import environ
-import sys
 import logging
-from flask import Flask
-from flask_restful import Api
-from flask_cors import CORS
+import sys
+from os import environ
+
 import json_log_formatter
-from .kubeseal import KubesealEndpoint
+from flask import Flask
+from flask_cors import CORS
+from flask_restful import Api
+
 from .kubernetes import KubernetesNamespacesEndpoint
+from .kubeseal import KubesealEndpoint
 
 # Setup JSON handler for logging
 formatter = json_log_formatter.JSONFormatter()
