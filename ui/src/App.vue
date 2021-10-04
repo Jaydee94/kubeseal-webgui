@@ -3,7 +3,7 @@
     <b-container>
       <b-row id="logo">
         <b-col>
-          <img alt="Kubeseal-Webgui Logo" src="./assets/kubeseal-webgui-logo.jpg">
+          <img alt="Kubeseal-Webgui Logo" src="./assets/kubeseal-webgui-logo.png">
         </b-col>
       </b-row>
       <Secrets />
