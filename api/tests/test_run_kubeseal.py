@@ -1,5 +1,5 @@
-from app.kubeseal import run_kubeseal
 import pytest
+from app.kubeseal import decode_base64_string, run_kubeseal
 
 
 def test_run_kubeseal_with_with_empty_string_namespace():
@@ -78,3 +78,12 @@ def test_run_kubeseal_without_k8s_cluster():
     assert "/kubeseal-webgui/cert/kubeseal-cert.pem: no such file or directory" in str(
         error_cert_missing
     )
+
+
+@pytest.mark.parametrize(
+    "input, expected_output",
+    [("YWJjZGVm", "abcdef"), ("w6TDtsO8", "äöü"), ("LV8jIT8kwqc=", "-_#!?$§")],
+)
+def test_decode_base64_string(input, expected_output):
+    base64_encoded_string = decode_base64_string(input)
+    assert base64_encoded_string == expected_output

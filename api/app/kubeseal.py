@@ -49,7 +49,7 @@ class KubesealEndpoint(Resource):
 
 
 def run_kubeseal(cleartext_secrets, secret_namespace, secret_name):
-    """Wrapper function for checking input and initiating kubeseal-cli call"""
+    """Check input and initiate kubeseal-cli call."""
     if secret_namespace is None or secret_namespace == "":
         error_message = "secret_namespace was not given"
         LOGGER.error(error_message)
@@ -78,7 +78,7 @@ def run_kubeseal(cleartext_secrets, secret_namespace, secret_name):
 
 
 def run_kubeseal_command(cleartext_secret_tuple, secret_namespace, secret_name):
-    """Function for calling kubeseal-cli in subprocess."""
+    """Call kubeseal-cli in subprocess."""
     LOGGER.info(
         f"Sealing secret '{secret_name}.{cleartext_secret_tuple['key']}' \
         for namespace '{secret_namespace}'."
@@ -105,8 +105,8 @@ def run_kubeseal_command(cleartext_secret_tuple, secret_namespace, secret_name):
     return {"key": cleartext_secret_tuple["key"], "value": sealed_secret}
 
 
-def decode_base64_string(base64_string_message):
-    """Decodes base64 ascii-encoded input"""
+def decode_base64_string(base64_string_message: str):
+    """Decode base64 ascii-encoded input."""
     base64_bytes = base64_string_message.encode("ascii")
     message_bytes = base64.b64decode(base64_bytes)
-    return message_bytes.decode("ascii")
+    return message_bytes.decode("utf-8")

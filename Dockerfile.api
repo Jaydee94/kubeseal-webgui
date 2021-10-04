@@ -19,6 +19,4 @@ RUN pip install -r requirements.txt
 
 USER 1001
 
-RUN pytest -m "not cluster"
-
 CMD [ "sh", "-c", "flask run --port $PORT --host $HOST" ]
