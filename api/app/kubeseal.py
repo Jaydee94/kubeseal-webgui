@@ -14,7 +14,11 @@ class KubesealEndpoint(Resource):
 
     @classmethod
     def get(cls):
-        """References POST method. Used for health checks."""
+        """
+        Return info message. Used for health checks.
+
+        Refer to POST method for sealing a secret.
+        """
         return "Use POST HTTP request to seal secret."
 
     @classmethod

@@ -11,4 +11,5 @@
         "--profile",
         "black"
     ],
+    "python.pythonPath": "/home/johannes/.local/share/virtualenvs/api-xC2vGvZU/bin/python3.8",
 }
