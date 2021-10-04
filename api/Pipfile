@@ -4,14 +4,26 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
+pytest = "*"
+pytest-cov = "*"
+flake8 = "*"
+black = "*"
+pre-commit = "*"
+pydocstyle = "*"
+isort = "*"
+prospector = "*"
+mypy = "*"
 
 [packages]
 flask = "*"
-flask-wtf = "*"
-flask-bootstrap = "*"
-flask-assets = "*"
-cssmin = "*"
-jinja = "*"
+flask-cors = "*"
+flask-restful = "*"
+jinja2 = "*"
+json-log-formatter = "*"
+kubernetes = "*"
 
 [requires]
 python_version = "3.8"
+
+[pipenv]
+allow_prereleases = true

@@ -1,7 +1,8 @@
-from os import environ
 import json
-import pytest
 import logging
+from os import environ
+
+import pytest
 
 LOGGER = logging.getLogger(__name__)
 environ["ORIGIN_URL"] = "http://no-server-here"
@@ -44,9 +45,11 @@ def test_post_api(client):
         "namespace": "test-namespace",
         "secrets": [{"key": "foo", "value": "bar"}, {"key": "bar", "value": "foo"}],
     }
+
     res = client.post(
         "/secrets", data=json.dumps(data), headers={"Content-Type": "application/json"}
     )
+
     # then return non empty result
     assert res.status_code == 200
     assert res.get_data(as_text=True) != ""
