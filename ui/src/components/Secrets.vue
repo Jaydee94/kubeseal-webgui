@@ -241,6 +241,10 @@ export default {
 
 <style scoped>
 #sealed-secret-result {
-  background: #eeeeee;
+  background: #eee;
+}
+
+html.dark #sealed-secret-result {
+  background: #333;
 }
 </style>
