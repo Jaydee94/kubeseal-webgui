@@ -1,30 +1,28 @@
 <template>
   <div id="app">
     <b-container>
-      <b-row id="logo">
-        <b-col>
-          <img alt="Kubeseal-Webgui Logo" src="./assets/kubeseal-webgui-logo.png">
-        </b-col>
-      </b-row>
+      <nav class="navbar navbar-light">
+        <div class="container-fluid">
+          <Logo />
+          <DarkMode />
+        </div>
+      </nav>
       <Secrets />
     </b-container>
   </div>
 </template>
-<script>
 
-import './assets/custom.scss'
+<script>
 import Secrets from './components/Secrets.vue'
+import Logo from './components/Logo.vue'
+import DarkMode from './components/DarkMode.vue'
 
 export default {
   name: 'App',
   components: {
-    Secrets
+    Secrets,
+    Logo,
+    DarkMode,
   }
 }
 </script>
-
-<style> 
-#logo {
-  text-align: center;
-} 
-</style>
