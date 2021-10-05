@@ -15,7 +15,7 @@ ui:
     repository: kubesealwebgui/ui
     tag: 2.1.1
 image:
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
 
 nameOverride: ""
 fullnameOverride: ""
