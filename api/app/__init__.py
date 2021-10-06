@@ -8,6 +8,7 @@ from flask import Flask
 from flask_cors import CORS
 from flask_restful import Api
 
+from .config import AppConfigEndpoint
 from .kubernetes import KubernetesNamespacesEndpoint
 from .kubeseal import KubesealEndpoint
 
@@ -43,9 +44,11 @@ def create_app(test_config=None):
 
     CORS(app, resources={r"/secrets/*": {"origins": environ["ORIGIN_URL"]}})
     CORS(app, resources={r"/namespaces/*": {"origins": environ["ORIGIN_URL"]}})
+    CORS(app, resources={r"/config/*": {"origins": environ["ORIGIN_URL"]}})
 
     api = Api(app)
     api.add_resource(KubesealEndpoint, "/secrets")
     api.add_resource(KubernetesNamespacesEndpoint, "/namespaces")
+    api.add_resource(AppConfigEndpoint, "/config")
 
     return app
