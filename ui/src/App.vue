@@ -8,6 +8,7 @@
         </div>
       </nav>
       <Secrets />
+      <AppConfig />
     </b-container>
   </div>
 </template>
@@ -16,6 +17,7 @@
 import Secrets from './components/Secrets.vue'
 import Logo from './components/Logo.vue'
 import DarkMode from './components/DarkMode.vue'
+import AppConfig from './components/AppConfig.vue'
 
 export default {
   name: 'App',
@@ -23,6 +25,7 @@ export default {
     Secrets,
     Logo,
     DarkMode,
+    AppConfig
   }
 }
 </script>
