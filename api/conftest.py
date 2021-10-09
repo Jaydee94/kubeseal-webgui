@@ -2,7 +2,7 @@ import pytest
 from app import create_app
 
 
-@pytest.fixture
+@pytest.fixture()
 def app():
     app = create_app(
         {
@@ -12,11 +12,11 @@ def app():
     yield app
 
 
-@pytest.fixture
+@pytest.fixture()
 def client(app):
     return app.test_client()
 
 
-@pytest.fixture
+@pytest.fixture()
 def runner(app):
     return app.test_cli_runner()
