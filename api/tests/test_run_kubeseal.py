@@ -83,7 +83,7 @@ def test_run_kubeseal_without_k8s_cluster():
 
 
 @pytest.mark.parametrize(
-    "base64_input, expected_output",
+    ("base64_input", "expected_output"),
     [("YWJjZGVm", "abcdef"), ("w6TDtsO8", "äöü"), ("LV8jIT8kwqc=", "-_#!?$§")],
 )
 def test_decode_base64_string(base64_input, expected_output):
