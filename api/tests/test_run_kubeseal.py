@@ -42,8 +42,8 @@ def test_run_kubeseal_with_with_empty_secrets_list_but_otherwise_valid_inputs():
     assert sealedSecrets == []
 
 
-@pytest.mark.container
-@pytest.mark.cluster
+@pytest.mark.container()
+@pytest.mark.cluster()
 def test_run_kubeseal_with_cli():
     # given run test against cli with test cluster
     # when run_kubeseal is called
@@ -51,7 +51,7 @@ def test_run_kubeseal_with_cli():
     pass
 
 
-@pytest.mark.cluster
+@pytest.mark.cluster()
 def test_run_kubeseal_without_cli():
     # given k8s cluster but no kubeseal cli
     # when run_kubeseal is called
@@ -68,7 +68,7 @@ def test_run_kubeseal_with_invalid_secrets_list_but_otherwise_valid_inputs():
         run_kubeseal(["this-should-be-a-dict-object"], "secretNamespace", "secretName")
 
 
-@pytest.mark.container
+@pytest.mark.container()
 def test_run_kubeseal_without_k8s_cluster():
     # given kubeseal cli but no k8s cluster
     # when run_kubeseal is called
