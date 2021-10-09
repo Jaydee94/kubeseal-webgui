@@ -37,9 +37,9 @@ def test_run_kubeseal_with_with_none_secret_name():
 def test_run_kubeseal_with_with_empty_secrets_list_but_otherwise_valid_inputs():
     # given an empty list
     # when run_kubeseal is called
-    sealedSecrets = run_kubeseal([], "secretNamespace", "secretName")
+    sealed_secrets = run_kubeseal([], "secretNamespace", "secretName")
     # then return empty list
-    assert sealedSecrets == []
+    assert sealed_secrets == []
 
 
 @pytest.mark.container()
