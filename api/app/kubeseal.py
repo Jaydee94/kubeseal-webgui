@@ -80,8 +80,10 @@ def run_kubeseal(cleartext_secrets, secret_namespace, secret_name):
 def run_kubeseal_command(cleartext_secret_tuple, secret_namespace, secret_name):
     """Call kubeseal-cli in subprocess."""
     LOGGER.info(
-        f"Sealing secret '{secret_name}.{cleartext_secret_tuple['key']}' \
-        for namespace '{secret_namespace}'."
+        "Sealing secret '%s.%s' for namespace '%s'.",
+        secret_name,
+        cleartext_secret_tuple["key"],
+        secret_namespace,
     )
     cleartext_secret = decode_base64_string(cleartext_secret_tuple["value"])
     exec_kubeseal_command = f'echo -n "{cleartext_secret}" | \
