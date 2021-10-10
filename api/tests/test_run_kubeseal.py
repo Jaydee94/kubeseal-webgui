@@ -6,7 +6,7 @@ def test_run_kubeseal_with_with_empty_string_namespace():
     # given an empty string secretNamespace
     # when run_kubeseal is called
     # then raise ValueError
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="secret_namespace was not given"):
         run_kubeseal([{"key": "foo", "value": "YmFy"}], "", "secretName")
 
 
@@ -14,7 +14,7 @@ def test_run_kubeseal_with_with_none_namespace():
     # given a None secretNamespace
     # when run_kubeseal is called
     # then raise ValueError
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="secret_namespace was not given"):
         run_kubeseal([{"key": "foo", "value": "YmFy"}], None, "secretName")
 
 
@@ -22,7 +22,7 @@ def test_run_kubeseal_with_with_empty_string_secret_name():
     # given an empty string secretName
     # when run_kubeseal is called
     # then raise ValueError
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="secret_name was not given"):
         run_kubeseal([{"key": "foo", "value": "YmFy"}], "secretNamespace", "")
 
 
@@ -30,20 +30,20 @@ def test_run_kubeseal_with_with_none_secret_name():
     # given a None secretName
     # when run_kubeseal is called
     # then raise ValueError
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="secret_name was not given"):
         run_kubeseal([{"key": "foo", "value": "YmFy"}], "secretNamespace", None)
 
 
 def test_run_kubeseal_with_with_empty_secrets_list_but_otherwise_valid_inputs():
     # given an empty list
     # when run_kubeseal is called
-    sealedSecrets = run_kubeseal([], "secretNamespace", "secretName")
+    sealed_secrets = run_kubeseal([], "secretNamespace", "secretName")
     # then return empty list
-    assert sealedSecrets == []
+    assert sealed_secrets == []
 
 
-@pytest.mark.container
-@pytest.mark.cluster
+@pytest.mark.container()
+@pytest.mark.cluster()
 def test_run_kubeseal_with_cli():
     # given run test against cli with test cluster
     # when run_kubeseal is called
@@ -51,7 +51,7 @@ def test_run_kubeseal_with_cli():
     pass
 
 
-@pytest.mark.cluster
+@pytest.mark.cluster()
 def test_run_kubeseal_without_cli():
     # given k8s cluster but no kubeseal cli
     # when run_kubeseal is called
@@ -64,11 +64,13 @@ def test_run_kubeseal_with_invalid_secrets_list_but_otherwise_valid_inputs():
     # given a secret list with string element
     # when run_kubeseal is called
     # then raise ValueError
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError, match="Input of cleartext_secrets was not a list of dicts."
+    ):
         run_kubeseal(["this-should-be-a-dict-object"], "secretNamespace", "secretName")
 
 
-@pytest.mark.container
+@pytest.mark.container()
 def test_run_kubeseal_without_k8s_cluster():
     # given kubeseal cli but no k8s cluster
     # when run_kubeseal is called
@@ -81,7 +83,7 @@ def test_run_kubeseal_without_k8s_cluster():
 
 
 @pytest.mark.parametrize(
-    "base64_input, expected_output",
+    ("base64_input", "expected_output"),
     [("YWJjZGVm", "abcdef"), ("w6TDtsO8", "äöü"), ("LV8jIT8kwqc=", "-_#!?$§")],
 )
 def test_decode_base64_string(base64_input, expected_output):
