@@ -32,6 +32,9 @@ def test_valid_k8s_name(value):
         "no.dots.allowed",
         "no-special-chars-like/,#+%",
         "ends-on-dash-",
+        "Uppercase",
+        "U",
+        "uPPer",
     ],
 )
 def test_invalid_k8s_name(value):

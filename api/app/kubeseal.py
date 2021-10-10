@@ -79,7 +79,7 @@ def run_kubeseal(cleartext_secrets, secret_namespace, secret_name):
 
 
 def valid_k8s_name(value: str) -> str:
-    if re.match(r"^[a-z]([a-z0-9-]{,61}[a-z0-9])?$", value, re.I):
+    if re.match(r"^[a-z]([a-z0-9-]{,61}[a-z0-9])?$", value):
         return value
     raise ValueError("Invalid k8s name: {value}")
 
