@@ -1,5 +1,41 @@
 import pytest
-from app.kubeseal import decode_base64_string, run_kubeseal
+from app.kubeseal import decode_base64_string, run_kubeseal, valid_k8s_name
+
+
+@pytest.mark.parametrize(
+    "value",
+    ["abc", "l" + "o" * 60 + "ng", "some-1-too-check"],
+)
+def test_valid_k8s_name(value):
+    # given a valid k8s-label-name
+    # when valid_k8s_name is called on the label-name
+    # then the label-name is returned unchanged
+    assert valid_k8s_name(value) == value
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "",
+        "-something",
+        "1a",
+        "too-l" + "o" * 57 + "ng",
+        "ähm",
+        "_not-valid",
+        "with spaces",
+        " not-trimmed ",
+        "no.dots.allowed",
+        "no-special-chars-like/,#+%",
+        "ends-on-dash-",
+        "ends-on-digit-1",
+    ],
+)
+def test_invalid_k8s_name(value):
+    # given an invalid k8s-label-name
+    # when valid_k8s_name is called on the label-name
+    # then a ValueError is raised
+    with pytest.raises(ValueError, match="Invalid k8s name"):
+        valid_k8s_name(value)
 
 
 def test_run_kubeseal_with_with_empty_string_namespace():

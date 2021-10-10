@@ -1,6 +1,7 @@
 """Provides REST-API and kubeseal-cli specific functionality."""
 import base64
 import logging
+import re
 import subprocess
 
 from flask import request
@@ -77,6 +78,12 @@ def run_kubeseal(cleartext_secrets, secret_namespace, secret_name):
     return sealed_secrets
 
 
+def valid_k8s_name(value: str) -> str:
+    if re.match(r"^[a-z]([a-z0-9-]{,61}[a-z])?$", value, re.I):
+        return value
+    raise ValueError("Invalid k8s name: {value}")
+
+
 def run_kubeseal_command(cleartext_secret_tuple, secret_namespace, secret_name):
     """Call kubeseal-cli in subprocess."""
     LOGGER.info(
@@ -90,9 +97,9 @@ def run_kubeseal_command(cleartext_secret_tuple, secret_namespace, secret_name):
         "/kubeseal-webgui/kubeseal",
         "--raw",
         "--from-file=/dev/stdin" "--namespace",
-        secret_namespace,
+        valid_k8s_name(secret_namespace),
         "--name",
-        secret_name,
+        valid_k8s_name(secret_name),
         "--cert",
         "/kubeseal-webgui/cert/kubeseal-cert.pem",
     ]
