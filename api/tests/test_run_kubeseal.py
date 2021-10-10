@@ -4,7 +4,12 @@ from app.kubeseal import decode_base64_string, run_kubeseal, valid_k8s_name
 
 @pytest.mark.parametrize(
     "value",
-    ["abc", "l" + "o" * 60 + "ng", "some-1-too-check"],
+    [
+        "abc",
+        "l" + "o" * 60 + "ng",
+        "some-1-too-check",
+        "ends-on-digit-1",
+    ],
 )
 def test_valid_k8s_name(value):
     # given a valid k8s-label-name
@@ -27,7 +32,6 @@ def test_valid_k8s_name(value):
         "no.dots.allowed",
         "no-special-chars-like/,#+%",
         "ends-on-dash-",
-        "ends-on-digit-1",
     ],
 )
 def test_invalid_k8s_name(value):
