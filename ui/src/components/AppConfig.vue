@@ -1,11 +1,22 @@
 <template>
-  <div class="container-fluid text-center p-3 fixed-bottom" v-if="fetchConfigsSuccessful">
-    <b-button v-b-toggle.collapse-1 variant="outline-info" v-if="fetchConfigsSuccessful">Show Detailed App Information</b-button>
-    <b-collapse id="collapse-1" class="mt-2">
-      <div v-for="(value, key) in configs" :key="value">
-          {{ key }}: {{ value }}
-      </div>
-    </b-collapse>
+  <div class="app-config">
+    <b-container>
+      <b-row>
+        <b-col>
+          <small class="text-muted" v-if="fetchConfigsSuccessful">
+            <span v-for="(value, key, index) in configs" :key="value">
+              <span v-if="index != 0"> 🞄 </span><span>{{key}}: {{value}}</span>
+            </span>
+          </small>
+          <small class="text-muted" v-else-if="fetchConfigsSuccessful == false">
+            ⚠️ Could not retrieve application properties.
+          </small>
+          <small class="text-muted" v-else>
+            ⏳ Loading application properties.
+          </small>
+        </b-col>
+      </b-row>
+    </b-container>
   </div>
 </template>
 
@@ -27,6 +38,8 @@ export default {
         this.code2 = response.ok;
         if (response.ok && response_config.ok) {
           this.fetchConfigsSuccessful = true;
+        } else {
+          this.fetchConfigsSuccessful = false
         }
         let configs = await response.json();
         this.configs = JSON.parse(configs);
@@ -49,4 +62,11 @@ export default {
   },
 };
 </script>
+
+<style scoped>
+.app-config{
+  margin: 8px 0;
+  text-align: center;
+}
+</style>
 
