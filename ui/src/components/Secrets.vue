@@ -17,6 +17,7 @@
               v-model="namespaceName"
               :options="namespaces"
               :select-size="1"
+              :state="namespaceNameState"
             ></b-form-select>
             <b-form-text id="password-help-block">
               Specify target namespace where the sealed secret will be deployed.
@@ -148,6 +149,14 @@ spec:
 <script>
 import { Base64 } from "js-base64";
 
+function validLabelName(name) {
+  if (!name) {
+    return;
+  }
+  var re = /^[a-z]([a-z0-9-]{0,61}[a-z])?$/;
+  return re.test(name);
+}
+
 export default {
   name: "Secrets",
   methods: {
@@ -228,11 +237,10 @@ export default {
   },
   computed: {
     secretNameState: function () {
-      if (!this.secretName) {
-        return;
-      }
-      var re = /^[a-z]([a-z0-9-]{0,61}[a-z])?$/;
-      return re.test(this.secretName);
+      return validLabelName(this.secretName);
+    },
+    namespaceNameState: function () {
+      return validLabelName(this.namespaceName);
     },
   },
   data: function () {
