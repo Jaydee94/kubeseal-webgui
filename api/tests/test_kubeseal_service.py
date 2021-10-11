@@ -8,8 +8,8 @@ LOGGER = logging.getLogger(__name__)
 environ["ORIGIN_URL"] = "http://no-server-here"
 
 
-@pytest.mark.container
-@pytest.mark.cluster
+@pytest.mark.container()
+@pytest.mark.cluster()
 def test_post_secrets_object(app, client):
     sealing_request_data = {
         "namespace": "foo",
@@ -35,8 +35,8 @@ def test_get_api(client):
     assert res.get_data(as_text=True) != ""
 
 
-@pytest.mark.container
-@pytest.mark.cluster
+@pytest.mark.container()
+@pytest.mark.cluster()
 def test_post_api(client):
     # given running http server
     # when POST /secrets

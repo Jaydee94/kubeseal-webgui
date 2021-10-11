@@ -28,8 +28,11 @@ def get_incluster_namespaces():
     LOGGER.info("Resolving in-cluster Namespaces")
     v1 = client.CoreV1Api()
     namespaces = v1.list_namespace()
-    for ns in namespaces.items:
-        namespaces_list.append(ns.metadata.name)
+    if isinstance(namespaces, client.V1NamespaceList) and namespaces.items:
+        for ns in namespaces.items:
+            namespaces_list.append(ns.metadata.name)
+    else:
+        LOGGER.warn("No valid namespace list available via %s", namespaces)
 
     LOGGER.debug("Namespaces list %s", namespaces_list)
     return json.dumps(namespaces_list)

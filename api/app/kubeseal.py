@@ -1,6 +1,7 @@
 """Provides REST-API and kubeseal-cli specific functionality."""
 import base64
 import logging
+import re
 import subprocess
 
 from flask import request
@@ -77,24 +78,40 @@ def run_kubeseal(cleartext_secrets, secret_namespace, secret_name):
     return sealed_secrets
 
 
+def valid_k8s_name(value: str) -> str:
+    if re.match(r"^[a-z]([a-z0-9-]{,61}[a-z0-9])?$", value):
+        return value
+    raise ValueError("Invalid k8s name: {value}")
+
+
 def run_kubeseal_command(cleartext_secret_tuple, secret_namespace, secret_name):
     """Call kubeseal-cli in subprocess."""
     LOGGER.info(
-        f"Sealing secret '{secret_name}.{cleartext_secret_tuple['key']}' \
-        for namespace '{secret_namespace}'."
+        "Sealing secret '%s.%s' for namespace '%s'.",
+        secret_name,
+        cleartext_secret_tuple["key"],
+        secret_namespace,
     )
     cleartext_secret = decode_base64_string(cleartext_secret_tuple["value"])
-    exec_kubeseal_command = f'echo -n "{cleartext_secret}" | \
-        /kubeseal-webgui/kubeseal --raw --from-file=/dev/stdin \
-        --namespace "{secret_namespace}" --name "{secret_name}" \
-        --cert /kubeseal-webgui/cert/kubeseal-cert.pem'
+    exec_kubeseal_command = [
+        "/kubeseal-webgui/kubeseal",
+        "--raw",
+        "--from-file=/dev/stdin" "--namespace",
+        valid_k8s_name(secret_namespace),
+        "--name",
+        valid_k8s_name(secret_name),
+        "--cert",
+        "/kubeseal-webgui/cert/kubeseal-cert.pem",
+    ]
     kubeseal_subprocess = subprocess.Popen(
-        [exec_kubeseal_command],
+        exec_kubeseal_command,
+        stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        shell=True,
     )
-    output, error = kubeseal_subprocess.communicate()
+    output, error = kubeseal_subprocess.communicate(
+        input=cleartext_secret.encode("utf-8")
+    )
 
     if error:
         error_message = f"Error in run_kubeseal: {error}"
