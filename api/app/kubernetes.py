@@ -1,7 +1,6 @@
 """Provides REST-API and kubeseal-cli specific functionality."""
 import json
 import logging
-from typing import Optional
 
 from flask_restful import Resource, abort
 from kubernetes import client, config
@@ -13,13 +12,12 @@ class KubernetesNamespacesEndpoint(Resource):
     """Provide REST-API for sealing sensitive data."""
 
     @classmethod
-    def get(cls) -> Optional[str]:
+    def get(cls) -> str:
         """Retrieve cluster namespaces."""
         try:
-            namespaces = get_incluster_namespaces()
+            return get_incluster_namespaces()
         except RuntimeError:
             abort(500)
-        return namespaces
 
 
 def get_incluster_namespaces() -> str:
