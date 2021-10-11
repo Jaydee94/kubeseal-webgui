@@ -1,3 +1,5 @@
 {
-  "api_url" : "http://localhost:5000"
+  "api_url" : "http://localhost:5000",
+  "kubeseal_webgui_ui_version" : "2.1.0",
+  "kubeseal_webgui_api_version" : "2.1.0"
 }
