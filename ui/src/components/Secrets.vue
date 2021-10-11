@@ -27,6 +27,8 @@
               v-model="secretName"
               placeholder="Secret name"
               id="input-secret-name"
+              trim
+              :state="secretNameState"
             ></b-form-input>
             <b-form-text id="password-help-block">
               Specify name of the secret.
@@ -223,6 +225,15 @@ export default {
   beforeMount() {
     this.fetchNamespaces();
     this.fetchDisplayName();
+  },
+  computed: {
+    secretNameState: function () {
+      if (!this.secretName) {
+        return;
+      }
+      var re = /^[a-z]([a-z0-9-]{0,61}[a-z])?$/;
+      return re.test(this.secretName);
+    },
   },
   data: function () {
     return {
