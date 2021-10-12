@@ -35,9 +35,6 @@
               :options="namespaces"
               :select-size="1"
             ></b-form-select>
-              <template #first>
-                <b-form-select-option :value="null" disabled>-- Please select an option --</b-form-select-option>
-              </template>
             <b-form-text id="password-help-block">
               Select the target namespace where the sealed secret will be deployed.
             </b-form-text>
