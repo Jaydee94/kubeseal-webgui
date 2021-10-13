@@ -49,7 +49,9 @@
               :state="secretNameState"
             ></b-form-input>
             <b-form-text id="password-help-block">
-              Specify name of the secret. <a target="_blank" href="https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names">Naming convention</a>
+              Specify name of the secret.
+              <br>
+              <i>type: <a target="_blank" href="https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-label-names">Label Name</a></i>
             </b-form-text>
           </b-col>
         </b-form-row>
@@ -91,6 +93,8 @@
           <b-col>
             <b-form-text block class="mb-3">
               Specify sensitive value and corresponding key of the secret.
+              <br>
+              <i>The key must be of type: <a target="_blank" href="https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names">DNS Subdomain</a></i>
             </b-form-text>
           </b-col>
         </b-row>
