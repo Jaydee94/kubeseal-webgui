@@ -17,6 +17,7 @@
               v-model="namespaceName"
               :options="namespaces"
               :select-size="1"
+              :state="namespaceNameState"
             ></b-form-select>
             <b-form-text id="password-help-block">
               Specify target namespace where the sealed secret will be deployed.
@@ -36,13 +37,18 @@
           </b-col>
         </b-form-row>
 
-        <div class="mt-4" v-for="(secret, counter) in secrets" :key="counter">
+        <div
+          class="mt-4"
+          v-for="(secret, counter) in secretsState"
+          :key="counter"
+        >
           <b-form-row class="align-items-center">
             <b-col cols="3">
               <b-form-textarea
                 v-model="secret.key"
                 placeholder="Secret key"
                 id="input-key"
+                :state="secret.state"
               ></b-form-textarea>
             </b-col>
             <b-col cols="8">
@@ -148,6 +154,22 @@ spec:
 <script>
 import { Base64 } from "js-base64";
 
+function validLabelName(name) {
+  if (!name) {
+    return;
+  }
+  var re = /^[a-z]([a-z0-9-]{0,61}[a-z])?$/;
+  return re.test(name);
+}
+
+function validDnsSubdomain(name) {
+  if (!name) {
+    return;
+  }
+  var re = /^[a-z]([a-z0-9._-]{0,251}[a-z])?$/;
+  return re.test(name);
+}
+
 export default {
   name: "Secrets",
   methods: {
@@ -228,11 +250,16 @@ export default {
   },
   computed: {
     secretNameState: function () {
-      if (!this.secretName) {
-        return;
-      }
-      var re = /^[a-z]([a-z0-9-]{0,61}[a-z])?$/;
-      return re.test(this.secretName);
+      return validLabelName(this.secretName);
+    },
+    namespaceNameState: function () {
+      return validLabelName(this.namespaceName);
+    },
+    secretsState: function () {
+      return this.secrets.map((e) => {
+        e.state = validDnsSubdomain(e.key);
+        return e;
+      });
     },
   },
   data: function () {

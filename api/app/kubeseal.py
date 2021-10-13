@@ -96,7 +96,8 @@ def run_kubeseal_command(cleartext_secret_tuple, secret_namespace, secret_name):
     exec_kubeseal_command = [
         "/kubeseal-webgui/kubeseal",
         "--raw",
-        "--from-file=/dev/stdin" "--namespace",
+        "--from-file=/dev/stdin",
+        "--namespace",
         valid_k8s_name(secret_namespace),
         "--name",
         valid_k8s_name(secret_name),
