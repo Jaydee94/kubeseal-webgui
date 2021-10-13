@@ -12,7 +12,7 @@ class KubernetesNamespacesEndpoint(Resource):
     """Provide REST-API for sealing sensitive data."""
 
     @classmethod
-    def get(cls):
+    def get(cls) -> str:
         """Retrieve cluster namespaces."""
         try:
             return get_incluster_namespaces()
@@ -20,7 +20,7 @@ class KubernetesNamespacesEndpoint(Resource):
             abort(500)
 
 
-def get_incluster_namespaces():
+def get_incluster_namespaces() -> str:
     """Retrieve all namespaces from current kubernetes cluster as JSON-Array."""
     config.load_incluster_config()
     namespaces_list = []
