@@ -51,7 +51,7 @@
             <b-form-text id="password-help-block">
               Specify name of the secret.
               <br>
-              <i>type: <a target="_blank" href="https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-label-names">Label Name</a></i>
+              <i>The secret name must be of type: <a target="_blank" href="https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-label-names">Label Name</a></i>
             </b-form-text>
           </b-col>
         </b-form-row>
