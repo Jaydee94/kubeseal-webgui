@@ -224,15 +224,13 @@ export default {
         var requestObject = {
           secret: this.secretName,
           namespace: this.namespaceName,
-          secrets: [],
+          secrets: this.secrets.map((element) => {
+            return {
+              key: element.key,
+              value: Base64.encode(element.value),
+            };
+          }),
         };
-
-        this.secrets.forEach((element) => {
-          requestObject.secrets.push({
-            key: element.key,
-            value: Base64.encode(element.value),
-          });
-        });
 
         let requestBody = JSON.stringify(requestObject, null, "\t");
 
@@ -249,18 +247,23 @@ export default {
           body: requestBody,
         });
 
-        let sealedSecrets = await response.json();
-        this.renderedSecrets = this.renderSecrets(sealedSecrets);
-        this.displayCreateSealedSecretForm = false;
+        if (!response.ok) {
+          throw Error(
+            "No sealed secrets in response from backend: " +
+              (await response.text())
+          );
+        } else {
+          let sealedSecrets = await response.json();
+          this.renderedSecrets = this.renderSecrets(sealedSecrets);
+          this.displayCreateSealedSecretForm = false;
+        }
       } catch (error) {
         this.errorMessage = error;
       }
     },
     renderSecrets: function (sealedSecrets) {
-      var dataEntries = [];
-      sealedSecrets.forEach((element) => {
-        let entry = `    ${element["key"]}: ${element["value"]}`;
-        dataEntries.push(entry);
+      var dataEntries = sealedSecrets.map((element) => {
+        return `    ${element["key"]}: ${element["value"]}`;
       });
       return dataEntries.join("\n");
     },
