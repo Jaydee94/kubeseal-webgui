@@ -4,10 +4,27 @@
     <div class="secrets-form" v-if="displayCreateSealedSecretForm">
       <b-row>
         <b-col class="mb-3">
-          Enter sensitive values for sealing in the form below. The cleartext
-          values will be encrypted using the kubeseal-cli and displayed here
-          afterwards.
+          Enter sensitive values for sealing in the form below.
         </b-col>
+          <popper
+            trigger="clickToToggle"
+            :options="{
+              placement: 'right-start',
+              modifiers: { offset: { offset: '0,10px' } }
+            }">
+            <div class="popper">
+              <div align="left">The entered values will be encrypted using the <b>kubeseal</b> cli.</div>
+              <div align="left">Kubeseal encrypts a plaintext secret using a configured public key.</div>
+              <br>
+              <div align="left">You can encrypt multiple <b>&lt;key&gt; &lt;value&gt;</b> pairs inside one</div>
+              <div align="left">Kubernetes secret object.</div>
+              <br>
+              <div align="left">For more information about <b>sealed-secrets</b> <a target="_blank" href="https://github.com/bitnami-labs/sealed-secrets">click here</a>.</div>
+            </div>
+            <div id="questionmark" slot="reference" margin-left="40px" style="cursor: pointer;">
+              ❓
+            </div>
+        </popper>
       </b-row>
 
       <b-form>
@@ -20,7 +37,7 @@
               :state="namespaceNameState"
             ></b-form-select>
             <b-form-text id="password-help-block">
-              Specify target namespace where the sealed secret will be deployed.
+              Select the target namespace where the sealed secret will be deployed.
             </b-form-text>
           </b-col>
           <b-col cols="6">
@@ -33,6 +50,8 @@
             ></b-form-input>
             <b-form-text id="password-help-block">
               Specify name of the secret.
+              <br>
+              <i>The secret name must be of type: <a target="_blank" href="https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-label-names">Label Name</a></i>
             </b-form-text>
           </b-col>
         </b-form-row>
@@ -74,6 +93,8 @@
           <b-col>
             <b-form-text block class="mb-3">
               Specify sensitive value and corresponding key of the secret.
+              <br>
+              <i>The key must be of type: <a target="_blank" href="https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names">DNS Subdomain</a></i>
             </b-form-text>
           </b-col>
         </b-row>
@@ -153,6 +174,8 @@ spec:
 
 <script>
 import { Base64 } from "js-base64";
+import Popper from 'vue-popperjs';
+import 'vue-popperjs/dist/vue-popper.css';
 
 function validLabelName(name) {
   if (!name) {
@@ -172,6 +195,9 @@ function validDnsSubdomain(name) {
 
 export default {
   name: "Secrets",
+  components: {
+      'popper': Popper
+  },
   methods: {
     fetchNamespaces: async function () {
       try {
