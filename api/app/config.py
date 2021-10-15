@@ -23,11 +23,11 @@ class AppConfigEndpoint(Resource):
 
 def get_kubeseal_version() -> str:
     """Retrieve the kubeseal binary version."""
+    LOGGER.debug("Retrieving kubeseal binary version.")
     kubeseal_subprocess = subprocess.Popen(
-        ["/kubeseal-webgui/kubeseal --version"],
+        ["/kubeseal-webgui/kubeseal", "--version"],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        shell=True,
     )
     output, error = kubeseal_subprocess.communicate()
     if error:
@@ -37,7 +37,6 @@ def get_kubeseal_version() -> str:
 
     version = "".join(output.decode("utf-8").split("\n"))
 
-    LOGGER.debug("Retrieving kubeseal binary version.")
     return str(version).split(":")[1].replace('"', "").lstrip()
 
 
