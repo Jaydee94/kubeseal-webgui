@@ -33,9 +33,7 @@ class KubesealEndpoint(Resource):
         if request.json is None:
             abort(400, "JSON Body was empty. Seal Request is required.")
         sealing_request = request.json
-        LOGGER.debug(
-            "Got secrets %s", sealing_request.get("secrets", "NO SECRETS FOUND")
-        )
+        LOGGER.debug("Got secrets")
 
         try:
             return run_kubeseal(
@@ -44,12 +42,10 @@ class KubesealEndpoint(Resource):
                 sealing_request["secret"],
             )
         except (KeyError, ValueError) as e:
-            LOGGER.error("Invalid data when sealing secrets with %s", sealing_request)
+            LOGGER.error("Invalid data when sealing secrets with", exc_info=e)
             abort(400, "Invalid data for sealing secrets: " + str(e))
-        except RuntimeError:
-            LOGGER.error(
-                "Problem on server while sealing secrets with %s", sealing_request
-            )
+        except RuntimeError as e:
+            LOGGER.error("Problem on server while sealing secrets", exc_info=e)
             abort(500, "Server is dreaming...")
 
 
