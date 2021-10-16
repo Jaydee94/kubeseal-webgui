@@ -3,7 +3,8 @@ import json
 import logging
 import subprocess
 
-from flask_restful import Resource, abort
+from flask import abort
+from flask_restful import Resource
 
 LOGGER = logging.getLogger("kubeseal-webgui")
 
@@ -17,16 +18,16 @@ class AppConfigEndpoint(Resource):
         try:
             return get_app_config()
         except RuntimeError:
-            abort(500)
+            abort(500, "Can't get config from server")
 
 
 def get_kubeseal_version() -> str:
     """Retrieve the kubeseal binary version."""
+    LOGGER.debug("Retrieving kubeseal binary version.")
     kubeseal_subprocess = subprocess.Popen(
-        ["/kubeseal-webgui/kubeseal --version"],
+        ["/kubeseal-webgui/kubeseal", "--version"],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        shell=True,
     )
     output, error = kubeseal_subprocess.communicate()
     if error:
@@ -36,9 +37,7 @@ def get_kubeseal_version() -> str:
 
     version = "".join(output.decode("utf-8").split("\n"))
 
-    result = str(version).split(":")[1].replace('"', "").lstrip()
-    LOGGER.debug("Retrieving kubeseal binary version.")
-    return result
+    return str(version).split(":")[1].replace('"', "").lstrip()
 
 
 def get_app_config():

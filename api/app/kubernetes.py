@@ -2,7 +2,8 @@
 import json
 import logging
 
-from flask_restful import Resource, abort
+from flask import abort
+from flask_restful import Resource
 from kubernetes import client, config
 
 LOGGER = logging.getLogger("kubeseal-webgui")
@@ -17,7 +18,7 @@ class KubernetesNamespacesEndpoint(Resource):
         try:
             return get_incluster_namespaces()
         except RuntimeError:
-            abort(500)
+            abort(500, "Can't get namespaces from server")
 
 
 def get_incluster_namespaces() -> str:
