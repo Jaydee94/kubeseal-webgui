@@ -1,31 +1,22 @@
 <template>
   <div class="secrets-component">
-    <h2 align="center" v-if="displayName">{{ displayName }}</h2>
+    <h3 align="center" v-if="displayName">{{ displayName }}</h3>
     <div class="secrets-form" v-if="displayCreateSealedSecretForm">
-      <b-row>
-        <b-col class="mb-3">
-          Enter sensitive values for sealing in the form below.
-        </b-col>
-          <popper
-            trigger="clickToToggle"
-            :options="{
-              placement: 'right-start',
-              modifiers: { offset: { offset: '0,10px' } }
-            }">
-            <div class="popper">
-              <div align="left">The entered values will be encrypted using the <b>kubeseal</b> cli.</div>
-              <div align="left">Kubeseal encrypts a plaintext secret using a configured public key.</div>
-              <br>
-              <div align="left">You can encrypt multiple <b>&lt;key&gt; &lt;value&gt;</b> pairs inside one</div>
-              <div align="left">Kubernetes secret object.</div>
-              <br>
-              <div align="left">For more information about <b>sealed-secrets</b> <a target="_blank" href="https://github.com/bitnami-labs/sealed-secrets">click here</a>.</div>
-            </div>
-            <div id="questionmark" slot="reference" margin-left="40px" style="cursor: pointer;">
-              ❓
-            </div>
-        </popper>
-      </b-row>
+      <div align="right">
+        <b-button variant="link" class="mb-2" id="help">
+          <b-icon icon="question-circle" scale="1.5"/>
+        </b-button>
+        <b-popover target="help" triggers="hover" placement="right">
+          <template #title>Usage</template>
+          <div align="left">The entered values will be encrypted using the <b>kubeseal</b> cli.</div>
+          <div align="left">Kubeseal encrypts a plaintext secret using a configured public key.</div>
+          <br>
+          <div align="left">You can encrypt multiple <b>&lt;key&gt; &lt;value&gt;</b> pairs inside one</div>
+          <div align="left">Kubernetes secret object.</div>
+          <br>
+          <div align="left">For more information about <b>sealed-secrets</b> <a target="_blank" href="https://github.com/bitnami-labs/sealed-secrets">click here</a>.</div>
+        </b-popover>
+      </div>
 
       <b-form>
         <b-form-row class="mt-2">
@@ -174,7 +165,6 @@ spec:
 
 <script>
 import { Base64 } from "js-base64";
-import Popper from 'vue-popperjs';
 import 'vue-popperjs/dist/vue-popper.css';
 
 function validLabelName(name) {
@@ -195,9 +185,6 @@ function validDnsSubdomain(name) {
 
 export default {
   name: "Secrets",
-  components: {
-      'popper': Popper
-  },
   methods: {
     fetchNamespaces: async function () {
       try {
