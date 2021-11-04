@@ -5,11 +5,10 @@ RUN npm install && npm run build
 
 FROM nginx:stable-alpine as ui-production-stage
 COPY --from=ui-build-stage /ui/dist /usr/share/nginx/html
+COPY --from=ui-build-stage /ui/nginx-default.conf /etc/nginx/conf.d/default.conf
 
 # support running as arbitrary user which belongs to the root group
 RUN chmod g+rwx /var/cache/nginx /var/run /var/log/nginx
-# users are not allowed to listen on priviliged ports
-RUN sed -i.bak 's/listen\(.*\)80;/listen 8080;/' /etc/nginx/conf.d/default.conf
 
 EXPOSE 8080
 
