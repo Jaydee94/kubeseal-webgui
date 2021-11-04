@@ -9,10 +9,6 @@ spec:
     app: {{ template "kubeseal-webgui.name" . }}
   type: ClusterIP
   ports:
-    - port: 5000
-      targetPort: api
-      protocol: TCP
-      name: api
     - port: 8080
       targetPort: ui
       protocol: TCP
