@@ -4,8 +4,8 @@ import logging
 import re
 import subprocess
 
-from flask import request
-from flask_restful import Resource, abort
+from flask import request, abort
+from flask_restful import Resource
 
 LOGGER = logging.getLogger("kubeseal-webgui")
 
@@ -25,28 +25,28 @@ class KubesealEndpoint(Resource):
     @classmethod
     def post(cls) -> list:
         """
-        Provide sealing functionality via kubseal-cli.
+        Provide sealing functionality via kubeseal-cli.
 
         Requires input of secretName, namespaceName and sensitive data in
         key-value format.
         """
         if request.json is None:
-            raise RuntimeError("JSON Body was empty. Seal Request is required.")
+            abort(400, "JSON Body was empty. Seal Request is required.")
         sealing_request = request.json
-        LOGGER.debug(sealing_request["secrets"])
+        LOGGER.debug("Got secrets")
 
         try:
-            response = run_kubeseal(
+            return run_kubeseal(
                 sealing_request["secrets"],
                 sealing_request["namespace"],
                 sealing_request["secret"],
             )
-        except RuntimeError:
-            abort(500)
-        except ValueError:
-            abort(500)
-
-        return response
+        except (KeyError, ValueError) as e:
+            LOGGER.error("Invalid data when sealing secrets with", exc_info=e)
+            abort(400, "Invalid data for sealing secrets: " + str(e))
+        except RuntimeError as e:
+            LOGGER.error("Problem on server while sealing secrets", exc_info=e)
+            abort(500, "Server is dreaming...")
 
 
 def run_kubeseal(cleartext_secrets, secret_namespace, secret_name) -> list:
