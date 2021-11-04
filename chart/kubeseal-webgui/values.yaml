@@ -1,14 +1,9 @@
 replicaCount: 1
 
 api:
-<<<<<<< HEAD
   # The value of api.url should be set to the public-accessible http endpoint (ingress url or OpenShift route).
-  # api.url will be generated into config.json ConfigMap of the UI. This statically served JSON file 
-  # is used by the UI to locate the API. 
-=======
   # api.url will be generated into config.json ConfigMap of the UI. This statically served JSON file
   # is used by the UI to locate the API.
->>>>>>> 3c3993ddd9be5836196238d3d5e743b36fdf2aa6
   url: http://localhost:5000
   # api.accessControlAllowOrigin determines the value that is returned by the API for the respective
   # HTTP-Header.
