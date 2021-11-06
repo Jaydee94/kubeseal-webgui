@@ -5,15 +5,13 @@ api:
   # api.url will be generated into config.json ConfigMap of the UI. This statically served JSON file
   # is used by the UI to locate the API.
   url: http://localhost:5000
-  # api.accessControlAllowOrigin determines the value that is returned by the API for the respective
-  # HTTP-Header.
   image:
     repository: kubesealwebgui/api
-    tag: 2.1.1
+    tag: 3.0.0
 ui:
   image:
     repository: kubesealwebgui/ui
-    tag: 2.1.1
+    tag: 3.0.0
 image:
   pullPolicy: Always
 
