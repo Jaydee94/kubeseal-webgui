@@ -38,7 +38,7 @@ If your default serviceaccount has this RBAC rule already you could disable `ser
 
 ## Upgrade from 2.0.X to 3.0.0
 
-When upgrading to `3.0.0` you don`t need to deploy a ingress route to the api. The nginx serving the ui will proxy the requests to the api.
+When upgrading to `3.0.0` you dont need to deploy a ingress route to the api. The nginx serving the ui will proxy the requests to the api.
 You can use the new helm chart located inside the `chart` folder to deploy the new kubseal-webgui version.
 
 ### Get Public-Cert from sealed-secrets controller
