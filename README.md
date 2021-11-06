@@ -18,7 +18,7 @@ The docker image can be found here: https://hub.docker.com/repository/docker/kub
 
 ## Demo
 
-![KubeSeal WebGui Demo](demo/kubseal-demo-2.0.0.gif)
+![KubeSeal WebGui Demo](demo/kubseal-demo-3.0.0.gif)
 
 ## Prerequisites
 
@@ -35,6 +35,11 @@ Please use the [helm chart](https://github.com/Jaydee94/kubeseal-webgui/tree/mas
 When upgrading to `2.1.0` make sure that you also update the helm chart for installing kubeseal-webgui.
 The application reads namespaces from current kubernetes cluster and needs to have access to list them.
 If your default serviceaccount has this RBAC rule already you could disable `serviceaccount.create` in the `values.yaml` of the helm chart.
+
+## Upgrade from 2.0.X to 3.0.0
+
+When upgrading to `3.0.0` you don`t need to deploy a ingress route to the api. The nginx serving the ui will proxy the requests to the api.
+You can use the new helm chart located inside the `chart` folder to deploy the new kubseal-webgui version.
 
 ### Get Public-Cert from sealed-secrets controller
 
