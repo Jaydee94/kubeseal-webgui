@@ -9,6 +9,9 @@ from app.kubeseal import decode_base64_string, run_kubeseal, valid_k8s_name
         "l" + "o" * 60 + "ng",
         "some-1-too-check",
         "ends-on-digit-1",
+        "1starts-with-it",
+        "some.dots.or_underscore",
+        "long-" + "a" * 248,
     ],
 )
 def test_valid_k8s_name(value):
@@ -23,13 +26,11 @@ def test_valid_k8s_name(value):
     [
         "",
         "-something",
-        "1a",
-        "too-l" + "o" * 57 + "ng",
+        "too-l" + "o" * 247 + "ng",
         "ähm",
         "_not-valid",
         "with spaces",
         " not-trimmed ",
-        "no.dots.allowed",
         "no-special-chars-like/,#+%",
         "ends-on-dash-",
         "Uppercase",
