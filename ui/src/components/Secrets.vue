@@ -61,8 +61,8 @@
                 >The secret name must be of type:
                 <a
                   target="_blank"
-                  href="https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-label-names"
-                  >Label Name</a
+                  href="https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names"
+                  >DNS Subdomain</a
                 ></i
               >
             </b-form-text>
@@ -196,19 +196,11 @@ spec:
 import { Base64 } from "js-base64";
 import "vue-popperjs/dist/vue-popper.css";
 
-function validLabelName(name) {
-  if (!name) {
-    return;
-  }
-  var re = /^[a-z]([a-z0-9-]{0,61}[a-z])?$/;
-  return re.test(name);
-}
-
 function validDnsSubdomain(name) {
   if (!name) {
     return;
   }
-  var re = /^[a-z]([a-z0-9._-]{0,251}[a-z])?$/;
+  var re = /^[a-z0-9]([a-z0-9._-]{0,251}[a-z0-9])?$/;
   return re.test(name);
 }
 
@@ -295,10 +287,10 @@ export default {
   },
   computed: {
     secretNameState: function () {
-      return validLabelName(this.secretName);
+      return validDnsSubdomain(this.secretName);
     },
     namespaceNameState: function () {
-      return validLabelName(this.namespaceName);
+      return validDnsSubdomain(this.namespaceName);
     },
     secretsState: function () {
       return this.secrets.map((e) => {
