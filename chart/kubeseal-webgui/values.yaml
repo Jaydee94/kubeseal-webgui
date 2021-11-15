@@ -7,11 +7,11 @@ api:
   url: http://localhost:5000
   image:
     repository: kubesealwebgui/api
-    tag: 3.0.0
+    tag: 3.0.1
 ui:
   image:
     repository: kubesealwebgui/ui
-    tag: 3.0.0
+    tag: 3.0.1
 image:
   pullPolicy: Always
 
