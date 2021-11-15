@@ -40,6 +40,7 @@
               :options="namespaces"
               :select-size="1"
               :state="namespaceNameState"
+              :plain=true
             ></b-form-select>
             <b-form-text id="password-help-block">
               Select the target namespace where the sealed secret will be
