@@ -4,7 +4,7 @@ api:
   # The value of api.url should be set to the public-accessible http endpoint (ingress url or OpenShift route).
   # api.url will be generated into config.json ConfigMap of the UI. This statically served JSON file
   # is used by the UI to locate the API.
-  url: http://localhost:5000
+  url: http://localhost:8080
   image:
     repository: kubesealwebgui/api
     tag: 3.0.1
