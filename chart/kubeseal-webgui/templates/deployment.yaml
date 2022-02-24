@@ -24,6 +24,8 @@ spec:
           env:
             - name: ORIGIN_URL
               value: "{{ .Values.api.url }}"
+            - name: KUBESEAL_CERT
+              value: "/kubeseal-webgui/cert/kubeseal-cert.pem"
           ports:
             - name: api
               containerPort: 5000
