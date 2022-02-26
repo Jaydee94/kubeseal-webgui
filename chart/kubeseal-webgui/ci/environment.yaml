@@ -1,0 +1,7 @@
+---
+
+api:
+  environment:
+    UWSGI_DISABLE_LOGGING: 1
+    UWSGI_PROCESSES: 4
+    UWSGI_THREADS: 2

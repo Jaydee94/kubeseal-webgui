@@ -37,6 +37,10 @@ spec:
           image: "{{ .Values.api.image.repository }}:{{ .Values.api.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
+          {{- range $key, $value := .Values.api.environment }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+          {{- end }}
             - name: ORIGIN_URL
               value: "{{ .Values.api.url }}"
             - name: KUBESEAL_CERT
