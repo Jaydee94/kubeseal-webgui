@@ -17,6 +17,21 @@ spec:
       {{- if .Values.serviceaccount.create }}
       serviceAccountName: kubeseal-webgui
       {{- end }}
+      {{- if .Values.sealedSecrets.autoFetchCert }}
+      initContainers:
+        - name: "fetch-cert"
+          image: "{{ .Values.api.image.repository }}:{{ .Values.api.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: [ "/kubeseal-webgui/bin/kubeseal-fetch.sh", "/certs/kubeseal-cert.pem" ]
+          env:
+            - name: KUBESEAL_CONTROLLER_NAME
+              value: {{ .Values.sealedSecrets.controllerName | quote }}
+            - name: KUBESEAL_CONTROLLER_NAMESPACE
+              value: {{ .Values.sealedSecrets.controllerNamespace | quote }}
+          volumeMounts:
+            - mountPath: /certs
+              name: sealed-secrets-certs
+      {{- end }}
       containers:
         - name: "api"
           image: "{{ .Values.api.image.repository }}:{{ .Values.api.image.tag }}"
@@ -41,9 +56,14 @@ spec:
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
+           {{- if .Values.sealedSecrets.autoFetchCert }}
+            - name: sealed-secret-certs
+              mountPath: /kubeseal-webgui/cert
+           {{- else }}
             - name: sealed-secret-configmap
               mountPath: /kubeseal-webgui/cert/kubeseal-cert.pem
               subPath: kubeseal-cert.pem
+           {{- end }}
         - name: "ui"
           image: "{{ .Values.ui.image.repository }}:{{ .Values.ui.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
@@ -66,6 +86,10 @@ spec:
               mountPath: /usr/share/nginx/html/config.json
               subPath: config.json
       volumes:
+        {{- if .Values.sealedSecrets.autoFetchCert }}
+        - name: sealed-secrets-certs
+          emptyDir: {}
+        {{- end }}
         - name: sealed-secret-configmap
           configMap:
             name: {{ include "kubeseal-webgui.fullname" . }}
