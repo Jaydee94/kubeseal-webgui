@@ -4,7 +4,7 @@ import logging
 import re
 import subprocess
 
-from flask import request, abort
+from flask import abort, current_app, request
 from flask_restful import Resource
 
 LOGGER = logging.getLogger("kubeseal-webgui")
@@ -93,8 +93,10 @@ def run_kubeseal_command(cleartext_secret_tuple, secret_namespace, secret_name):
         secret_namespace,
     )
     cleartext_secret = decode_base64_string(cleartext_secret_tuple["value"])
+    binary = current_app.config.get("KUBESEAL_BINARY")
+    cert = current_app.config.get("KUBESEAL_CERT")
     exec_kubeseal_command = [
-        "/kubeseal-webgui/kubeseal",
+        binary,
         "--raw",
         "--from-file=/dev/stdin",
         "--namespace",
@@ -102,7 +104,7 @@ def run_kubeseal_command(cleartext_secret_tuple, secret_namespace, secret_name):
         "--name",
         valid_k8s_name(secret_name),
         "--cert",
-        "/kubeseal-webgui/cert/kubeseal-cert.pem",
+        cert,
     ]
     kubeseal_subprocess = subprocess.Popen(
         exec_kubeseal_command,

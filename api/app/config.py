@@ -3,7 +3,7 @@ import json
 import logging
 import subprocess
 
-from flask import abort
+from flask import abort, current_app
 from flask_restful import Resource
 
 LOGGER = logging.getLogger("kubeseal-webgui")
@@ -24,8 +24,9 @@ class AppConfigEndpoint(Resource):
 def get_kubeseal_version() -> str:
     """Retrieve the kubeseal binary version."""
     LOGGER.debug("Retrieving kubeseal binary version.")
+    binary = current_app.config.get("KUBESEAL_BINARY")
     kubeseal_subprocess = subprocess.Popen(
-        ["/kubeseal-webgui/kubeseal", "--version"],
+        [binary, "--version"],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
