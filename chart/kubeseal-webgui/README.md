@@ -1,4 +1,4 @@
-# KubeSeal-Web-Gui Helm Chart
+# Kubeseal-Webgui Helm Chart
 
 * Installs the python based webapp for kubeseal-webgui
 
