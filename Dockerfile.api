@@ -4,7 +4,8 @@ ARG KUBESEAL_VERSION=0.16.0
 ENV PORT=5000 \
     HOST=0.0.0.0 \
     APP_HOME=/kubeseal-webgui
-ENV KUBESEAL_BINARY=${APP_HOME}/kubeseal
+ENV KUBESEAL_BINARY=${APP_HOME}/bin/kubeseal \
+    PATH="${APP_HOME}/bin:${PATH}"
 
 WORKDIR ${APP_HOME}
 COPY api/requirements.txt .

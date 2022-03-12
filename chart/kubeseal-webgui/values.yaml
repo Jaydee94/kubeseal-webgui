@@ -44,6 +44,9 @@ route:
     insecureEdgeTerminationPolicy: None
 
 sealedSecrets:
+  autoFetchCert: false
+  controllerName: sealed-secrets-controller
+  controllerNamespace: kube-system
   ## Public Certificate of your Sealed-Secrets Controller.
   ## Login to your cluster with kubectl.
   ## Run kubeseal --fetch-cert --controller-name <your-sealed-secrets-controller> --controller-namespace <sealed-secrets-controller-namespace>

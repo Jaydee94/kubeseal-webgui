@@ -1,0 +1,6 @@
+---
+
+sealedSecrets:
+  autoFetchCert: true
+  controllerName: seal
+  controllerNamespace: secrets
