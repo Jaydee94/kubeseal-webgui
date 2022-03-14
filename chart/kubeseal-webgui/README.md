@@ -1,4 +1,4 @@
-# KubeSeal-Web-Gui Helm Chart
+# Kubeseal-Webgui Helm Chart
 
 * Installs the python based webapp for kubeseal-webgui
 
@@ -48,4 +48,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `route.hostname`                          | Set Hostname of the route                      | `""`                                                    |
 | `route.tls.termination`                   | TLS Termination of the route                   | `""`                                                    |
 | `route.tls.insecureEdgeTerminationPolicy` | TLS insecureEdgeTerminationPolicy of the route | `""`                                                    |
+| `sealedSecrets.autoFetchCert`             | Load the cert from the Controller on start     | `false`                                                 |
+| `sealedSecrets.controllerName`            | Deployment name of the Controller              | `sealed-secrets-controller`                             |
+| `sealedSecrets.controllerNamespace`       | Namespace the Controller resides in            | `kube-system`                                           |
 | `sealedSecrets.cert`                      | Public-Key of your SealedSecrets controller    | `""`                                                    |
