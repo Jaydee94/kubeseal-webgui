@@ -24,6 +24,18 @@ The docker image can be found here: https://hub.docker.com/repository/docker/kub
 
 To use this Web-Gui you have to install [Bitnami-Sealed-Secrets](https://github.com/bitnami-labs/sealed-secrets) in your cluster first!
 
+## Installation
+
+You can use the helm chart which is included inside this repository to install kubseal-webgui.
+
+```bash
+helm repo add kubesealwebgui https://jaydee94.github.io/kubeseal-webgui/
+helm repo update
+
+# Make sure to configure all required values (with helm's --set argument) documented in our helm Chart before installing.
+helm install kubesealwebgui/kubeseal-webgui --set example_required_value="foobar"
+```
+
 ## Usage
 
 Mount the public certificate of your sealed secrets controller to `/kubeseal-webgui/cert/kubeseal-cert.pem` in the Docker container.
