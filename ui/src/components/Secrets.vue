@@ -178,6 +178,7 @@ spec:
             block
             variant="link"
             class="mb-3"
+            v-if="clipboardAvailable"
             v-on:click="copyRenderedSecrets()"
             >Copy <b-icon icon="clipboard-check" aria-hidden="true"></b-icon
           ></b-button>
@@ -310,7 +311,13 @@ export default {
       namespaceName: "",
       secrets: [{ key: "", value: "" }],
       renderedSecrets: "",
+      clipboardAvailable: false,
     };
+  },
+  mounted: function() {
+    if (navigator && navigator.clipboard) {
+      this.clipboardAvailable = true;
+    }
   },
 };
 </script>
