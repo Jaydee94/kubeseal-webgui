@@ -57,7 +57,7 @@ spec:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
            {{- if .Values.sealedSecrets.autoFetchCert }}
-            - name: sealed-secret-certs
+            - name: sealed-secrets-certs
               mountPath: /kubeseal-webgui/cert
            {{- else }}
             - name: sealed-secret-configmap
