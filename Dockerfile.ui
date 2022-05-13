@@ -3,16 +3,7 @@ COPY ui/ /ui
 WORKDIR /ui
 RUN npm install && npm run build
 
-FROM nginx:stable-alpine as ui-production-stage
-COPY --from=ui-build-stage /ui/dist /usr/share/nginx/html
-COPY --from=ui-build-stage /ui/nginx-default.conf /etc/nginx/conf.d/default.conf
-
-# support running as arbitrary user which belongs to the root group
-RUN chmod g+rwx /var/cache/nginx /var/run /var/log/nginx
-
-EXPOSE 8080
-
-# comment user directive as master process is run as user in OpenShift anyhow
-RUN sed -i.bak 's/^user/#user/' /etc/nginx/nginx.conf
-
-CMD ["nginx", "-g", "daemon off;"]
+FROM nginxinc/nginx-unprivileged:stable-alpine as ui-production-stage
+COPY --chown=101:101 --from=ui-build-stage /ui/dist /usr/share/nginx/html/
+COPY --chown=101:101 ui/nginx-default.conf /etc/nginx/conf.d/default.conf
+COPY --chown=101:101 ui/hooks /docker-entrypoint.d/
