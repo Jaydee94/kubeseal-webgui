@@ -2,10 +2,10 @@ FROM alpine:3.15
 
 RUN set -xe ; \
     apk add --no-cache \
-      uwsgi-python \
-      py3-pip
+    uwsgi-python \
+    py3-pip
 
-ARG KUBESEAL_VERSION=0.16.0
+ARG KUBESEAL_VERSION=0.17.5
 ENV PORT=5000 \
     HOST=0.0.0.0 \
     BASE_PATH=/ \
@@ -24,7 +24,7 @@ RUN pip --no-cache-dir install -r requirements.txt
 COPY api/ .
 RUN set -xe ; \
     wget -q -O "${KUBESEAL_BINARY}" \
-      "https://github.com/bitnami-labs/sealed-secrets/releases/download/v${KUBESEAL_VERSION}/kubeseal-linux-amd64" && \
+    "https://github.com/bitnami-labs/sealed-secrets/releases/download/v${KUBESEAL_VERSION}/kubeseal-linux-amd64" && \
     chown -R 1001:1001 . && \
     chmod 0755 "${KUBESEAL_BINARY}"
 
