@@ -1,15 +1,25 @@
-FROM python:3.9-alpine
+FROM alpine:3.15
+
+RUN set -xe ; \
+    apk add --no-cache \
+      uwsgi-python \
+      py3-pip
 
 ARG KUBESEAL_VERSION=0.16.0
 ENV PORT=5000 \
     HOST=0.0.0.0 \
+    BASE_PATH=/ \
+    UWSGI_NEED_APP=1 \
+    UWSGI_MASTER=1 \
+    UWSGI_PLUGIN=python \
+    UWSGI_MANAGE_SCRIPT_NAME=1 \
     APP_HOME=/kubeseal-webgui
 ENV KUBESEAL_BINARY=${APP_HOME}/bin/kubeseal \
     PATH="${APP_HOME}/bin:${PATH}"
 
 WORKDIR ${APP_HOME}
 COPY api/requirements.txt .
-RUN pip install -r requirements.txt
+RUN pip --no-cache-dir install -r requirements.txt
 
 COPY api/ .
 RUN set -xe ; \
@@ -20,4 +30,7 @@ RUN set -xe ; \
 
 USER 1001
 
-CMD [ "sh", "-c", "flask run --port $PORT --host $HOST" ]
+STOPSIGNAL SIGQUIT
+
+ENTRYPOINT [ "/kubeseal-webgui/bin/docker-entrypoint.sh" ]
+CMD [ "uwsgi" ]

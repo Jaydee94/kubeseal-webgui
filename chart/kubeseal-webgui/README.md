@@ -52,3 +52,4 @@ The command removes all the Kubernetes components associated with the chart and 
 | `sealedSecrets.controllerName`            | Deployment name of the Controller              | `sealed-secrets-controller`                             |
 | `sealedSecrets.controllerNamespace`       | Namespace the Controller resides in            | `kube-system`                                           |
 | `sealedSecrets.cert`                      | Public-Key of your SealedSecrets controller    | `""`                                                    |
+| `api.environment`                         | Additional API environment variables           | `{}`                                                    |

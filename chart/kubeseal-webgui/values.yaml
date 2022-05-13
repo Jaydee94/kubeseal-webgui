@@ -8,6 +8,7 @@ api:
   image:
     repository: kubesealwebgui/api
     tag: 3.0.1
+  environment: {}
 ui:
   image:
     repository: kubesealwebgui/ui
