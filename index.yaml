@@ -2,12 +2,21 @@ apiVersion: v1
 entries:
   kubeseal-webgui:
   - apiVersion: v1
+    appVersion: 3.1.0
+    created: "2022-05-14T14:47:43.9787862+02:00"
+    description: A Helm chart for installing kubeseal-webgui
+    digest: b7e9d9fe010942d527ac68813f8af98065cddef925e757c0e500a68be4841f7a
+    name: kubeseal-webgui
+    urls:
+    - kubeseal-webgui-3.1.0.tgz
+    version: 3.1.0
+  - apiVersion: v1
     appVersion: 3.0.0
-    created: "2022-03-14T17:56:03.0111768+01:00"
+    created: "2022-05-14T14:47:43.978339+02:00"
     description: A Helm chart for installing kubeseal-webgui
     digest: 33de673d4f3e3471ae79eb0d410eb0ce5b6092359a82938b1b180eef814929f9
     name: kubeseal-webgui
     urls:
     - kubeseal-webgui-3.0.0.tgz
     version: 3.0.0
-generated: "2022-03-14T17:56:03.0105741+01:00"
+generated: "2022-05-14T14:47:43.9777734+02:00"
