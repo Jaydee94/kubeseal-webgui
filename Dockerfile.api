@@ -19,14 +19,23 @@ ENV KUBESEAL_BINARY=${APP_HOME}/bin/kubeseal \
 
 WORKDIR ${APP_HOME}
 COPY api/requirements.txt .
-RUN pip --no-cache-dir install -r requirements.txt
+RUN apk update && \
+    apk add py-pip && \
+    pip --no-cache-dir install -r requirements.txt
 
 COPY api/ .
 RUN set -xe ; \
-    wget -q -O "${KUBESEAL_BINARY}" \
-    "https://github.com/bitnami-labs/sealed-secrets/releases/download/v${KUBESEAL_VERSION}/kubeseal-linux-amd64" && \
+    mkdir /tmp/kubeseal && \
+    cd /tmp/kubeseal && \
+    wget -q "https://github.com/bitnami-labs/sealed-secrets/releases/download/v${KUBESEAL_VERSION}/kubeseal-${KUBESEAL_VERSION}-linux-amd64.tar.gz" && \
+    ls -la /tmp/kubeseal && \
+    tar -xzvf kubeseal-${KUBESEAL_VERSION}-linux-amd64.tar.gz && \
+    mv kubeseal ${KUBESEAL_BINARY} && \
+    rm -rf /tmp/kubeseal && \
     chown -R 1001:1001 . && \
     chmod 0755 "${KUBESEAL_BINARY}"
+
+WORKDIR ${APP_HOME}
 
 USER 1001
 

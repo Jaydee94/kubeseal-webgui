@@ -1,7 +1,7 @@
 FROM node:lts-alpine AS ui-build-stage
 COPY ui/ /ui
 WORKDIR /ui
-RUN npm install && npm run build
+RUN npm install --legacy-peer-deps && npm run build
 
 FROM nginxinc/nginx-unprivileged:stable-alpine as ui-production-stage
 COPY --chown=101:101 --from=ui-build-stage /ui/dist /usr/share/nginx/html/
