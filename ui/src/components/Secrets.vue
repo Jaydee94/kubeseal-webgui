@@ -216,9 +216,7 @@ export default {
         let apiUrl = data["api_url"];
 
         response = await fetch(`${apiUrl}/namespaces`);
-
-        let availableNamespaces = await response.json();
-        this.namespaces = JSON.parse(availableNamespaces);
+        this.namespaces = await response.json();
       } catch (error) {
         this.errorMessage = error;
       }

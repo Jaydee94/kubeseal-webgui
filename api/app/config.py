@@ -1,5 +1,4 @@
 """Provides REST-API and kubeseal-cli specific functionality."""
-import json
 import logging
 import subprocess
 
@@ -41,9 +40,8 @@ def get_kubeseal_version() -> str:
     return str(version).split(":")[1].replace('"', "").lstrip()
 
 
-def get_app_config():
-    """Return the app configs in json format."""
-    config = {}
-    config["kubeseal_version"] = get_kubeseal_version()
-
-    return json.dumps(config)
+def get_app_config() -> dict[str, str]:
+    """Return the app configs dict."""
+    return {
+        'kubeseal_version': get_kubeseal_version(),
+    }
