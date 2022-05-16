@@ -8,7 +8,7 @@ Vue.config.productionTip = false
 import 'bootstrap/dist/css/bootstrap.css'
 import 'bootstrap-vue/dist/bootstrap-vue.css'
 import 'bootstrap-dark-4/dist/bootstrap-nightshade.css'
- 
+
 
 
 if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
