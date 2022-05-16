@@ -42,7 +42,7 @@ export default {
           this.fetchConfigsSuccessful = false
         }
         let configs = await response.json();
-        this.configs = JSON.parse(configs);
+        this.configs = configs;
         this.configs.kubeseal_webgui_ui_version = kubeseal_webgui_ui_version;
         this.configs.kubeseal_webgui_api_version = kubeseal_webgui_api_version;
       } catch (error) {
