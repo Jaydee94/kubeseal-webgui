@@ -45,6 +45,11 @@ The command removes all the Kubernetes components associated with the chart and 
 | `resources.limits.memory`                 | Limits memory                                   | `256Mi`                          |
 | `resources.requests.cpu`                  | Requests CPU                                    | `20m`                            |
 | `resources.requests.memory`               | Requests memory                                 | `20m`                            |
+| `ingress.enabled`                         | Enable an ingress route                         | `false`                          |
+| `ingress.annotations`                     | Additional annotations for the ingress object.  | `{}`                             |
+| `ingress.hostname`                        | The hostname for the ingress route              | `kubeseal-webgui.example.com`    |
+| `ingress.tls.enabled`                     | Enable TLS for the ingress route                | `false`                          |
+| `ingress.tls.secretName`                  | The secret name for private and public key      | `""`                             |
 | `route.enabled`                           | Deploy OpenShift route                          | `false`                          |
 | `route.hostname`                          | Set Hostname of the route                       | `""`                             |
 | `route.tls.termination`                   | TLS Termination of the route                    | `""`                             |

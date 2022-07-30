@@ -37,6 +37,16 @@ resources:
     cpu: 20m
     memory: 256Mi
 
+# Setup an ingress route optionally
+
+ingress:
+  enabled: false
+  annotations: {}
+  hostname: "kubeseal-webgui.example.com"
+  tls:
+    enabled: false
+    secretName: ""
+
 # Optionally use a OpenShift-Route
 # If 'hostname' is an empty string (""), OpenShift will create a hostname for you.
 route:
