@@ -23,17 +23,14 @@
           <br />
           <div align="left">
             For more information about <b>sealed-secrets</b>
-            <a
-              target="_blank"
-              href="https://github.com/bitnami-labs/sealed-secrets"
-              >click here</a
-            >.
+            <a target="_blank" href="https://github.com/bitnami-labs/sealed-secrets">click here</a>.
           </div>
         </b-popover>
       </div>
 
       <b-form>
         <b-form-row class="mt-2">
+<<<<<<< HEAD
           <b-col cols="4">
             <b-form-select
               v-model="namespaceName"
@@ -42,11 +39,17 @@
               :state="namespaceNameState"
               :plain=true
             ></b-form-select>
+=======
+          <b-col cols="6">
+            <b-form-select v-model="namespaceName" :options="namespaces" :select-size="1" :state="namespaceNameState"
+              :plain=true></b-form-select>
+>>>>>>> d98eb83 (file upload on frontend added)
             <b-form-text id="password-help-block">
               Select the target namespace where the sealed secret will be
               deployed.
             </b-form-text>
           </b-col>
+<<<<<<< HEAD
           <b-col cols="4">
             <b-form-input
               v-model="secretName"
@@ -55,17 +58,18 @@
               trim
               :state="secretNameState"
             ></b-form-input>
+=======
+          <b-col cols="6">
+            <b-form-input v-model="secretName" placeholder="Secret name" id="input-secret-name" trim
+              :state="secretNameState"></b-form-input>
+>>>>>>> d98eb83 (file upload on frontend added)
             <b-form-text id="password-help-block">
               Specify name of the secret.
               <br />
-              <i
-                >The secret name must be of type:
-                <a
-                  target="_blank"
-                  href="https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names"
-                  >DNS Subdomain</a
-                ></i
-              >
+              <i>The secret name must be of type:
+                <a target="_blank"
+                  href="https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names">DNS
+                  Subdomain</a></i>
             </b-form-text>
           </b-col>
           <b-col cols="4">
@@ -90,29 +94,22 @@
           </b-col>
         </b-form-row>
 
-        <div
-          class="mt-4"
-          v-for="(secret, counter) in secretsState"
-          :key="counter"
-        >
+        <div class="mt-4" v-for="(secret, counter) in secretsState" :key="counter">
           <b-form-row class="align-items-center">
             <b-col cols="3">
-              <b-form-textarea
-                v-model="secret.key"
-                placeholder="Secret key"
-                id="input-key"
-                :state="secret.state"
-              ></b-form-textarea>
+              <b-form-textarea v-model="secret.key" placeholder="Secret key" id="input-key" :state="secret.state">
+              </b-form-textarea>
             </b-col>
-            <b-col cols="8">
-              <b-form-textarea
-                rows="1"
-                v-model="secret.value"
-                :placeholder="'Secret value'"
-                id="input-value"
-              ></b-form-textarea>
+            <b-col cols="6">
+              <b-form-textarea rows="1" v-model="secret.value" :placeholder="'Secret value'" id="input-value">
+              </b-form-textarea>
+            </b-col>
+            <b-col cols="2">
+              <b-form-file v-model="secret.file" :state="secret.containsFile" placeholder="Upload File"
+                drop-placeholder="Drop file here..."></b-form-file>
             </b-col>
             <b-col cols="1">
+<<<<<<< HEAD
               <b-button block variant="link"
                 :disabled="hasNoSecrets"
                 ><b-icon
@@ -121,6 +118,12 @@
                   v-on:click="removeSecret(counter)"
                 ></b-icon
               ></b-button>
+=======
+              <b-button block variant="link">
+                <b-icon v-if="counter > 0" icon="trash" aria-hidden="true" v-on:click="secrets.splice(counter, 1)">
+                </b-icon>
+              </b-button>
+>>>>>>> d98eb83 (file upload on frontend added)
             </b-col>
           </b-form-row>
         </div>
@@ -129,24 +132,16 @@
             <b-form-text block class="mb-3">
               Specify sensitive value and corresponding key of the secret.
               <br />
-              <i
-                >The key must be of type:
-                <a
-                  target="_blank"
-                  href="https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names"
-                  >DNS Subdomain</a
-                ></i
-              >
+              <i>The key must be of type:
+                <a target="_blank"
+                  href="https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names">DNS
+                  Subdomain</a></i>
             </b-form-text>
           </b-col>
         </b-row>
         <b-form-row>
           <b-col>
-            <b-alert
-              :show="!(!errorMessage || 0 === errorMessage.length)"
-              dismissible
-              variant="warning"
-            >
+            <b-alert :show="!(!errorMessage || 0 === errorMessage.length)" dismissible variant="warning">
               <p>
                 Error while encoding sensitive data. Please contact your
                 administrator and try again later.
@@ -160,17 +155,11 @@
         </b-form-row>
         <b-form-row class="mt-2">
           <b-col cols="6">
-            <b-button
-              block
-              variant="secondary"
-              v-on:click="secrets.push({ key: '', value: '' })"
-              >Add key-value pair</b-button
-            >
+            <b-button block variant="secondary" v-on:click="secrets.push({ key: '', value: '' })">Add key-value pair
+            </b-button>
           </b-col>
           <b-col cols="6">
-            <b-button block variant="primary" v-on:click="fetchEncodedSecrets()"
-              >Encrypt</b-button
-            >
+            <b-button block variant="primary" v-on:click="fetchEncodedSecrets()">Encrypt</b-button>
           </b-col>
         </b-form-row>
       </b-form>
@@ -195,19 +184,10 @@ spec:
       </b-row>
       <b-row>
         <b-col>
-          <b-button
-            block
-            variant="link"
-            class="mb-3"
-            v-if="clipboardAvailable"
-            v-on:click="copyRenderedSecrets()"
-            >Copy <b-icon icon="clipboard-check" aria-hidden="true"></b-icon
-          ></b-button>
-          <b-button
-            block
-            variant="primary"
-            :pressed.sync="displayCreateSealedSecretForm"
-            >Encrypt more secrets
+          <b-button block variant="link" class="mb-3" v-if="clipboardAvailable" v-on:click="copyRenderedSecrets()">Copy
+            <b-icon icon="clipboard-check" aria-hidden="true"></b-icon>
+          </b-button>
+          <b-button block variant="primary" :pressed.sync="displayCreateSealedSecretForm">Encrypt more secrets
           </b-button>
         </b-col>
       </b-row>
@@ -282,7 +262,7 @@ export default {
         if (!response.ok) {
           throw Error(
             "No sealed secrets in response from backend: " +
-              (await response.text())
+            (await response.text())
           );
         } else {
           let sealedSecrets = await response.json();
@@ -353,7 +333,7 @@ export default {
       clipboardAvailable: false,
     };
   },
-  mounted: function() {
+  mounted: function () {
     if (navigator && navigator.clipboard) {
       this.clipboardAvailable = true;
     }
