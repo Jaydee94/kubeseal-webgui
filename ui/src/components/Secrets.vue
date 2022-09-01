@@ -64,7 +64,7 @@
             </b-col>
             <b-col cols="2">
               <b-form-file v-model="secret.file" :state="secret.containsFile" placeholder="Upload File"
-                drop-placeholder="Drop file here..."></b-form-file>
+                drop-placeholder="Drop file here..." v-on:change="validateInputSize" ref="file-input"></b-form-file>
             </b-col>
             <b-col cols="1">
               <b-button block variant="link">
@@ -90,8 +90,7 @@
           <b-col>
             <b-alert :show="!(!errorMessage || 0 === errorMessage.length)" dismissible variant="warning">
               <p>
-                Error while encoding sensitive data. Please contact your
-                administrator and try again later.
+                {{ errorInfo }}
               </p>
               <b>Error message: </b>
               <p class="mt-3">
@@ -106,7 +105,7 @@
             </b-button>
           </b-col>
           <b-col cols="6">
-            <b-button block variant="primary" v-on:click="fetchEncodedSecrets()">Encrypt</b-button>
+            <b-button block variant="primary" v-on:click="fetchEncodedSecrets()" :disabled="!(!errorMessage)">Encrypt</b-button>
           </b-col>
         </b-form-row>
       </b-form>
@@ -168,6 +167,7 @@ export default {
         let availableNamespaces = await response.json();
         this.namespaces = JSON.parse(availableNamespaces);
       } catch (error) {
+        this.errorInfo = "Failed to retieve namespaces from backend."
         this.errorMessage = error;
       }
     },
@@ -216,6 +216,7 @@ export default {
           this.displayCreateSealedSecretForm = false;
         }
       } catch (error) {
+        this.errorInfo = "Error while encoding sensitive data. Please contact your administrator and try again later."
         this.errorMessage = error;
       }
     },
@@ -229,6 +230,26 @@ export default {
       let sealedSecretElement = this.$refs["sealedSecret"];
       let sealedSecretContent = sealedSecretElement.innerText.trim();
       navigator.clipboard.writeText(sealedSecretContent);
+    },
+    validateInputSize: function (e){
+      const file = e.target.files[0];
+      if (!file) {
+        e.preventDefault();
+        this.errorInfo = "File Validation failed."
+        this.errorMessage = Error("No file chosen")
+        // alert('No file chosen');
+        return;
+      }
+      
+      if (file.size > 1024 * 1024) {
+        e.preventDefault();
+        this.errorInfo = "File Validation failed."
+        this.errorMessage = "File too big (> 1MB)"
+        // alert('File too big (> 1MB)');
+        return;
+      }
+      
+      this.errorMessage = ""
     },
   },
   beforeMount() {
@@ -253,6 +274,7 @@ export default {
     return {
       namespaces: [],
       errorMessage: "",
+      errorInfo:"",
       displayName: "",
       displayCreateSealedSecretForm: true,
       secretName: "",
