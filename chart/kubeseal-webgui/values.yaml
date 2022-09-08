@@ -42,6 +42,7 @@ resources:
 ingress:
   enabled: false
   annotations: {}
+  ingressClassName: ""
   hostname: "kubeseal-webgui.example.com"
   tls:
     enabled: false
