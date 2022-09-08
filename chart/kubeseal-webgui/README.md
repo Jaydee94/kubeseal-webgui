@@ -47,6 +47,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `resources.requests.memory`               | Requests memory                                 | `20m`                            |
 | `ingress.enabled`                         | Enable an ingress route                         | `false`                          |
 | `ingress.annotations`                     | Additional annotations for the ingress object.  | `{}`                             |
+| `ingress.ingressClassName`                | Additional ingressClassName.                    | `""`                             |
 | `ingress.hostname`                        | The hostname for the ingress route              | `kubeseal-webgui.example.com`    |
 | `ingress.tls.enabled`                     | Enable TLS for the ingress route                | `false`                          |
 | `ingress.tls.secretName`                  | The secret name for private and public key      | `""`                             |
