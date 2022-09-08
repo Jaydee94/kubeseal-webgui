@@ -23,7 +23,7 @@
           <br />
           <div align="left">
             For more information about <b>sealed-secrets</b>
-            <a target="_blank" href="https://github.com/bitnami-labs/sealed-secrets">click here</a>.
+            <a target="_blank" href="https://github.com/bitnami-labs/sealed-secrets"> click here</a>.
           </div>
         </b-popover>
       </div>
@@ -105,7 +105,7 @@
             </b-button>
           </b-col>
           <b-col cols="6">
-            <b-button block variant="primary" v-on:click="fetchEncodedSecrets()" :disabled="!(!errorMessage)">Encrypt</b-button>
+            <b-button block variant="primary" v-on:click="fetchEncodedSecrets()">Encrypt</b-button>
           </b-col>
         </b-form-row>
       </b-form>
