@@ -30,39 +30,17 @@
 
       <b-form>
         <b-form-row class="mt-2">
-<<<<<<< HEAD
           <b-col cols="4">
-            <b-form-select
-              v-model="namespaceName"
-              :options="namespaces"
-              :select-size="1"
-              :state="namespaceNameState"
-              :plain=true
-            ></b-form-select>
-=======
-          <b-col cols="6">
             <b-form-select v-model="namespaceName" :options="namespaces" :select-size="1" :state="namespaceNameState"
               :plain=true></b-form-select>
->>>>>>> d98eb83 (file upload on frontend added)
             <b-form-text id="password-help-block">
               Select the target namespace where the sealed secret will be
               deployed.
             </b-form-text>
           </b-col>
-<<<<<<< HEAD
           <b-col cols="4">
-            <b-form-input
-              v-model="secretName"
-              placeholder="Secret name"
-              id="input-secret-name"
-              trim
-              :state="secretNameState"
-            ></b-form-input>
-=======
-          <b-col cols="6">
             <b-form-input v-model="secretName" placeholder="Secret name" id="input-secret-name" trim
               :state="secretNameState"></b-form-input>
->>>>>>> d98eb83 (file upload on frontend added)
             <b-form-text id="password-help-block">
               Specify name of the secret.
               <br />
@@ -73,23 +51,13 @@
             </b-form-text>
           </b-col>
           <b-col cols="4">
-            <b-form-select
-              v-model="scope"
-              :options="scopes"
-              :select-size="1"
-              :plain="true"
-            ></b-form-select>
+            <b-form-select v-model="scope" :options="scopes" :select-size="1" :plain="true"></b-form-select>
             <b-form-text id="scope-help-block">
               Specify scope of the secret.
               <br />
-              <i
-                >
-                <a
-                  target="_blank"
-                  href="https://github.com/bitnami-labs/sealed-secrets#scopes"
-                  >Scopes for sealed secrets</a
-                ></i
-              >
+              <i>
+                <a target="_blank" href="https://github.com/bitnami-labs/sealed-secrets#scopes">Scopes for sealed
+                  secrets</a></i>
             </b-form-text>
           </b-col>
         </b-form-row>
@@ -101,41 +69,32 @@
               </b-form-textarea>
             </b-col>
             <b-col cols="6">
-              <b-form-textarea rows="1" v-model="secret.value" :placeholder="'Secret value'" id="input-value">
+              <b-form-textarea v-if="! secret.file" rows="1" v-model="secret.value" :placeholder="'Secret value'"
+                id="input-value">
               </b-form-textarea>
             </b-col>
             <b-col cols="2">
-              <b-form-file v-model="secret.file" :state="secret.containsFile" placeholder="Upload File"
-                drop-placeholder="Drop file here..." v-on:change="validateInputSize" ref="file-input"></b-form-file>
+              <b-form-file v-if="! secret.value" v-model="secret.file" :state="secret.containsFile"
+                placeholder="Upload File" drop-placeholder="Drop file here..." v-on:change="validateInputSize"
+                ref="file-input"></b-form-file>
             </b-col>
             <b-col cols="1">
-<<<<<<< HEAD
-              <b-button block variant="link"
-                :disabled="hasNoSecrets"
-                ><b-icon
-                  icon="trash"
-                  aria-hidden="true"
-                  v-on:click="removeSecret(counter)"
-                ></b-icon
-              ></b-button>
-=======
-              <b-button block variant="link">
-                <b-icon v-if="counter > 0" icon="trash" aria-hidden="true" v-on:click="secrets.splice(counter, 1)">
-                </b-icon>
+              <b-button block variant="link" :disabled="hasNoSecrets">
+                <b-icon icon="trash" aria-hidden="true" v-on:click="removeSecret(counter)"></b-icon>
               </b-button>
->>>>>>> d98eb83 (file upload on frontend added)
             </b-col>
           </b-form-row>
         </div>
         <b-row>
           <b-col>
             <b-form-text block class="mb-3">
-              Specify sensitive value and corresponding key of the secret.
-              <br />
-              <i>The key must be of type:
+              <i>Specify sensitive value or file (
+                < 1MB) and corresponding key of the secret. <br />
+                The key must be of type:
                 <a target="_blank"
                   href="https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names">DNS
-                  Subdomain</a></i>
+                  Subdomain</a>
+              </i>
             </b-form-text>
           </b-col>
         </b-row>
@@ -206,6 +165,20 @@ function validDnsSubdomain(name) {
   return re.test(name);
 }
 
+function readFileAsync(file) {
+  return new Promise((resolve, reject) => {
+    let reader = new FileReader();
+
+    reader.onload = () => {
+      resolve(reader.result);
+    };
+
+    reader.onerror = reject;
+
+    reader.readAsText(file);
+  })
+}
+
 export default {
   name: "Secrets",
   methods: {
@@ -235,13 +208,20 @@ export default {
         var requestObject = {
           secret: this.secretName,
           namespace: this.namespaceName,
-          scope: this.scope,
-          secrets: this.secrets.map((element) => {
-            return {
-              key: element.key,
-              value: Base64.encode(element.value),
-            };
-          }),
+          secrets: await Promise.all(this.secrets.map(async (element) => {
+            if (element.value) {
+              return {
+                key: element.key,
+                value: Base64.encode(element.value),
+              };
+            } else {
+              let fileContent = await readFileAsync(element.file)
+              return {
+                key: element.key,
+                file: Base64.encode(fileContent)
+              };
+            }
+          })),
         };
 
         let requestBody = JSON.stringify(requestObject, null, "\t");
@@ -285,7 +265,6 @@ export default {
       let sealedSecretContent = sealedSecretElement.innerText.trim();
       navigator.clipboard.writeText(sealedSecretContent);
     },
-<<<<<<< HEAD
     removeSecret: function (counter) {
       if (this.secrets.length > 1) {
         this.secrets.splice(counter, 1)
@@ -293,9 +272,8 @@ export default {
         this.secrets[0].key = '';
         this.secrets[0].value = '';
       }
-    }
-=======
-    validateInputSize: function (e){
+    },
+    validateInputSize: function (e) {
       const file = e.target.files[0];
       if (!file) {
         e.preventDefault();
@@ -304,7 +282,7 @@ export default {
         // alert('No file chosen');
         return;
       }
-      
+
       if (file.size > 1024 * 1024) {
         e.preventDefault();
         this.errorInfo = "File Validation failed."
@@ -312,10 +290,9 @@ export default {
         // alert('File too big (> 1MB)');
         return;
       }
-      
+
       this.errorMessage = ""
     },
->>>>>>> a9dad7a (Add file size validation)
   },
   beforeMount() {
     this.fetchNamespaces();
@@ -347,13 +324,12 @@ export default {
       namespaces: [],
       scopes: ["strict", "cluster-wide", "namespace-wide"],
       errorMessage: "",
-      errorInfo:"",
+      errorInfo: "",
       displayName: "",
       displayCreateSealedSecretForm: true,
       secretName: "",
       namespaceName: "",
-      scope: "strict",
-      secrets: [{ key: "", value: "" }],
+      secrets: [{ key: "", value: "", file: "" }],
       renderedSecrets: "",
       clipboardAvailable: false,
     };
