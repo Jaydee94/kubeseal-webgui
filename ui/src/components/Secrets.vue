@@ -59,12 +59,14 @@
               </b-form-textarea>
             </b-col>
             <b-col cols="6">
-              <b-form-textarea rows="1" v-model="secret.value" :placeholder="'Secret value'" id="input-value">
+              <b-form-textarea v-if="! secret.file" rows="1" v-model="secret.value" :placeholder="'Secret value'"
+                id="input-value">
               </b-form-textarea>
             </b-col>
             <b-col cols="2">
-              <b-form-file v-model="secret.file" :state="secret.containsFile" placeholder="Upload File"
-                drop-placeholder="Drop file here..." v-on:change="validateInputSize" ref="file-input"></b-form-file>
+              <b-form-file v-if="! secret.value" v-model="secret.file" :state="secret.containsFile"
+                placeholder="Upload File" drop-placeholder="Drop file here..." v-on:change="validateInputSize"
+                ref="file-input"></b-form-file>
             </b-col>
             <b-col cols="1">
               <b-button block variant="link">
@@ -77,12 +79,13 @@
         <b-row>
           <b-col>
             <b-form-text block class="mb-3">
-              Specify sensitive value and corresponding key of the secret.
-              <br />
-              <i>The key must be of type:
+              <i>Specify sensitive value or file (
+                < 1MB) and corresponding key of the secret. <br />
+                The key must be of type:
                 <a target="_blank"
                   href="https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names">DNS
-                  Subdomain</a></i>
+                  Subdomain</a>
+              </i>
             </b-form-text>
           </b-col>
         </b-row>
@@ -153,6 +156,20 @@ function validDnsSubdomain(name) {
   return re.test(name);
 }
 
+function readFileAsync(file) {
+  return new Promise((resolve, reject) => {
+    let reader = new FileReader();
+
+    reader.onload = () => {
+      resolve(reader.result);
+    };
+
+    reader.onerror = reject;
+
+    reader.readAsText(file);
+  })
+}
+
 export default {
   name: "Secrets",
   methods: {
@@ -182,12 +199,20 @@ export default {
         var requestObject = {
           secret: this.secretName,
           namespace: this.namespaceName,
-          secrets: this.secrets.map((element) => {
-            return {
-              key: element.key,
-              value: Base64.encode(element.value),
-            };
-          }),
+          secrets: await Promise.all(this.secrets.map(async (element) => {
+            if (element.value) {
+              return {
+                key: element.key,
+                value: Base64.encode(element.value),
+              };
+            } else {
+              let fileContent = await readFileAsync(element.file)
+              return {
+                key: element.key,
+                file: Base64.encode(fileContent)
+              };
+            }
+          })),
         };
 
         let requestBody = JSON.stringify(requestObject, null, "\t");
@@ -231,7 +256,7 @@ export default {
       let sealedSecretContent = sealedSecretElement.innerText.trim();
       navigator.clipboard.writeText(sealedSecretContent);
     },
-    validateInputSize: function (e){
+    validateInputSize: function (e) {
       const file = e.target.files[0];
       if (!file) {
         e.preventDefault();
@@ -240,7 +265,7 @@ export default {
         // alert('No file chosen');
         return;
       }
-      
+
       if (file.size > 1024 * 1024) {
         e.preventDefault();
         this.errorInfo = "File Validation failed."
@@ -248,7 +273,7 @@ export default {
         // alert('File too big (> 1MB)');
         return;
       }
-      
+
       this.errorMessage = ""
     },
   },
@@ -274,12 +299,12 @@ export default {
     return {
       namespaces: [],
       errorMessage: "",
-      errorInfo:"",
+      errorInfo: "",
       displayName: "",
       displayCreateSealedSecretForm: true,
       secretName: "",
       namespaceName: "",
-      secrets: [{ key: "", value: "" }],
+      secrets: [{ key: "", value: "", file: "" }],
       renderedSecrets: "",
       clipboardAvailable: false,
     };
