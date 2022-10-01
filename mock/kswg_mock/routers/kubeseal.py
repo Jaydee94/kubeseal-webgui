@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 import json
 import re
 import subprocess
@@ -19,20 +19,18 @@ class Data(BaseModel):
 
 @router.post("/secrets")
 def encrypt(data: Data) -> list:
-    # try:
-    return json.dumps(
-        run_kubeseal(
-            data.secrets,
-            data.namespace,
-            data.secret,
+    try:
+        return json.dumps(
+            run_kubeseal(
+                data.secrets,
+                data.namespace,
+                data.secret,
+            )
         )
-    )
-
-
-# except (KeyError, ValueError) as e:
-#     raise HTTPException(400, f"Invalid data for sealing secrets: {e}")
-# except RuntimeError:
-#     raise HTTPException(500, "Server is dreaming...")
+    except (KeyError, ValueError) as e:
+        raise HTTPException(400, f"Invalid data for sealing secrets: {e}")
+    except RuntimeError:
+        raise HTTPException(500, "Server is dreaming...")
 
 
 def run_kubeseal(cleartext_secrets, secret_namespace, secret_name) -> list:
