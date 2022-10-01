@@ -1,8 +1,7 @@
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter
 import json
 import re
 import subprocess
-import traceback
 import tempfile
 import os
 import base64
