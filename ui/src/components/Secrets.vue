@@ -94,7 +94,7 @@
             </b-col>
             <b-col cols="1">
               <b-button block variant="link"
-                :disabled="hasNoSecrets()"
+                :disabled="hasNoSecrets"
                 ><b-icon
                   icon="trash"
                   aria-hidden="true"
@@ -283,13 +283,6 @@ export default {
       let sealedSecretContent = sealedSecretElement.innerText.trim();
       navigator.clipboard.writeText(sealedSecretContent);
     },
-    hasNoSecrets: function () {
-      if (this.secrets.length > 1) {
-        return false;
-      }
-      let secret = this.secrets[0];
-      return secret.key === '' && secret.value === '';
-    },
     removeSecret: function (counter) {
       if (this.secrets.length > 1) {
         this.secrets.splice(counter, 1)
@@ -315,6 +308,13 @@ export default {
         e.state = validDnsSubdomain(e.key);
         return e;
       });
+    },
+    hasNoSecrets: function () {
+      if (this.secrets.length > 1) {
+        return false;
+      }
+      let secret = this.secrets[0];
+      return secret.key === '' && secret.value === '';
     },
   },
   data: function () {
