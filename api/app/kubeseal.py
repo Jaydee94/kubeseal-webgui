@@ -1,5 +1,6 @@
 """Provides REST-API and kubeseal-cli specific functionality."""
 import base64
+from enum import Enum
 import logging
 import re
 import subprocess
@@ -8,6 +9,18 @@ from flask import abort, current_app, request
 from flask_restful import Resource
 
 LOGGER = logging.getLogger("kubeseal-webgui")
+
+
+class Scope(Enum):
+    STRICT = "strict"
+    CLUSTER_WIDE = "cluster-wide"
+    NAMESPACE_WIDE = "namespace-wide"
+
+    def needs_name(self):
+        return self not in (Scope.CLUSTER_WIDE, Scope.NAMESPACE_WIDE)
+
+    def needs_namespace(self):
+        return self is not Scope.CLUSTER_WIDE
 
 
 class KubesealEndpoint(Resource):
@@ -40,7 +53,7 @@ class KubesealEndpoint(Resource):
                 sealing_request["secrets"],
                 sealing_request["namespace"],
                 sealing_request["secret"],
-                sealing_request.get("scope", "strict"),
+                sealing_request.get("scope", Scope.STRICT.value),
             )
         except (KeyError, ValueError) as e:
             LOGGER.error("Invalid data when sealing secrets with", exc_info=e)
@@ -55,24 +68,26 @@ def is_blank(value: str) -> bool:
 
 
 def run_kubeseal(
-    cleartext_secrets, secret_namespace, secret_name, scope="strict"
+    cleartext_secrets, secret_namespace, secret_name, scope=Scope.STRICT.value
 ) -> list:
     """Check input and initiate kubeseal-cli call."""
-    if is_blank(secret_namespace):
+    if is_blank(scope):
+        scope = Scope.STRICT
+    else:
+        try:
+            scope = Scope(scope)
+        except ValueError as e:
+            error_message = "scope is not of allowed value"
+            LOGGER.error(error_message)
+            raise ValueError(error_message) from e
+
+    if is_blank(secret_namespace) and scope.needs_namespace():
         error_message = "secret_namespace was not given"
         LOGGER.error(error_message)
         raise ValueError(error_message)
 
-    if is_blank(secret_name):
+    if is_blank(secret_name) and scope.needs_name():
         error_message = "secret_name was not given"
-        LOGGER.error(error_message)
-        raise ValueError(error_message)
-
-    if is_blank(scope):
-        scope = "strict"
-
-    if scope not in {"strict", "cluster-wide", "namespace-wide"}:
-        error_message = "scope is not of allowed value"
         LOGGER.error(error_message)
         raise ValueError(error_message)
 
@@ -100,7 +115,7 @@ def valid_k8s_name(value: str) -> str:
 
 
 def run_kubeseal_command(
-    cleartext_secret_tuple, secret_namespace, secret_name, scope="strict"
+    cleartext_secret_tuple, secret_namespace, secret_name, scope: Scope = Scope.STRICT
 ):
     """Call kubeseal-cli in subprocess."""
     LOGGER.info(
@@ -117,15 +132,25 @@ def run_kubeseal_command(
         binary,
         "--raw",
         "--from-file=/dev/stdin",
-        "--namespace",
-        valid_k8s_name(secret_namespace),
-        "--name",
-        valid_k8s_name(secret_name),
         "--cert",
         cert,
         "--scope",
-        scope,
+        scope.value,
     ]
+    if scope.needs_namespace():
+        exec_kubeseal_command.extend(
+            [
+                "--namespace",
+                valid_k8s_name(secret_namespace),
+            ]
+        )
+    if scope.needs_name():
+        exec_kubeseal_command.extend(
+            [
+                "--name",
+                valid_k8s_name(secret_name),
+            ]
+        )
     kubeseal_subprocess = subprocess.Popen(
         exec_kubeseal_command,
         stdin=subprocess.PIPE,
