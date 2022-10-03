@@ -255,7 +255,7 @@ export default {
       }
     },
     renderSecrets: function (sealedSecrets) {
-      var dataEntries = sealedSecrets.map((element) => {
+      var dataEntries = JSON.parse(sealedSecrets).map((element) => {
         return `    ${element["key"]}: ${element["value"]}`;
       });
       return dataEntries.join("\n");
