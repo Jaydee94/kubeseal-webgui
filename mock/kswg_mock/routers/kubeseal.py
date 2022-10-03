@@ -67,44 +67,29 @@ def valid_k8s_name(value: str) -> str:
 
 def run_kubeseal_command(cleartext_secret_tuple: Dict, secret_namespace, secret_name):
     cleartext_secret = ""
-    cleartext_file = ""
     if "value" in cleartext_secret_tuple:
         cleartext_secret = decode_base64_string(cleartext_secret_tuple["value"])
-        type = "text"
     elif "file" in cleartext_secret_tuple:
-        cleartext_file = decode_base64_string(cleartext_secret_tuple["file"])
-        type = "file"
+        cleartext_secret = decode_base64_string(cleartext_secret_tuple["file"])
     else:
         raise ValueError("Missing 'value' or 'file' in request.")
 
     binary = "/tmp/kubeseal"
     cert = "/tmp/cert.pem"
-    if cleartext_secret:
-        sealed_secret = encrypt_value_or_file(
-            secret_namespace, secret_name, cleartext_secret, binary, cert, type
-        )
-    if cleartext_file:
-        sealed_secret = encrypt_value_or_file(
-            secret_namespace, secret_name, cleartext_secret, binary, cert, type
-        )
+    sealed_secret = encrypt_value_or_file(
+        secret_namespace, secret_name, cleartext_secret, binary, cert
+    )
 
     return {"key": cleartext_secret_tuple["key"], "value": sealed_secret}
 
 
 def encrypt_value_or_file(
-    secret_namespace, secret_name, cleartext_secret, binary, cert, type
+    secret_namespace, secret_name, cleartext_secret, binary, cert
 ) -> str:
-    if type == "text":
-        temp_secret_file = "/dev/stdin"
-    if type == "file":
-        temp = tempfile.NamedTemporaryFile("w")
-        temp.write(cleartext_secret)
-        temp_secret_file = temp.name
-
     exec_kubeseal_command = [
         binary,
         "--raw",
-        f"--from-file={temp_secret_file}",
+        "--from-file=/dev/stdin",
         "--namespace",
         valid_k8s_name(secret_namespace),
         "--name",
@@ -112,23 +97,18 @@ def encrypt_value_or_file(
         "--cert",
         cert,
     ]
-    kubeseal_subprocess = subprocess.Popen(
+    proc = subprocess.run(
         exec_kubeseal_command,
-        stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-    )
-    output, error = kubeseal_subprocess.communicate(
-        input=cleartext_secret.encode("utf-8")
+        input=cleartext_secret,
+        encoding="utf-8",
     )
 
-    if error:
-        error_message = f"Error in run_kubeseal: {error}"
+    if proc.returncode:
+        error_message = f"Error in run_kubeseal: {proc.stderr}"
         raise RuntimeError(error_message)
-    sealed_secret = "".join(output.decode("utf-8").split("\n"))
-    if type == "file":
-        os.remove(temp_secret_file)
-    return sealed_secret
+    return proc.stdout.replace("\n", " ")
 
 
 def decode_base64_string(base64_string_message: str) -> str:
