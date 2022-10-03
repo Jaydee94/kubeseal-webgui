@@ -1,11 +1,7 @@
 FROM alpine:3.16.2
 
-RUN set -xe ; \
-    apk add --no-cache \
-    uwsgi-python \
-    py3-pip
-
 ARG KUBESEAL_VERSION=0.17.5
+
 ENV PORT=5000 \
     HOST=0.0.0.0 \
     BASE_PATH=/ \
@@ -14,31 +10,39 @@ ENV PORT=5000 \
     UWSGI_PLUGIN=python \
     UWSGI_MANAGE_SCRIPT_NAME=1 \
     APP_HOME=/kubeseal-webgui
-ENV KUBESEAL_BINARY=${APP_HOME}/bin/kubeseal \
-    PATH="${APP_HOME}/bin:${PATH}"
+
+ENV KUBESEAL_BINARY="${APP_HOME}/bin/kubeseal" \
+    PATH="${APP_HOME}/bin:${PATH}" \
+    UWSGI_VIRTUALENV="${APP_HOME}"
+
+RUN set -xe ; \
+    apk update && \
+    apk add --no-cache \
+    uwsgi-python3 \
+    py3-pip && \
+    install -o 1001 -g 0 -m 775 -d "${APP_HOME}"
 
 WORKDIR ${APP_HOME}
-COPY api/requirements.txt .
-RUN apk update && \
-    apk add py-pip && \
-    pip --no-cache-dir install -r requirements.txt
 
-COPY api/ .
+USER 1001:0
+
+COPY --chown=1001:0 api/ .
+
 RUN set -xe ; \
-    mkdir /tmp/kubeseal && \
-    cd /tmp/kubeseal && \
+    python3 -m venv "${APP_HOME}" && \
+    "${APP_HOME}/bin/pip" --no-cache-dir install --upgrade pip && \
+    "${APP_HOME}/bin/pip" --no-cache-dir install -r requirements.txt && \
+    TMP_KUBE=$(mktemp -d) && \
+    cd "${TMP_KUBE}" && \
     wget -q "https://github.com/bitnami-labs/sealed-secrets/releases/download/v${KUBESEAL_VERSION}/kubeseal-${KUBESEAL_VERSION}-linux-amd64.tar.gz" && \
-    ls -la /tmp/kubeseal && \
-    tar -xzvf kubeseal-${KUBESEAL_VERSION}-linux-amd64.tar.gz && \
-    mv kubeseal ${KUBESEAL_BINARY} && \
-    rm -rf /tmp/kubeseal && \
-    chown -R 1001:1001 . && \
+    ls -la "${TMP_KUBE}" && \
+    tar -xzvf "kubeseal-${KUBESEAL_VERSION}-linux-amd64.tar.gz" && \
+    mv kubeseal "${KUBESEAL_BINARY}" && \
+    cd "${APP_HOME}" && \
+    rm -rf "${TMP_KUBE}" && \
     chmod 0755 "${KUBESEAL_BINARY}" && \
     chmod 0755 "${APP_HOME}/bin/kubeseal-fetch.sh"
 
-WORKDIR ${APP_HOME}
-
-USER 1001
 
 STOPSIGNAL SIGQUIT
 
