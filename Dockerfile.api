@@ -40,6 +40,7 @@ RUN set -xe ; \
     mv kubeseal "${KUBESEAL_BINARY}" && \
     cd "${APP_HOME}" && \
     rm -rf "${TMP_KUBE}" && \
+    chmod -R g-w "${APP_HOME}" && \
     chmod 0755 "${KUBESEAL_BINARY}" && \
     chmod 0755 "${APP_HOME}/bin/kubeseal-fetch.sh"
 
