@@ -34,7 +34,7 @@
 
       <b-form>
         <b-form-row class="mt-2">
-          <b-col cols="6">
+          <b-col cols="4">
             <b-form-select
               v-model="namespaceName"
               :options="namespaces"
@@ -47,7 +47,7 @@
               deployed.
             </b-form-text>
           </b-col>
-          <b-col cols="6">
+          <b-col cols="4">
             <b-form-input
               v-model="secretName"
               placeholder="Secret name"
@@ -64,6 +64,26 @@
                   target="_blank"
                   href="https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names"
                   >DNS Subdomain</a
+                ></i
+              >
+            </b-form-text>
+          </b-col>
+          <b-col cols="4">
+            <b-form-select
+              v-model="scope"
+              :options="scopes"
+              :select-size="1"
+              :plain="true"
+            ></b-form-select>
+            <b-form-text id="scope-help-block">
+              Specify scope of the secret.
+              <br />
+              <i
+                >
+                <a
+                  target="_blank"
+                  href="https://github.com/bitnami-labs/sealed-secrets#scopes"
+                  >Scopes for sealed secrets</a
                 ></i
               >
             </b-form-text>
@@ -235,6 +255,7 @@ export default {
         var requestObject = {
           secret: this.secretName,
           namespace: this.namespaceName,
+          scope: this.scope,
           secrets: this.secrets.map((element) => {
             return {
               key: element.key,
@@ -320,11 +341,13 @@ export default {
   data: function () {
     return {
       namespaces: [],
+      scopes: ["strict", "cluster-wide", "namespace-wide"],
       errorMessage: "",
       displayName: "",
       displayCreateSealedSecretForm: true,
       secretName: "",
       namespaceName: "",
+      scope: "strict",
       secrets: [{ key: "", value: "" }],
       renderedSecrets: "",
       clipboardAvailable: false,
