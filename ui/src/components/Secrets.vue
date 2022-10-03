@@ -114,10 +114,11 @@
             </b-col>
             <b-col cols="1">
               <b-button block variant="link"
+                :disabled="hasNoSecrets"
                 ><b-icon
                   icon="trash"
                   aria-hidden="true"
-                  v-on:click="secrets.splice(counter, 1)"
+                  v-on:click="removeSecret(counter)"
                 ></b-icon
               ></b-button>
             </b-col>
@@ -303,6 +304,14 @@ export default {
       let sealedSecretContent = sealedSecretElement.innerText.trim();
       navigator.clipboard.writeText(sealedSecretContent);
     },
+    removeSecret: function (counter) {
+      if (this.secrets.length > 1) {
+        this.secrets.splice(counter, 1)
+      } else {
+        this.secrets[0].key = '';
+        this.secrets[0].value = '';
+      }
+    }
   },
   beforeMount() {
     this.fetchNamespaces();
@@ -320,6 +329,13 @@ export default {
         e.state = validDnsSubdomain(e.key);
         return e;
       });
+    },
+    hasNoSecrets: function () {
+      if (this.secrets.length > 1) {
+        return false;
+      }
+      let secret = this.secrets[0];
+      return secret.key === '' && secret.value === '';
     },
   },
   data: function () {
