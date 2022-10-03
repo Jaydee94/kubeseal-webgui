@@ -12,3 +12,4 @@ test.yaml
 *.pyc
 .dockerignore
 .coverage
+.venv/

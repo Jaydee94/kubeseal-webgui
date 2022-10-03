@@ -2,7 +2,7 @@
 
 from os import environ
 
-from app import create_app
+from . import create_app
 
 app = create_app()
 bind_address = environ.get("HOST", "127.0.0.1")

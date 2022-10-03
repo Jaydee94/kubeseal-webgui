@@ -1,6 +1,6 @@
 import pytest
 
-from app import create_app
+from kubeseal_webgui_api import create_app
 
 
 @pytest.fixture(name="app")

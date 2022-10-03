@@ -2,7 +2,12 @@ from base64 import b64encode
 from unittest.mock import MagicMock, patch
 import pytest
 
-from app.kubeseal import decode_base64_string, run_kubeseal, valid_k8s_name, Scope
+from kubeseal_webgui_api.kubeseal import (
+    decode_base64_string,
+    run_kubeseal,
+    valid_k8s_name,
+    Scope,
+)
 
 
 @pytest.mark.parametrize(
