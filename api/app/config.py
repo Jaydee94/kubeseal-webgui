@@ -29,6 +29,7 @@ def get_kubeseal_version() -> str:
         [binary, "--version"],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
+        encoding="utf-8",
     )
     output, error = kubeseal_subprocess.communicate()
     if error:
@@ -36,7 +37,7 @@ def get_kubeseal_version() -> str:
         LOGGER.error(error_message)
         raise RuntimeError(error_message)
 
-    version = "".join(output.decode("utf-8").split("\n"))
+    version = "".join(output.split("\n"))
 
     return str(version).split(":")[1].replace('"', "").lstrip()
 
