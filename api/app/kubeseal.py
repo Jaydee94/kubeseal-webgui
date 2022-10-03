@@ -111,17 +111,16 @@ def run_kubeseal_command(cleartext_secret_tuple, secret_namespace, secret_name):
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
+        encoding="utf-8",
     )
-    output, error = kubeseal_subprocess.communicate(
-        input=cleartext_secret.encode("utf-8")
-    )
+    output, error = kubeseal_subprocess.communicate(input=cleartext_secret)
 
     if error:
         error_message = f"Error in run_kubeseal: {error}"
         LOGGER.error(error_message)
         raise RuntimeError(error_message)
 
-    sealed_secret = "".join(output.decode("utf-8").split("\n"))
+    sealed_secret = "".join(output.split("\n"))
     return {"key": cleartext_secret_tuple["key"], "value": sealed_secret}
 
 
