@@ -126,7 +126,8 @@ def encrypt_value_or_file(
         error_message = f"Error in run_kubeseal: {error}"
         raise RuntimeError(error_message)
     sealed_secret = "".join(output.decode("utf-8").split("\n"))
-    os.remove(temp_secret_file)
+    if type == "file":
+        os.remove(temp_secret_file)
     return sealed_secret
 
 
