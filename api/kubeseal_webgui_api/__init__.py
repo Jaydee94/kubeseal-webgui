@@ -37,7 +37,7 @@ def create_app(test_config=None) -> Flask:
 
     err = validate_config(app.config)
     if err is not None:
-        raise RuntimeError("Error: %s" % err)
+        raise RuntimeError(f"Error: {err}")
 
     CORS(app, resources={r"/secrets/*": {"origins": app.config.get("ORIGIN_URL")}})
     CORS(app, resources={r"/namespaces/*": {"origins": app.config.get("ORIGIN_URL")}})
@@ -86,9 +86,9 @@ def validate_config(cfg):
         return "KUBESEAL_BINARY is not set"
 
     if not exists(cert):
-        return "KUBESEAL_CERT '%s' does not exist" % cert
+        return f"KUBESEAL_CERT '{cert}' does not exist"
 
     if not exists(binary):
-        return "KUBESEAL_BINARY '%s' does not exist" % binary
+        return f"KUBESEAL_BINARY '{binary}' does not exist"
 
     return None
