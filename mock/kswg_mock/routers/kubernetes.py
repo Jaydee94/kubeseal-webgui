@@ -1,9 +1,10 @@
+from typing import List
+
 import fastapi
-import json
 
 router = fastapi.APIRouter()
 
 
 @router.get("/namespaces")
-def get_namespaces():
-    return json.dumps(["foo", "bar"])
+def get_namespaces() -> List[str]:
+    return ["foo", "bar"]
