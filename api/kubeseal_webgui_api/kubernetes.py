@@ -32,7 +32,7 @@ def get_incluster_namespaces() -> list[str]:
         for ns in namespaces.items:
             namespaces_list.append(ns.metadata.name)
     else:
-        LOGGER.warn("No valid namespace list available via %s", namespaces)
+        LOGGER.warning("No valid namespace list available via %s", namespaces)
 
     LOGGER.debug("Namespaces list %s", namespaces_list)
     return namespaces_list

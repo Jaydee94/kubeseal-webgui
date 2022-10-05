@@ -55,11 +55,11 @@ class KubesealEndpoint(Resource):
                 sealing_request["secret"],
                 sealing_request.get("scope", Scope.STRICT.value),
             )
-        except (KeyError, ValueError) as e:
-            LOGGER.error("Invalid data when sealing secrets with", exc_info=e)
-            abort(400, "Invalid data for sealing secrets: " + str(e))
-        except RuntimeError as e:
-            LOGGER.error("Problem on server while sealing secrets", exc_info=e)
+        except (KeyError, ValueError) as error:
+            LOGGER.error("Invalid data when sealing secrets with", exc_info=error)
+            abort(400, f"Invalid data for sealing secrets: {error}")
+        except RuntimeError as error:
+            LOGGER.error("Problem on server while sealing secrets", exc_info=error)
             abort(500, "Server is dreaming...")
 
 
@@ -76,10 +76,10 @@ def run_kubeseal(
     else:
         try:
             scope = Scope(scope)
-        except ValueError as e:
+        except ValueError as error:
             error_message = "scope is not of allowed value"
             LOGGER.error(error_message)
-            raise ValueError(error_message) from e
+            raise ValueError(error_message) from error
 
     if is_blank(secret_namespace) and scope.needs_namespace():
         error_message = "secret_namespace was not given"
