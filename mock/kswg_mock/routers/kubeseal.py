@@ -2,8 +2,6 @@ from fastapi import APIRouter, HTTPException
 import json
 import re
 import subprocess
-import tempfile
-import os
 import base64
 from pydantic import BaseModel
 from typing import List, Dict
