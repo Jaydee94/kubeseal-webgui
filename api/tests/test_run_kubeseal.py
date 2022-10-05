@@ -1,6 +1,8 @@
+from base64 import b64encode
+from unittest.mock import MagicMock, patch
 import pytest
 
-from app.kubeseal import decode_base64_string, run_kubeseal, valid_k8s_name
+from app.kubeseal import decode_base64_string, run_kubeseal, valid_k8s_name, Scope
 
 
 @pytest.mark.parametrize(
@@ -85,6 +87,60 @@ def test_run_kubeseal_with_with_empty_secrets_list_but_otherwise_valid_inputs():
     sealed_secrets = run_kubeseal([], "secretNamespace", "secretName")
     # then return empty list
     assert sealed_secrets == []
+
+
+@pytest.mark.parametrize("scope", ["struct", "STRICT"])
+def test_run_kubeseal_with_wrong_scope(scope: str):
+    with pytest.raises(ValueError, match="scope is not of allowed value"):
+        run_kubeseal([{"key": "foo", "value": "something"}], "namespace", "name", scope)
+
+
+@patch("app.kubeseal.run_kubeseal_command")
+@pytest.mark.parametrize("scope", list(Scope))
+def test_run_kubeseal_with_scope(mock_run_command: MagicMock, scope: Scope):
+    encoded_value = b64encode("something".encode("ascii")).decode("ascii")
+    secrets = [
+        {
+            "key": "foo",
+            "value": encoded_value,
+        }
+    ]
+    run_kubeseal(
+        secrets,
+        "namespace",
+        "name",
+        scope.value,
+    )
+    mock_run_command.assert_called_with(secrets[0], "namespace", "name", scope)
+
+
+@patch("app.kubeseal.run_kubeseal_command")
+@pytest.mark.parametrize("scope", list(Scope))
+def test_run_kubeseal_with_scope_needed_params_only(
+    mock_run_command: MagicMock, scope: Scope
+):
+    encoded_value = b64encode("something".encode("ascii")).decode("ascii")
+    secrets = [
+        {
+            "key": "foo",
+            "value": encoded_value,
+        }
+    ]
+    if not scope.needs_namespace():
+        namespace = None
+    else:
+        namespace = "namespace"
+    if not scope.needs_name():
+        name = None
+    else:
+        name = "name"
+    run_kubeseal(
+        secrets,
+        namespace,
+        name,
+        scope.value,
+    )
+    mock_run_command.assert_called_with(secrets[0], namespace, name, scope)
 
 
 @pytest.mark.container()

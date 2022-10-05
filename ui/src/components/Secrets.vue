@@ -34,7 +34,7 @@
 
       <b-form>
         <b-form-row class="mt-2">
-          <b-col cols="6">
+          <b-col cols="4">
             <b-form-select
               v-model="namespaceName"
               :options="namespaces"
@@ -47,7 +47,7 @@
               deployed.
             </b-form-text>
           </b-col>
-          <b-col cols="6">
+          <b-col cols="4">
             <b-form-input
               v-model="secretName"
               placeholder="Secret name"
@@ -64,6 +64,26 @@
                   target="_blank"
                   href="https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names"
                   >DNS Subdomain</a
+                ></i
+              >
+            </b-form-text>
+          </b-col>
+          <b-col cols="4">
+            <b-form-select
+              v-model="scope"
+              :options="scopes"
+              :select-size="1"
+              :plain="true"
+            ></b-form-select>
+            <b-form-text id="scope-help-block">
+              Specify scope of the secret.
+              <br />
+              <i
+                >
+                <a
+                  target="_blank"
+                  href="https://github.com/bitnami-labs/sealed-secrets#scopes"
+                  >Scopes for sealed secrets</a
                 ></i
               >
             </b-form-text>
@@ -94,10 +114,11 @@
             </b-col>
             <b-col cols="1">
               <b-button block variant="link"
+                :disabled="hasNoSecrets"
                 ><b-icon
                   icon="trash"
                   aria-hidden="true"
-                  v-on:click="secrets.splice(counter, 1)"
+                  v-on:click="removeSecret(counter)"
                 ></b-icon
               ></b-button>
             </b-col>
@@ -234,6 +255,7 @@ export default {
         var requestObject = {
           secret: this.secretName,
           namespace: this.namespaceName,
+          scope: this.scope,
           secrets: this.secrets.map((element) => {
             return {
               key: element.key,
@@ -282,6 +304,14 @@ export default {
       let sealedSecretContent = sealedSecretElement.innerText.trim();
       navigator.clipboard.writeText(sealedSecretContent);
     },
+    removeSecret: function (counter) {
+      if (this.secrets.length > 1) {
+        this.secrets.splice(counter, 1)
+      } else {
+        this.secrets[0].key = '';
+        this.secrets[0].value = '';
+      }
+    }
   },
   beforeMount() {
     this.fetchNamespaces();
@@ -300,15 +330,24 @@ export default {
         return e;
       });
     },
+    hasNoSecrets: function () {
+      if (this.secrets.length > 1) {
+        return false;
+      }
+      let secret = this.secrets[0];
+      return secret.key === '' && secret.value === '';
+    },
   },
   data: function () {
     return {
       namespaces: [],
+      scopes: ["strict", "cluster-wide", "namespace-wide"],
       errorMessage: "",
       displayName: "",
       displayCreateSealedSecretForm: true,
       secretName: "",
       namespaceName: "",
+      scope: "strict",
       secrets: [{ key: "", value: "" }],
       renderedSecrets: "",
       clipboardAvailable: false,
