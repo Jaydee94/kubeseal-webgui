@@ -11,7 +11,7 @@ case "${1:-}" in
 esac
 
 set -- --http-socket "${HOST}:${PORT}" \
-  --mount "${BASE_PATH}=run:app" \
+  --mount "${BASE_PATH}=kubeseal_webgui_api.run:app" \
   "$@"
 
 exec uwsgi "$@"

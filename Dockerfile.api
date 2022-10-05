@@ -1,4 +1,4 @@
-FROM alpine:3.16.2
+FROM python:3.9-slim
 
 ARG KUBESEAL_VERSION=0.17.5
 
@@ -7,7 +7,7 @@ ENV PORT=5000 \
     BASE_PATH=/ \
     UWSGI_NEED_APP=1 \
     UWSGI_MASTER=1 \
-    UWSGI_PLUGIN=python \
+    UWSGI_PLUGIN=python3 \
     UWSGI_MANAGE_SCRIPT_NAME=1 \
     APP_HOME=/kubeseal-webgui
 
@@ -16,34 +16,34 @@ ENV KUBESEAL_BINARY="${APP_HOME}/bin/kubeseal" \
     UWSGI_VIRTUALENV="${APP_HOME}"
 
 RUN set -xe ; \
-    apk update && \
-    apk add --no-cache \
-    uwsgi-python3 \
-    py3-pip && \
-    install -o 1001 -g 0 -m 775 -d "${APP_HOME}"
+    apt update && \
+    apt -y install \
+    curl \
+    uwsgi-plugin-python3 && \
+    install -o 1001 -g 0 -m 775 -d "${APP_HOME}" && \
+    install -o 1001 -g 0 -m 775 -d /sources
 
 WORKDIR ${APP_HOME}
 
 USER 1001:0
 
-COPY --chown=1001:0 api/ .
+COPY --chown=1001:0 api/ /sources
 
 RUN set -xe ; \
     python3 -m venv "${APP_HOME}" && \
-    "${APP_HOME}/bin/pip" --no-cache-dir install --upgrade pip && \
-    "${APP_HOME}/bin/pip" --no-cache-dir install -r requirements.txt && \
+    "${APP_HOME}/bin/pip" --no-cache-dir install --upgrade pip setuptools && \
+    "${APP_HOME}/bin/pip" --no-cache-dir install poetry wheel && \
+    "${APP_HOME}/bin/pip" --no-cache-dir install /sources && \
     TMP_KUBE=$(mktemp -d) && \
     cd "${TMP_KUBE}" && \
-    wget -q "https://github.com/bitnami-labs/sealed-secrets/releases/download/v${KUBESEAL_VERSION}/kubeseal-${KUBESEAL_VERSION}-linux-amd64.tar.gz" && \
-    ls -la "${TMP_KUBE}" && \
-    tar -xzvf "kubeseal-${KUBESEAL_VERSION}-linux-amd64.tar.gz" && \
+    curl -f -L "https://github.com/bitnami-labs/sealed-secrets/releases/download/v${KUBESEAL_VERSION}/kubeseal-${KUBESEAL_VERSION}-linux-amd64.tar.gz" -o - | \
+    tar -xzvf - && \
     mv kubeseal "${KUBESEAL_BINARY}" && \
     cd "${APP_HOME}" && \
     rm -rf "${TMP_KUBE}" && \
     chmod -R g-w "${APP_HOME}" && \
     chmod 0755 "${KUBESEAL_BINARY}" && \
-    chmod 0755 "${APP_HOME}/bin/kubeseal-fetch.sh"
-
+    install -m 0755 -o 1001 -g 0 /sources/bin/* "${APP_HOME}/bin/"
 
 STOPSIGNAL SIGQUIT
 
