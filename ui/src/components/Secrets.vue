@@ -69,12 +69,12 @@
               </b-form-textarea>
             </b-col>
             <b-col cols="6">
-              <b-form-textarea v-if="! secret.file" rows="1" v-model="secret.value" :placeholder="'Secret value'"
-                id="input-value">
+              <b-form-textarea :disabled="secret.file != ''" rows="1" v-model="secret.value"
+                :placeholder="'Secret value'" id="input-value">
               </b-form-textarea>
             </b-col>
             <b-col cols="2">
-              <b-form-file v-if="! secret.value" v-model="secret.file" :state="secret.containsFile"
+              <b-form-file :disabled="secret.value != ''" v-model=" secret.file" :state="secret.containsFile"
                 placeholder="Upload File" drop-placeholder="Drop file here..." v-on:change="validateInputSize"
                 ref="file-input"></b-form-file>
             </b-col>
@@ -117,7 +117,9 @@
             </b-button>
           </b-col>
           <b-col cols="6">
-            <b-button block variant="primary" v-on:click="fetchEncodedSecrets()">Encrypt</b-button>
+            <b-button block variant="primary" :disabled="errorMessage != ''" v-on:click="fetchEncodedSecrets()">
+              Encrypt
+            </b-button>
           </b-col>
         </b-form-row>
       </b-form>
@@ -271,6 +273,7 @@ export default {
       } else {
         this.secrets[0].key = '';
         this.secrets[0].value = '';
+        this.secrets[0].file = '';
       }
     },
     validateInputSize: function (e) {
@@ -332,6 +335,8 @@ export default {
       secrets: [{ key: "", value: "", file: "" }],
       renderedSecrets: "",
       clipboardAvailable: false,
+      dynamicColsText: 6,
+      dynamicColsFile: 2,
     };
   },
   mounted: function () {
