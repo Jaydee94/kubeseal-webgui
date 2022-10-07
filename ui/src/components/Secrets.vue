@@ -191,7 +191,7 @@ export default {
         let apiUrl = data["api_url"];
 
         response = await fetch(`${apiUrl}/namespaces`);
-
+        
         this.namespaces = await response.json();
       } catch (error) {
         this.errorInfo = "Failed to retieve namespaces from backend."
