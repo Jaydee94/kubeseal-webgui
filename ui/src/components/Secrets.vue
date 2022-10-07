@@ -69,12 +69,12 @@
               </b-form-textarea>
             </b-col>
             <b-col cols="6">
-              <b-form-textarea :disabled="secret.file != ''" rows="1" v-model="secret.value"
-                :placeholder="'Secret value'" id="input-value">
+              <b-form-textarea :disabled="hasFile" rows="1" v-model="secret.value" :placeholder="'Secret value'"
+                id="input-value">
               </b-form-textarea>
             </b-col>
             <b-col cols="2">
-              <b-form-file :disabled="secret.value != ''" v-model=" secret.file" :state="secret.containsFile"
+              <b-form-file :disabled="hasValue" v-model=" secret.file" :state="secret.containsFile"
                 placeholder="Upload File" drop-placeholder="Drop file here..." v-on:change="validateInputSize"
                 ref="file-input"></b-form-file>
             </b-col>
@@ -89,7 +89,7 @@
           <b-col>
             <b-form-text block class="mb-3">
               <i>Specify sensitive value or file (
-                < 1MB) and corresponding key of the secret. <br />
+                less than 1MB) and corresponding key of the secret. <br />
                 The key must be of type:
                 <a target="_blank"
                   href="https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names">DNS
@@ -192,8 +192,7 @@ export default {
 
         response = await fetch(`${apiUrl}/namespaces`);
 
-        let availableNamespaces = await response.json();
-        this.namespaces = JSON.parse(availableNamespaces);
+        this.namespaces = await response.json();
       } catch (error) {
         this.errorInfo = "Failed to retieve namespaces from backend."
         this.errorMessage = error;
@@ -210,6 +209,7 @@ export default {
         var requestObject = {
           secret: this.secretName,
           namespace: this.namespaceName,
+          scope: this.scope,
           secrets: await Promise.all(this.secrets.map(async (element) => {
             if (element.value) {
               return {
@@ -320,6 +320,14 @@ export default {
       }
       let secret = this.secrets[0];
       return secret.key === '' && secret.value === '';
+    },
+    hasFile: function () {
+      let secret = this.secrets[0];
+      return !secret.file == '';
+    },
+    hasValue: function () {
+      let secret = this.secrets[0];
+      return !secret.value == '';
     },
   },
   data: function () {

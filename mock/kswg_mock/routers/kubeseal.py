@@ -1,38 +1,70 @@
-from fastapi import APIRouter, HTTPException
-import json
+import base64
 import re
 import subprocess
-import base64
+from enum import Enum
+from typing import Dict, List
+
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import List, Dict
 
 router = APIRouter()
+
+
+class Scope(Enum):
+    STRICT = "strict"
+    CLUSTER_WIDE = "cluster-wide"
+    NAMESPACE_WIDE = "namespace-wide"
+
+    def needs_name(self):
+        return self not in (Scope.CLUSTER_WIDE, Scope.NAMESPACE_WIDE)
+
+    def needs_namespace(self):
+        return self is not Scope.CLUSTER_WIDE
 
 
 class Data(BaseModel):
     secret: str
     namespace: str
     secrets: List[Dict[str, str]]
+    scope: Scope
 
 
 @router.post("/secrets")
 def encrypt(data: Data) -> list:
     try:
-        return json.dumps(
-            run_kubeseal(
-                data.secrets,
-                data.namespace,
-                data.secret,
-            )
-        )
+        return run_kubeseal(data.secrets, data.namespace, data.secret, data.scope)
     except (KeyError, ValueError) as e:
         raise HTTPException(400, f"Invalid data for sealing secrets: {e}")
     except RuntimeError:
         raise HTTPException(500, "Server is dreaming...")
 
 
-def run_kubeseal(cleartext_secrets, secret_namespace, secret_name) -> list:
+def is_blank(value: str) -> bool:
+    return value is None or str(value).strip() == ""
+
+
+def run_kubeseal(
+    cleartext_secrets, secret_namespace, secret_name, scope=Scope.STRICT.value
+) -> list:
     """Check input and initiate kubeseal-cli call."""
+
+    if is_blank(scope):
+        scope = Scope.STRICT
+    else:
+        try:
+            scope = Scope(scope)
+        except ValueError as error:
+            error_message = "scope is not of allowed value"
+            raise ValueError(error_message) from error
+
+    if is_blank(secret_namespace) and scope.needs_namespace():
+        error_message = "secret_namespace was not given"
+        raise ValueError(error_message)
+
+    if is_blank(secret_name) and scope.needs_name():
+        error_message = "secret_name was not given"
+        raise ValueError(error_message)
+
     if secret_namespace is None or secret_namespace == "":
         error_message = "secret_namespace was not given"
         raise ValueError(error_message)
@@ -51,7 +83,7 @@ def run_kubeseal(cleartext_secrets, secret_namespace, secret_name) -> list:
     sealed_secrets = []
     for cleartext_secret_tuple in cleartext_secrets:
         sealed_secret = run_kubeseal_command(
-            cleartext_secret_tuple, secret_namespace, secret_name
+            cleartext_secret_tuple, secret_namespace, secret_name, scope
         )
         sealed_secrets.append(sealed_secret)
     return sealed_secrets
@@ -63,7 +95,12 @@ def valid_k8s_name(value: str) -> str:
     raise ValueError(f"Invalid k8s name: {value}")
 
 
-def run_kubeseal_command(cleartext_secret_tuple: Dict, secret_namespace, secret_name):
+def run_kubeseal_command(
+    cleartext_secret_tuple: Dict,
+    secret_namespace,
+    secret_name,
+    scope: Scope = Scope.STRICT,
+):
     cleartext_secret = ""
     if "value" in cleartext_secret_tuple:
         cleartext_secret = decode_base64_string(cleartext_secret_tuple["value"])
@@ -75,14 +112,14 @@ def run_kubeseal_command(cleartext_secret_tuple: Dict, secret_namespace, secret_
     binary = "/tmp/kubeseal"
     cert = "/tmp/cert.pem"
     sealed_secret = encrypt_value_or_file(
-        secret_namespace, secret_name, cleartext_secret, binary, cert
+        secret_namespace, secret_name, cleartext_secret, binary, cert, scope
     )
 
     return {"key": cleartext_secret_tuple["key"], "value": sealed_secret}
 
 
 def encrypt_value_or_file(
-    secret_namespace, secret_name, cleartext_secret, binary, cert
+    secret_namespace, secret_name, cleartext_secret, binary, cert, scope
 ) -> str:
     exec_kubeseal_command = [
         binary,
@@ -94,7 +131,23 @@ def encrypt_value_or_file(
         valid_k8s_name(secret_name),
         "--cert",
         cert,
+        "--scope",
+        scope.value,
     ]
+    if scope.needs_namespace():
+        exec_kubeseal_command.extend(
+            [
+                "--namespace",
+                valid_k8s_name(secret_namespace),
+            ]
+        )
+    if scope.needs_name():
+        exec_kubeseal_command.extend(
+            [
+                "--name",
+                valid_k8s_name(secret_name),
+            ]
+        )
     proc = subprocess.run(
         exec_kubeseal_command,
         stdout=subprocess.PIPE,
