@@ -1,5 +1,4 @@
 """Provides REST-API and kubeseal-cli specific functionality."""
-import json
 import logging
 
 from flask import abort
@@ -13,7 +12,7 @@ class KubernetesNamespacesEndpoint(Resource):
     """Provide REST-API for sealing sensitive data."""
 
     @classmethod
-    def get(cls) -> str:
+    def get(cls) -> list[str]:
         """Retrieve cluster namespaces."""
         try:
             return get_incluster_namespaces()
@@ -21,8 +20,8 @@ class KubernetesNamespacesEndpoint(Resource):
             abort(500, "Can't get namespaces from server")
 
 
-def get_incluster_namespaces() -> str:
-    """Retrieve all namespaces from current kubernetes cluster as JSON-Array."""
+def get_incluster_namespaces() -> list[str]:
+    """Retrieve a list of namespaces from current kubernetes cluster."""
     config.load_incluster_config()
     namespaces_list = []
 
@@ -36,4 +35,4 @@ def get_incluster_namespaces() -> str:
         LOGGER.warning("No valid namespace list available via %s", namespaces)
 
     LOGGER.debug("Namespaces list %s", namespaces_list)
-    return json.dumps(namespaces_list)
+    return namespaces_list

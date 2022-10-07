@@ -1,10 +1,10 @@
-from fastapi import APIRouter, HTTPException
-import json
+import base64
 import re
 import subprocess
-import base64
+from typing import Dict, List
+
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import List, Dict
 
 router = APIRouter()
 
@@ -18,12 +18,10 @@ class Data(BaseModel):
 @router.post("/secrets")
 def encrypt(data: Data) -> list:
     try:
-        return json.dumps(
-            run_kubeseal(
-                data.secrets,
-                data.namespace,
-                data.secret,
-            )
+        return run_kubeseal(
+            data.secrets,
+            data.namespace,
+            data.secret,
         )
     except (KeyError, ValueError) as e:
         raise HTTPException(400, f"Invalid data for sealing secrets: {e}")
