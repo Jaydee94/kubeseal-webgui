@@ -257,7 +257,7 @@ export default {
       }
     },
     renderSecrets: function (sealedSecrets) {
-      var dataEntries = JSON.parse(sealedSecrets).map((element) => {
+      var dataEntries = sealedSecrets.map((element) => {
         return `    ${element["key"]}: ${element["value"]}`;
       });
       return dataEntries.join("\n");
@@ -332,11 +332,10 @@ export default {
       displayCreateSealedSecretForm: true,
       secretName: "",
       namespaceName: "",
+      scope: "strict",
       secrets: [{ key: "", value: "", file: "" }],
       renderedSecrets: "",
       clipboardAvailable: false,
-      dynamicColsText: 6,
-      dynamicColsFile: 2,
     };
   },
   mounted: function () {
