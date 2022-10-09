@@ -4,47 +4,55 @@ repos:
     hooks:
       - id: check-yaml
         exclude: ^chart/kubeseal-webgui/templates/
+        files: ^api/
       - id: end-of-file-fixer
+        files: ^api/
       - id: trailing-whitespace
-  - repo: https://github.com/asottile/pyupgrade
-    rev: v3.0.0
-    hooks:
-      - id: pyupgrade
-  - repo: https://github.com/PyCQA/flake8
-    rev: 5.0.4
-    hooks:
-      - id: flake8
-        args: [--max-line-length=88]
-  - repo: https://github.com/psf/black
-    rev: 22.8.0
-    hooks:
-      - id: black
+        files: ^api/
   # - repo: https://github.com/PyCQA/pydocstyle
   #   rev: 6.1.1
   #   hooks:
   #   - id: pydocstyle
-  - repo: https://github.com/pycqa/isort
-    rev: 5.10.1
+  #  - repo: https://github.com/PyCQA/prospector
+  #rev: 1.5.1
+  #hooks:
+  #- id: prospector
+  #args: ["--zero-exit"]
+  - repo: local
     hooks:
+      # - id: mypy
+      #   name: mypy
+      #   entry: bash -c 'cd api && poetry run mypy kubeseal-webgui-api'
+      #   language: system
       - id: isort
         name: isort (python)
         args: ["--profile", "black"]
-        #  - repo: https://github.com/PyCQA/prospector
-        #rev: 1.5.1
-        #hooks:
-        #- id: prospector
-        #args: ["--zero-exit"]
-        #  - repo: https://github.com/pre-commit/mirrors-mypy
-        #rev: v0.910-1
-        #hooks:
-        #- id: mypy
-  # https://github.com/pre-commit/pygrep-hooks/blob/eb0a92ce09636b6d72787952ce0f74c5dad996fa/.pre-commit-config.yaml#L47-L53
-  - repo: local
-    hooks:
+        entry: bash -c 'cd api && poetry run isort'
+        language: system
+        types: [python]
+        files: ^api/
+      - id: pyupgrade
+        name: pyupgrade
+        entry: bash -c 'cd api && poetry run pyupgrade'
+        language: system
+        files: ^api/
+      - id: black
+        name: black
+        language: system
+        entry: bash -c 'cd api && poetry run black .'
+        types: [python]
+        files: ^api/
+      - id: flake8
+        name: flake8
+        entry: bash -c 'cd api && poetry run flake8 --max-line-length=88 kubeseal_webgui_api'
+        language: system
+        types: [python]
+        files: ^api/
       - id: tests
         name: run test suite
         entry: bash -c 'cd api && poetry install && poetry run pytest -m "not (container or cluster)"'
         language: system
         types: [python]
         pass_filenames: false
+        files: ^api/
         # stages: [push]
