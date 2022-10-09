@@ -26,6 +26,8 @@ def test_post_secrets_object(app, client):
     assert expected_sealing_response_data == json.loads(res.get_data(as_text=True))
 
 
+@pytest.mark.container()
+@pytest.mark.cluster()
 def test_get_api(client):
     # given running http server
     # when GET /secrets
