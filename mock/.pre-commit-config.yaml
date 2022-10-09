@@ -4,11 +4,11 @@ repos:
     hooks:
       - id: check-yaml
         exclude: ^chart/kubeseal-webgui/templates/
-        files: ^api/
+        files: ^mock/
       - id: end-of-file-fixer
-        files: ^api/
+        files: ^mock/
       - id: trailing-whitespace
-        files: ^api/
+        files: ^mock/
   # - repo: https://github.com/PyCQA/pydocstyle
   #   rev: 6.1.1
   #   hooks:
@@ -30,29 +30,29 @@ repos:
         entry: bash -c 'cd api && poetry run isort'
         language: system
         types: [python]
-        files: ^api/
+        files: ^mock/
       - id: pyupgrade
         name: pyupgrade
         entry: bash -c 'cd api && poetry run pyupgrade'
         language: system
-        files: ^api/
+        files: ^mock/
       - id: black
         name: black
         language: system
         entry: bash -c 'cd api && poetry run black .'
         types: [python]
-        files: ^api/
+        files: ^mock/
       - id: flake8
         name: flake8
-        entry: bash -c 'cd api && poetry run flake8 --max-line-length=88 kubeseal_webgui_api'
+        entry: bash -c 'cd api && poetry run flake8 --max-line-length=88 kswg_mock'
         language: system
         types: [python]
-        files: ^api/
+        files: ^mock/
       - id: tests
         name: run test suite
         entry: bash -c 'cd api && poetry install && poetry run pytest -m "not (container or cluster)"'
         language: system
         types: [python]
         pass_filenames: false
-        files: ^api/
+        files: ^mock/
         # stages: [push]
