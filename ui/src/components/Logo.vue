@@ -1,6 +1,14 @@
 <template>
-  <a id="logo" class="navbar-brand" href="#">
-    <img alt="Kubeseal-Webgui Logo" src="../assets/logo.png" class="align-middle">
+  <a
+    id="logo"
+    class="navbar-brand"
+    href="#"
+  >
+    <img
+      alt="Kubeseal-Webgui Logo"
+      src="../assets/logo.png"
+      class="align-middle"
+    >
     <span class="header-first align-middle">kubeseal</span>
     <span class="header-second align-middle">-webgui</span>
   </a>
