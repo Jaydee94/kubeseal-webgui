@@ -3,15 +3,27 @@
     <b-container>
       <b-row>
         <b-col>
-          <small class="text-muted" v-if="fetchConfigsSuccessful">
-            <span v-for="(value, key, index) in configs" :key="value">
-              <span v-if="index != 0"> 🞄 </span><span>{{key}}: {{value}}</span>
+          <small
+            v-if="fetchConfigsSuccessful"
+            class="text-muted"
+          >
+            <span
+              v-for="(value, key, index) in configs"
+              :key="key"
+            >
+              <span v-if="index != 0"> 🞄 </span><span>{{ key }}: {{ value }}</span>
             </span>
           </small>
-          <small class="text-muted" v-else-if="fetchConfigsSuccessful == false">
+          <small
+            v-else-if="fetchConfigsSuccessful == false"
+            class="text-muted"
+          >
             ⚠️ Could not retrieve application properties.
           </small>
-          <small class="text-muted" v-else>
+          <small
+            v-else
+            class="text-muted"
+          >
             ⏳ Loading application properties.
           </small>
         </b-col>
@@ -24,6 +36,16 @@
 
 export default {
   name: "AppConfig",
+  data: function () {
+    return {
+      configs: {},
+      errorMessage: "",
+      fetchConfigsSuccessful: null,
+    };
+  },
+  mounted() {
+    this.fetchConfigs();
+  },
   methods: {
     fetchConfigs: async function () {
       try {
@@ -49,16 +71,6 @@ export default {
         this.errorMessage = error;
       }
     },
-  },
-  mounted() {
-    this.fetchConfigs();
-  },
-  data: function () {
-    return {
-      configs: {},
-      errorMessage: "",
-      fetchConfigsSuccessful: null,
-    };
   },
 };
 </script>

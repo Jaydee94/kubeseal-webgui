@@ -1,13 +1,34 @@
 <template>
   <div class="darkModeTheme">
-      <span class="align-bottom">Dark Mode: </span>
-      <toggle-button id="toggle-dark-mode" :sync=true color="#333" v-model="useDarkTheme" />
+    <span class="align-bottom">Dark Mode: </span>
+    <toggle-button
+      id="toggle-dark-mode"
+      v-model="useDarkTheme"
+      :sync="true"
+      color="#333"
+    />
   </div>
 </template>
 
 <script>
 export default {
   name: "DarkMode",
+  data() {
+    return {
+      useDarkTheme: '',
+    }
+  },
+  watch: {
+    useDarkTheme: function () {
+      if (this.useDarkTheme) {
+        document.documentElement.classList.add("dark")
+        localStorage.useDarkTheme = true
+      } else {
+        document.documentElement.classList.remove("dark")
+        localStorage.useDarkTheme = false
+      }
+    }
+  },
   mounted: function() {
     let result = false;
     let isDarkModeSetToFalse = (localStorage.useDarkTheme === 'false');
@@ -27,22 +48,6 @@ export default {
     }
     
     this.useDarkTheme = result;
-  },
-  data() {
-    return {
-      useDarkTheme: '',
-    }
-  },
-  watch: {
-    useDarkTheme: function () {
-      if (this.useDarkTheme) {
-        document.documentElement.classList.add("dark")
-        localStorage.useDarkTheme = true
-      } else {
-        document.documentElement.classList.remove("dark")
-        localStorage.useDarkTheme = false
-      }
-    }
   }
 }
 </script>
