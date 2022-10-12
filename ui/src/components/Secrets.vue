@@ -260,7 +260,7 @@ spec:
               icon="clipboard-check"
               aria-hidden="true"
             />
-            : <em>{{ secret["key"] }}</em>
+            : <code>{{ secret["key"] }}</code>
           </b-button>
         </b-col>
       </b-row>
