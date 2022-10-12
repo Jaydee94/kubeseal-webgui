@@ -16,7 +16,7 @@
           variant="link"
           class="mb-2"
         >
-          <b-icon
+          <bootstrap-icon
             icon="question-circle"
             scale="1.5"
           />
@@ -134,7 +134,7 @@
                 variant="link"
                 :disabled="hasNoSecrets"
               >
-                <b-icon
+                <bootstrap-icon
                   icon="trash"
                   aria-hidden="true"
                   @click="removeSecret(counter)"
@@ -230,7 +230,7 @@ spec:
             class="mb-3"
             @click="copyRenderedSecrets()"
           >
-            Copy <b-icon
+            Copy <bootstrap-icon
               icon="clipboard-check"
               aria-hidden="true"
             />
@@ -250,7 +250,6 @@ spec:
 
 <script>
 import { Base64 } from "js-base64";
-import "vue-popperjs/dist/vue-popper.css";
 
 function validDnsSubdomain(name) {
   if (!name) {

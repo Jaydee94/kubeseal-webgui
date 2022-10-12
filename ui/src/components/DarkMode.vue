@@ -1,13 +1,10 @@
 <template>
-  <div class="darkModeTheme">
-    <span class="align-bottom">Dark Mode: </span>
-    <toggle-button
-      id="toggle-dark-mode"
-      v-model="useDarkTheme"
-      :sync="true"
-      color="#333"
-    />
-  </div>
+  <b-form-checkbox
+    v-model="useDarkTheme"
+    switch
+  >
+    <span class="align-bottom">Dark Mode ({{ useDarkTheme }}) </span>
+  </b-form-checkbox>
 </template>
 
 <script>
@@ -41,12 +38,12 @@ export default {
 
     if (isDarkModeSetToTrue) {
       result = true;
-    } 
+    }
 
     if (isSystemDarkModeSet && !isDarkModeSetToFalse) {
       result = true;
     }
-    
+
     this.useDarkTheme = result;
   }
 }
