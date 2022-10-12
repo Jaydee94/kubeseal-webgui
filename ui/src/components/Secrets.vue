@@ -235,7 +235,7 @@ spec:
               aria-hidden="true"
             />
           </b-button>
-          </b-col>
+        </b-col>
       </b-row>
       <b-row>
         <b-col class="d-flex">
