@@ -84,7 +84,8 @@
                 <a
                   target="_blank"
                   href="https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names"
-                >DNS Subdomain</a></i>
+                >DNS
+                  Subdomain</a></i>
             </b-form-text>
           </b-col>
           <b-col cols="4">
@@ -101,7 +102,8 @@
                 <a
                   target="_blank"
                   href="https://github.com/bitnami-labs/sealed-secrets#scopes"
-                >Scopes for sealed secrets</a></i>
+                >Scopes for sealed
+                  secrets</a></i>
             </b-form-text>
           </b-col>
         </b-form-row>
@@ -155,7 +157,8 @@
                 <a
                   target="_blank"
                   href="https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names"
-                >DNS Subdomain</a></i>
+                >DNS
+                  Subdomain</a></i>
             </b-form-text>
           </b-col>
         </b-row>
@@ -230,10 +233,34 @@ spec:
             class="mb-3"
             @click="copyRenderedSecrets()"
           >
-            Copy <bootstrap-icon
+            Copy complete secret
+            <bootstrap-icon
               icon="clipboard-check"
               aria-hidden="true"
             />
+          </b-button>
+        </b-col>
+      </b-row>
+      <b-row
+        v-if="clipboardAvailable"
+        class="d-flex"
+      >
+        <b-col
+          v-for="(secret, counter) in sealedSecrets"
+          :key="counter"
+          class="flex"
+        >
+          <b-button
+            variant="link"
+            class="mb-3"
+            @click="copySealedSecret(counter)"
+          >
+            Copy
+            <bootstrap-icon
+              icon="clipboard-check"
+              aria-hidden="true"
+            />
+            : <em>{{ secret["key"] }}</em>
           </b-button>
         </b-col>
       </b-row>
@@ -277,7 +304,7 @@ export default {
       namespaceName: "",
       scope: "strict",
       secrets: [{ key: "", value: "" }],
-      renderedSecrets: "",
+      sealedSecrets: [],
       clipboardAvailable: false,
     };
   },
@@ -301,12 +328,15 @@ export default {
       let secret = this.secrets[0];
       return secret.key === '' && secret.value === '';
     },
+    renderedSecrets: function () {
+      return this.renderSecrets(this.sealedSecrets);
+    }
   },
   beforeMount() {
     this.fetchNamespaces();
     this.fetchDisplayName();
   },
-  mounted: function() {
+  mounted: function () {
     if (navigator && navigator.clipboard) {
       this.clipboardAvailable = true;
     }
@@ -362,11 +392,10 @@ export default {
         if (!response.ok) {
           throw Error(
             "No sealed secrets in response from backend: " +
-              (await response.text())
+            (await response.text())
           );
         } else {
-          let sealedSecrets = await response.json();
-          this.renderedSecrets = this.renderSecrets(sealedSecrets);
+          this.sealedSecrets = await response.json();
           this.displayCreateSealedSecretForm = false;
         }
       } catch (error) {
@@ -383,6 +412,9 @@ export default {
       let sealedSecretElement = this.$refs["sealedSecret"];
       let sealedSecretContent = sealedSecretElement.innerText.trim();
       navigator.clipboard.writeText(sealedSecretContent);
+    },
+    copySealedSecret: function (counter) {
+      navigator.clipboard.writeText(this.sealedSecrets[counter].value)
     },
     removeSecret: function (counter) {
       if (this.secrets.length > 1) {
