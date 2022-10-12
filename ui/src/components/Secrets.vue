@@ -222,7 +222,7 @@ spec:
         </b-col>
       </b-row>
       <b-row>
-        <b-col>
+        <b-col class="d-flex justify-content-center">
           <b-button
             v-if="clipboardAvailable"
             block
@@ -235,9 +235,14 @@ spec:
               aria-hidden="true"
             />
           </b-button>
+          </b-col>
+      </b-row>
+      <b-row>
+        <b-col class="d-flex">
           <b-button
             block
             variant="primary"
+            class="flex-fill"
             @click="displayCreateSealedSecretForm=!displayCreateSealedSecretForm"
           >
             Encrypt more secrets
