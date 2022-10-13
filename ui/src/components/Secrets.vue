@@ -57,12 +57,13 @@
       <b-form>
         <b-form-row class="mt-2">
           <b-col cols="4">
-            <b-form-select
+            <v-select
               v-model="namespaceName"
               :options="namespaces"
               :select-size="1"
               :state="namespaceNameState"
-              :plain="true"
+              class="form-control"
+              placeholder="Namespace name"
             />
             <b-form-text id="password-help-block">
               Select the target namespace where the sealed secret will be
@@ -260,7 +261,7 @@ spec:
               icon="clipboard-check"
               aria-hidden="true"
             />
-            : <em>{{ secret["key"] }}</em>
+            : <code>{{ secret["key"] }}</code>
           </b-button>
         </b-col>
       </b-row>
@@ -435,5 +436,32 @@ export default {
 
 html.dark #sealed-secret-result {
   background: #333;
+}
+</style>
+
+<style>
+.dark {
+  --vs-border-color: var(--bs-gray-700-alt);
+}
+
+html.dark .vs__selected {
+  color: var(--bs-body-color-alt);
+}
+
+html.dark .vs__dropdown-option--highlight {
+  background-color: var(--bs-gray-600-alt);
+}
+
+html.dark .vs__dropdown-menu {
+  background-color: var(--bs-gray-900-alt);
+  color: var(--bs-body-color-alt);
+  border: 1px solid var(--bs-gray-black);
+}
+
+html.dark .form-control:focus-within {
+  color: #b1b1b1;
+  background-color: #222;
+  border-color: #9badbf;
+  box-shadow: 0 0 0 0.25rem rgba(55, 90, 127, 0.25);
 }
 </style>
