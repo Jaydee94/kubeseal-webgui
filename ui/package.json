@@ -20,6 +20,7 @@
   },
   "devDependencies": {
     "@babel/eslint-parser": "^7.19.1",
+    "@vue/cli": "^5.0.8",
     "@vue/cli-plugin-babel": "^5.0.8",
     "@vue/cli-plugin-eslint": "^5.0.8",
     "@vue/cli-service": "^5.0.8",
