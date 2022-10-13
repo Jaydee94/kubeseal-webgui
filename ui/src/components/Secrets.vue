@@ -16,7 +16,7 @@
           variant="link"
           class="mb-2"
         >
-          <b-icon
+          <bootstrap-icon
             icon="question-circle"
             scale="1.5"
           />
@@ -134,7 +134,7 @@
                 variant="link"
                 :disabled="hasNoSecrets"
               >
-                <b-icon
+                <bootstrap-icon
                   icon="trash"
                   aria-hidden="true"
                   @click="removeSecret(counter)"
@@ -222,7 +222,7 @@ spec:
         </b-col>
       </b-row>
       <b-row>
-        <b-col>
+        <b-col class="d-flex justify-content-center">
           <b-button
             v-if="clipboardAvailable"
             block
@@ -230,14 +230,19 @@ spec:
             class="mb-3"
             @click="copyRenderedSecrets()"
           >
-            Copy <b-icon
+            Copy <bootstrap-icon
               icon="clipboard-check"
               aria-hidden="true"
             />
           </b-button>
+        </b-col>
+      </b-row>
+      <b-row>
+        <b-col class="d-flex">
           <b-button
             block
             variant="primary"
+            class="flex-fill"
             @click="displayCreateSealedSecretForm=!displayCreateSealedSecretForm"
           >
             Encrypt more secrets
@@ -250,7 +255,6 @@ spec:
 
 <script>
 import { Base64 } from "js-base64";
-import "vue-popperjs/dist/vue-popper.css";
 
 function validDnsSubdomain(name) {
   if (!name) {
