@@ -1,8 +1,10 @@
 <template>
-  <v-switch
-    label="Dark Mode"
-    @click="toggleTheme"
-  />
+  <v-col cols="2">
+    <v-switch
+      label="Dark Mode"
+      @click="toggleTheme"
+    />
+  </v-col>
 </template>
 
 <script>

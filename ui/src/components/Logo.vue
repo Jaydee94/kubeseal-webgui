@@ -1,17 +1,19 @@
 <template>
-  <a
-    id="logo"
-    class="navbar-brand"
-    href="#"
-  >
-    <img
-      alt="Kubeseal-Webgui Logo"
-      src="../assets/logo.png"
-      class="align-middle"
+  <v-col>
+    <a
+      id="logo"
+      class="navbar-brand"
+      href="#"
     >
-    <span class="header-first align-middle">kubeseal</span>
-    <span class="header-second align-middle">-webgui</span>
-  </a>
+      <img
+        alt="Kubeseal-Webgui Logo"
+        src="../assets/logo.png"
+        class="align-middle"
+      >
+      <span class="header-first align-middle">kubeseal</span>
+      <span class="header-second align-middle">-webgui</span>
+    </a>
+  </v-col>
 </template>
 
 <script>
@@ -22,12 +24,13 @@ export default {
 
 <style scoped>
 .header-first {
-  color:#007bff;
+  color: #007bff;
 }
 
 .header-second {
-  color:orange;
+  color: orange;
 }
+
 img {
   height: 40px;
   margin: 0 10px 0 0;

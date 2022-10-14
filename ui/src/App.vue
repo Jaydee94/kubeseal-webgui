@@ -3,10 +3,10 @@
     <header>
       <v-container>
         <nav class="navbar navbar-light">
-          <div class="container-fluid">
+          <v-row>
             <Logo />
             <DarkMode />
-          </div>
+          </v-row>
         </nav>
       </v-container>
     </header>
