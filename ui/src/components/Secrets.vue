@@ -75,6 +75,7 @@
               v-model="secretName"
               hint="Secret name"
               trim
+              :rules="[rules.validDnsSubdomain]"
               :state="secretNameState"
             />
             <v-container id="password-help-block">
@@ -116,15 +117,13 @@
           <v-row class="align-items-center">
             <v-col cols="3">
               <v-textarea
-                id="input-key"
                 v-model="secret.key"
                 placeholder="Secret key"
-                :state="secret.state"
+                :rules="[rules.validDnsSubdomain]"
               />
             </v-col>
             <v-col cols="8">
               <v-textarea
-                id="input-value"
                 v-model="secret.value"
                 rows="1"
                 :placeholder="'Secret value'"
@@ -206,23 +205,19 @@
     <div v-else>
       <v-row>
         <v-col>
-          <div>
-            <pre
-              id="sealed-secret-result"
-              ref="sealedSecret"
-              class="px-3"
-            >
-              <code>
-apiVersion: bitnami.com/v1alpha1
+          <v-code
+            id="sealed-secret-result"
+            ref="sealedSecret"
+            class="px-3"
+          >
+            <pre>apiVersion: bitnami.com/v1alpha1
 kind: SealedSecret
 metadata:
   name: {{ secretName }}
   namespace: {{ namespaceName }}
 spec:
-  encryptedData:
-{{ renderedSecrets }}</code>
-            </pre>
-          </div>
+  encryptedData: {{ renderedSecrets }}</pre>
+          </v-code>
         </v-col>
       </v-row>
       <v-row>
@@ -303,6 +298,7 @@ export default {
       secrets: [{ key: "", value: "" }],
       sealedSecrets: [],
       clipboardAvailable: false,
+      rules: { validDnsSubdomain: value => validDnsSubdomain(value) || "Not a valid DNS subdomain" }
     };
   },
   computed: {
