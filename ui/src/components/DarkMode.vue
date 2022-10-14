@@ -1,32 +1,35 @@
 <template>
-  <b-form-checkbox
-    v-model="useDarkTheme"
-    switch
-  >
-    <span class="align-bottom">Dark Mode ({{ useDarkTheme }}) </span>
-  </b-form-checkbox>
+  <v-switch
+    label="Dark Mode"
+    @click="toggleTheme"
+  />
 </template>
 
 <script>
+import { useTheme } from 'vuetify'
+
+
 export default {
   name: "DarkMode",
-  data() {
+  setup() {
+    const theme = useTheme()
     return {
-      useDarkTheme: '',
+      theme,
+      toggleTheme: () => theme.global.name.value = theme.global.current.value.dark ? 'light' : 'dark',
     }
   },
   watch: {
     useDarkTheme: function () {
       if (this.useDarkTheme) {
-        document.documentElement.classList.add("dark")
+        theme.global.name.value = "dark"
         localStorage.useDarkTheme = true
       } else {
-        document.documentElement.classList.remove("dark")
+        theme.global.name.value = "light"
         localStorage.useDarkTheme = false
       }
     }
   },
-  mounted: function() {
+  mounted: function () {
     let result = false;
     let isDarkModeSetToFalse = (localStorage.useDarkTheme === 'false');
     let isDarkModeSetToTrue = (localStorage.useDarkTheme === 'true');

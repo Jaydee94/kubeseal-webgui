@@ -11,17 +11,18 @@
       class="secrets-form"
     >
       <div align="right">
-        <b-button
+        <v-btn
           id="help"
-          variant="link"
-          class="mb-2"
+          variant="text"
         >
-          <bootstrap-icon
-            icon="question-circle"
-            scale="1.5"
-          />
-        </b-button>
-        <b-popover
+          <v-icon
+            large
+            aria-hidden="true"
+          >
+            mdi-question-mark
+          </v-icon>
+        </v-btn>
+        <v-tooltip
           target="help"
           triggers="hover"
           placement="right"
@@ -51,34 +52,32 @@
               href="https://github.com/bitnami-labs/sealed-secrets"
             >click here</a>.
           </div>
-        </b-popover>
+        </v-tooltip>
       </div>
 
-      <b-form>
-        <b-form-row class="mt-2">
-          <b-col cols="4">
-            <v-select
+      <v-form>
+        <v-row class="mt-2">
+          <v-col cols="4">
+            <v-autocomplete
               v-model="namespaceName"
-              :options="namespaces"
-              :select-size="1"
+              :items="namespaces"
               :state="namespaceNameState"
-              class="form-control"
-              placeholder="Namespace name"
+              hint="Namespace name"
             />
-            <b-form-text id="password-help-block">
+            <v-container id="password-help-block">
               Select the target namespace where the sealed secret will be
               deployed.
-            </b-form-text>
-          </b-col>
-          <b-col cols="4">
-            <b-form-input
+            </v-container>
+          </v-col>
+          <v-col cols="4">
+            <v-text-field
               id="input-secret-name"
               v-model="secretName"
-              placeholder="Secret name"
+              hint="Secret name"
               trim
               :state="secretNameState"
             />
-            <b-form-text id="password-help-block">
+            <v-container id="password-help-block">
               Specify name of the secret.
               <br>
               <i>The secret name must be of type:
@@ -87,16 +86,16 @@
                   href="https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names"
                 >DNS
                   Subdomain</a></i>
-            </b-form-text>
-          </b-col>
-          <b-col cols="4">
-            <b-form-select
+            </v-container>
+          </v-col>
+          <v-col cols="4">
+            <v-select
               v-model="scope"
-              :options="scopes"
+              :items="scopes"
               :select-size="1"
               :plain="true"
             />
-            <b-form-text id="scope-help-block">
+            <v-container id="scope-help-block">
               Specify scope of the secret.
               <br>
               <i>
@@ -105,53 +104,52 @@
                   href="https://github.com/bitnami-labs/sealed-secrets#scopes"
                 >Scopes for sealed
                   secrets</a></i>
-            </b-form-text>
-          </b-col>
-        </b-form-row>
+            </v-container>
+          </v-col>
+        </v-row>
 
         <div
           v-for="(secret, counter) in secretsState"
           :key="counter"
           class="mt-4"
         >
-          <b-form-row class="align-items-center">
-            <b-col cols="3">
-              <b-form-textarea
+          <v-row class="align-items-center">
+            <v-col cols="3">
+              <v-textarea
                 id="input-key"
                 v-model="secret.key"
                 placeholder="Secret key"
                 :state="secret.state"
               />
-            </b-col>
-            <b-col cols="8">
-              <b-form-textarea
+            </v-col>
+            <v-col cols="8">
+              <v-textarea
                 id="input-value"
                 v-model="secret.value"
                 rows="1"
                 :placeholder="'Secret value'"
               />
-            </b-col>
-            <b-col cols="1">
-              <b-button
+            </v-col>
+            <v-col cols="1">
+              <v-btn
                 block
-                variant="link"
+                variant="text"
                 :disabled="hasNoSecrets"
               >
-                <bootstrap-icon
-                  icon="trash"
+                <v-icon
                   aria-hidden="true"
+                  class="ma-2"
                   @click="removeSecret(counter)"
-                />
-              </b-button>
-            </b-col>
-          </b-form-row>
+                >
+                  mdi-delete
+                </v-icon>
+              </v-btn>
+            </v-col>
+          </v-row>
         </div>
-        <b-row>
-          <b-col>
-            <b-form-text
-              block
-              class="mb-3"
-            >
+        <v-row>
+          <v-col>
+            <v-container block>
               Specify sensitive value and corresponding key of the secret.
               <br>
               <i>The key must be of type:
@@ -160,15 +158,17 @@
                   href="https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names"
                 >DNS
                   Subdomain</a></i>
-            </b-form-text>
-          </b-col>
-        </b-row>
-        <b-form-row>
-          <b-col>
-            <b-alert
-              :show="!(!errorMessage || 0 === errorMessage.length)"
-              dismissible
-              variant="warning"
+            </v-container>
+          </v-col>
+        </v-row>
+        <v-row>
+          <v-col>
+            <v-alert
+              v-model="hasErrorMessage"
+              closable
+              prominent
+              type="warning"
+              icon="mdi-flash"
             >
               <p>
                 Error while encoding sensitive data. Please contact your
@@ -178,34 +178,34 @@
               <p class="mt-3">
                 <code>{{ errorMessage }}</code>
               </p>
-            </b-alert>
-          </b-col>
-        </b-form-row>
-        <b-form-row class="mt-2">
-          <b-col cols="6">
-            <b-button
+            </v-alert>
+          </v-col>
+        </v-row>
+        <v-row class="mt-2">
+          <v-col cols="6">
+            <v-btn
               block
-              variant="secondary"
+              color="secondary"
               @click="secrets.push({ key: '', value: '' })"
             >
               Add key-value pair
-            </b-button>
-          </b-col>
-          <b-col cols="6">
-            <b-button
+            </v-btn>
+          </v-col>
+          <v-col cols="6">
+            <v-btn
               block
-              variant="primary"
+              variant="tonal"
               @click="fetchEncodedSecrets()"
             >
               Encrypt
-            </b-button>
-          </b-col>
-        </b-form-row>
-      </b-form>
+            </v-btn>
+          </v-col>
+        </v-row>
+      </v-form>
     </div>
     <div v-else>
-      <b-row>
-        <b-col>
+      <v-row>
+        <v-col>
           <div>
             <pre
               id="sealed-secret-result"
@@ -223,60 +223,56 @@ spec:
 {{ renderedSecrets }}</code>
             </pre>
           </div>
-        </b-col>
-      </b-row>
-      <b-row>
-        <b-col class="d-flex justify-content-center">
-          <b-button
+        </v-col>
+      </v-row>
+      <v-row>
+        <v-col class="d-flex justify-content-center">
+          <v-btn
             v-if="clipboardAvailable"
             block
-            variant="link"
-            class="mb-3"
+            variant="text"
             @click="copyRenderedSecrets()"
           >
             Copy complete secret
-            <bootstrap-icon
-              icon="clipboard-check"
-              aria-hidden="true"
-            />
-          </b-button>
-        </b-col>
-      </b-row>
-      <b-row
+            <v-icon aria-hidden="true">
+              mdi-copy-content
+            </v-icon>
+          </v-btn>
+        </v-col>
+      </v-row>
+      <v-row
         v-if="clipboardAvailable"
         class="d-flex"
       >
-        <b-col
+        <v-col
           v-for="(secret, counter) in sealedSecrets"
           :key="counter"
           class="flex"
         >
-          <b-button
-            variant="link"
-            class="mb-3"
+          <v-btn
+            variant="text"
             @click="copySealedSecret(counter)"
           >
             Copy
-            <bootstrap-icon
-              icon="clipboard-check"
-              aria-hidden="true"
-            />
+            <v-icon aria-hidden="true">
+              mdi-content-copy
+            </v-icon>
             : <code>{{ secret["key"] }}</code>
-          </b-button>
-        </b-col>
-      </b-row>
-      <b-row>
-        <b-col class="d-flex">
-          <b-button
+          </v-btn>
+        </v-col>
+      </v-row>
+      <v-row>
+        <v-col class="d-flex">
+          <v-btn
             block
-            variant="primary"
+            variant="tonal"
             class="flex-fill"
             @click="displayCreateSealedSecretForm=!displayCreateSealedSecretForm"
           >
             Encrypt more secrets
-          </b-button>
-        </b-col>
-      </b-row>
+          </v-btn>
+        </v-col>
+      </v-row>
     </div>
   </div>
 </template>
@@ -310,6 +306,9 @@ export default {
     };
   },
   computed: {
+    hasErrorMessage: function () {
+      return !(!this.errorMessage || 0 === this.errorMessage.length)
+    },
     secretNameState: function () {
       return validDnsSubdomain(this.secretName);
     },
@@ -428,40 +427,3 @@ export default {
   },
 };
 </script>
-
-<style scoped>
-#sealed-secret-result {
-  background: #eee;
-}
-
-html.dark #sealed-secret-result {
-  background: #333;
-}
-</style>
-
-<style>
-.dark {
-  --vs-border-color: var(--bs-gray-700-alt);
-}
-
-html.dark .vs__selected {
-  color: var(--bs-body-color-alt);
-}
-
-html.dark .vs__dropdown-option--highlight {
-  background-color: var(--bs-gray-600-alt);
-}
-
-html.dark .vs__dropdown-menu {
-  background-color: var(--bs-gray-900-alt);
-  color: var(--bs-body-color-alt);
-  border: 1px solid var(--bs-gray-black);
-}
-
-html.dark .form-control:focus-within {
-  color: #b1b1b1;
-  background-color: #222;
-  border-color: #9badbf;
-  box-shadow: 0 0 0 0.25rem rgba(55, 90, 127, 0.25);
-}
-</style>
