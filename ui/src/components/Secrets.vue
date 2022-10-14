@@ -56,24 +56,23 @@
       </div>
 
       <v-form>
-        <v-row class="mt-2">
-          <v-col cols="4">
+        <v-row class="d-flex">
+          <v-col>
             <v-autocomplete
               v-model="namespaceName"
               :items="namespaces"
-              :state="namespaceNameState"
-              hint="Namespace name"
+              label="Namespace name"
             />
             <v-container id="password-help-block">
               Select the target namespace where the sealed secret will be
               deployed.
             </v-container>
           </v-col>
-          <v-col cols="4">
+          <v-col>
             <v-text-field
               id="input-secret-name"
               v-model="secretName"
-              hint="Secret name"
+              label="Secret name"
               trim
               :rules="[rules.validDnsSubdomain]"
               :state="secretNameState"
@@ -89,12 +88,13 @@
                   Subdomain</a></i>
             </v-container>
           </v-col>
-          <v-col cols="4">
+          <v-col>
             <v-select
               v-model="scope"
               :items="scopes"
               :select-size="1"
               :plain="true"
+              label="Scope"
             />
             <v-container id="scope-help-block">
               Specify scope of the secret.
@@ -109,43 +109,35 @@
           </v-col>
         </v-row>
 
-        <div
+        <v-row
           v-for="(secret, counter) in secretsState"
           :key="counter"
-          class="mt-4"
         >
-          <v-row class="align-items-center">
-            <v-col cols="3">
-              <v-textarea
-                v-model="secret.key"
-                placeholder="Secret key"
-                :rules="[rules.validDnsSubdomain]"
-              />
-            </v-col>
-            <v-col cols="8">
-              <v-textarea
-                v-model="secret.value"
-                rows="1"
-                :placeholder="'Secret value'"
-              />
-            </v-col>
-            <v-col cols="1">
-              <v-btn
-                block
-                variant="text"
-                :disabled="hasNoSecrets"
-              >
-                <v-icon
-                  aria-hidden="true"
-                  class="ma-2"
-                  @click="removeSecret(counter)"
-                >
-                  mdi-delete
-                </v-icon>
-              </v-btn>
-            </v-col>
-          </v-row>
-        </div>
+          <v-col cols="3">
+            <v-textarea
+              v-model="secret.key"
+              label="Secret key"
+              rows="1"
+              clearable
+              :rules="[rules.validDnsSubdomain]"
+            />
+          </v-col>
+          <v-col>
+            <v-textarea
+              v-model="secret.value"
+              rows="1"
+              auto-grow
+              clearable
+              label="Secret value"
+            />
+          </v-col>
+          <v-col cols="1">
+            <v-btn
+              icon="mdi-delete"
+              :disabled="hasNoSecrets"
+            />
+          </v-col>
+        </v-row>
         <v-row>
           <v-col>
             <v-container block>
@@ -180,8 +172,8 @@
             </v-alert>
           </v-col>
         </v-row>
-        <v-row class="mt-2">
-          <v-col cols="6">
+        <v-row>
+          <v-col>
             <v-btn
               block
               color="secondary"
@@ -190,7 +182,7 @@
               Add key-value pair
             </v-btn>
           </v-col>
-          <v-col cols="6">
+          <v-col>
             <v-btn
               block
               variant="tonal"
@@ -207,10 +199,9 @@
         <v-col>
           <v-code
             id="sealed-secret-result"
-            ref="sealedSecret"
-            class="px-3"
+            class="overflow-auto"
           >
-            <pre>apiVersion: bitnami.com/v1alpha1
+            <pre ref="sealedSecret">apiVersion: bitnami.com/v1alpha1
 kind: SealedSecret
 metadata:
   name: {{ secretName }}
@@ -228,10 +219,10 @@ spec:
             variant="text"
             @click="copyRenderedSecrets()"
           >
-            Copy complete secret
             <v-icon aria-hidden="true">
-              mdi-copy-content
+              mdi-content-copy
             </v-icon>
+            Copy complete secret
           </v-btn>
         </v-col>
       </v-row>
@@ -248,11 +239,10 @@ spec:
             variant="text"
             @click="copySealedSecret(counter)"
           >
-            Copy
             <v-icon aria-hidden="true">
               mdi-content-copy
             </v-icon>
-            : <code>{{ secret["key"] }}</code>
+            Copy key: <code>{{ secret["key"] }}</code>
           </v-btn>
         </v-col>
       </v-row>
@@ -405,8 +395,9 @@ export default {
       return dataEntries.join("\n");
     },
     copyRenderedSecrets: function () {
-      let sealedSecretElement = this.$refs["sealedSecret"];
-      let sealedSecretContent = sealedSecretElement.innerText.trim();
+      let sealedSecretElement = this.$refs.sealedSecret;
+      console.log("sealedSecretElement: ", sealedSecretElement)
+      let sealedSecretContent = sealedSecretElement.innerText.trim()
       navigator.clipboard.writeText(sealedSecretContent);
     },
     copySealedSecret: function (counter) {

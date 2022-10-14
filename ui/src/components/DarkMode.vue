@@ -15,7 +15,10 @@ export default {
     const theme = useTheme()
     return {
       theme,
-      toggleTheme: () => theme.global.name.value = theme.global.current.value.dark ? 'light' : 'dark',
+      toggleTheme: () => {
+        localStorage.useDarkTheme = theme.global.current.value.dark
+        theme.global.name.value = theme.global.current.value.dark ? 'light' : 'dark'
+      },
     }
   },
   watch: {
