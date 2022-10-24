@@ -189,54 +189,70 @@
     <div v-else>
       <v-row>
         <v-col>
-          <v-code
-            id="sealed-secret-result"
-            class="overflow-auto"
+          <v-card
+            title="Complete sealed secret"
+            class="ma-2"
           >
-            <pre ref="sealedSecret">apiVersion: bitnami.com/v1alpha1
+            <template v-slot:text>
+              <v-code
+                id="sealed-secret-result"
+                class="overflow-auto"
+              >
+                <pre ref="sealedSecret">apiVersion: bitnami.com/v1alpha1
 kind: SealedSecret
 metadata:
   name: {{ secretName }}
   namespace: {{ namespaceName }}
 spec:
-  encryptedData: {{ renderedSecrets }}</pre>
-          </v-code>
-        </v-col>
-      </v-row>
-      <v-row>
-        <v-col class="d-flex justify-content-center">
-          <v-btn
-            v-if="clipboardAvailable"
-            block
-            variant="text"
-            @click="copyRenderedSecrets()"
-          >
-            <v-icon aria-hidden="true">
-              mdi-content-copy
-            </v-icon>
-            Copy complete secret
-          </v-btn>
+  encryptedData:
+{{ renderedSecrets }}</pre>
+              </v-code>
+            </template>
+            <template v-slot:actions>
+              <v-btn
+                v-if="clipboardAvailable"
+                block
+                variant="text"
+                @click="copyRenderedSecrets()"
+              >
+                <v-icon aria-hidden="true">
+                  mdi-content-copy
+                </v-icon>
+                Copy to clipboard
+              </v-btn>
+            </template>
+          </v-card>
         </v-col>
       </v-row>
       <v-row
         v-if="clipboardAvailable"
-        class="d-flex"
+        dense
+        align-content="center"
       >
-        <v-col
+        <v-card
           v-for="(secret, counter) in sealedSecrets"
           :key="counter"
-          class="flex"
+          class="s4 ma-2"
+          max-width="400"
         >
-          <v-btn
-            variant="text"
-            @click="copySealedSecret(counter)"
-          >
-            <v-icon aria-hidden="true">
-              mdi-content-copy
-            </v-icon>
-            Copy key: <code>{{ secret["key"] }}</code>
-          </v-btn>
-        </v-col>
+          <template v-slot:title>Key <code>{{ secret["key"] }}</code></template>
+          <template v-slot:text>
+            <v-code class="overflow-auto">
+              <pre>{{ secret["value"] }}</pre>
+            </v-code>
+          </template>
+          <template v-slot:actions>
+            <v-btn
+              variant="text"
+              @click="copySealedSecret(counter)"
+            >
+              <v-icon aria-hidden="true">
+                mdi-content-copy
+              </v-icon>
+              Copy to clipboard
+            </v-btn>
+          </template>
+        </v-card>
       </v-row>
       <v-row>
         <v-col class="d-flex">
