@@ -13,46 +13,37 @@
       <div align="right">
         <v-btn
           id="help"
-          variant="text"
+          icon="mdi-help"
         >
-          <v-icon
-            large
-            aria-hidden="true"
-          >
-            mdi-question-mark
-          </v-icon>
+          <v-icon>mdi-help</v-icon>
+          <v-tooltip activator="parent">
+            <div>
+              Usage
+            </div>
+            <div align="left">
+              The entered values will be encrypted using the <b>kubeseal</b> cli.
+            </div>
+            <div align="left">
+              Kubeseal encrypts a plaintext secret using a configured public key.
+            </div>
+            <br>
+            <div align="left">
+              You can encrypt multiple <b>&lt;key&gt; &lt;value&gt;</b> pairs
+              inside one
+            </div>
+            <div align="left">
+              Kubernetes secret object.
+            </div>
+            <br>
+            <div align="left">
+              For more information about <b>sealed-secrets</b>
+              <a
+                target="_blank"
+                href="https://github.com/bitnami-labs/sealed-secrets"
+              >click here</a>.
+            </div>
+          </v-tooltip>
         </v-btn>
-        <v-tooltip
-          target="help"
-          triggers="hover"
-          placement="right"
-        >
-          <template #title>
-            Usage
-          </template>
-          <div align="left">
-            The entered values will be encrypted using the <b>kubeseal</b> cli.
-          </div>
-          <div align="left">
-            Kubeseal encrypts a plaintext secret using a configured public key.
-          </div>
-          <br>
-          <div align="left">
-            You can encrypt multiple <b>&lt;key&gt; &lt;value&gt;</b> pairs
-            inside one
-          </div>
-          <div align="left">
-            Kubernetes secret object.
-          </div>
-          <br>
-          <div align="left">
-            For more information about <b>sealed-secrets</b>
-            <a
-              target="_blank"
-              href="https://github.com/bitnami-labs/sealed-secrets"
-            >click here</a>.
-          </div>
-        </v-tooltip>
       </div>
 
       <v-form>
@@ -135,6 +126,7 @@
             <v-btn
               icon="mdi-delete"
               :disabled="hasNoSecrets"
+              @click="removeSecret(counter)"
             />
           </v-col>
         </v-row>
@@ -252,7 +244,7 @@ spec:
             block
             variant="tonal"
             class="flex-fill"
-            @click="displayCreateSealedSecretForm=!displayCreateSealedSecretForm"
+            @click="displayCreateSealedSecretForm = !displayCreateSealedSecretForm"
           >
             Encrypt more secrets
           </v-btn>
