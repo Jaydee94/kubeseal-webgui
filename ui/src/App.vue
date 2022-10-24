@@ -18,7 +18,7 @@
     <v-footer
       inset
       app
-      class="py-12"
+      class="py-2"
       width="auto"
     >
       <AppConfig />
