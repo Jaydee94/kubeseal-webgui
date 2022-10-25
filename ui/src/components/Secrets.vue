@@ -17,6 +17,7 @@
         <v-btn
           id="help"
           icon="mdi-help"
+          class="ma-2"
         >
           <v-icon>mdi-help</v-icon>
           <v-tooltip activator="parent">
