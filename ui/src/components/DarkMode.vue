@@ -14,22 +14,16 @@ import { reactive } from 'vue';
 
 function isDarkModeEnabled(theme) {
   let result = false;
-  let isDarkModeSetToFalse = (localStorage.useDarkTheme === 'false');
-  let isDarkModeSetToTrue = (localStorage.useDarkTheme === 'true');
-  let isSystemDarkModeSet = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
-  if (isDarkModeSetToFalse) {
-    result = false;
-  }
+  if (localStorage.useDarkTheme) {
+    result = localStorage.useDarkTheme === 'true'
+  } else {
+    let isSystemDarkModeSet = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
-  if (isDarkModeSetToTrue) {
-    result = true;
+    if (isSystemDarkModeSet) {
+      result = true;
+    }
   }
-
-  if (isSystemDarkModeSet && !isDarkModeSetToFalse) {
-    result = true;
-  }
-  console.log("I take ", result)
   theme.global.name.value = result ? 'dark' : 'light'
   return result;
 }
@@ -48,10 +42,8 @@ export default {
   },
   methods: {
     toggleDarkMode: function () {
-      this.theme.global.name.value = this.theme.global.current.value.dark ? 'light' : 'dark'
+      this.theme.global.name.value = this.state.darkMode ? 'dark' : 'light'
       localStorage.useDarkTheme = this.theme.global.current.value.dark
-      this.state.darkMode = this.theme.global.current.value.dark
-      console.log("this.darkMode:", this.state.darkMode)
     }
   }
 }
