@@ -6,12 +6,12 @@
       href="#"
     >
       <img
+        id="logo-img"
         alt="Kubeseal-Webgui Logo"
-        src="../assets/logo.png"
-        class="align-middle"
+        :src="require('@/assets/logo.png')"
       >
-      <span class="header-first align-middle">kubeseal</span>
-      <span class="header-second align-middle">-webgui</span>
+      <span class="header-first">kubeseal</span>
+      <span class="header-second">-webgui</span>
     </a>
   </v-col>
 </template>
@@ -23,12 +23,22 @@ export default {
 </script>
 
 <style scoped>
+#logo {
+  text-decoration: none;
+}
+
+#logo-img {
+  vertical-align: middle;
+}
+
 .header-first {
   color: #007bff;
+  vertical-align: middle;
 }
 
 .header-second {
   color: orange;
+  vertical-align: middle;
 }
 
 img {
