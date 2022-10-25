@@ -193,7 +193,7 @@
             title="Complete sealed secret"
             class="ma-2"
           >
-            <template v-slot:text>
+            <template #text>
               <v-code
                 id="sealed-secret-result"
                 class="overflow-auto"
@@ -205,10 +205,10 @@ metadata:
   namespace: {{ namespaceName }}
 spec:
   encryptedData:
-{{ renderedSecrets }}</pre>
+                {{ renderedSecrets }}</pre>
               </v-code>
             </template>
-            <template v-slot:actions>
+            <template #actions>
               <v-btn
                 v-if="clipboardAvailable"
                 block
@@ -235,13 +235,15 @@ spec:
           class="s4 ma-2"
           max-width="400"
         >
-          <template v-slot:title>Key <code>{{ secret["key"] }}</code></template>
-          <template v-slot:text>
+          <template #title>
+            Key <code>{{ secret["key"] }}</code>
+          </template>
+          <template #text>
             <v-code class="overflow-auto">
               <pre>{{ secret["value"] }}</pre>
             </v-code>
           </template>
-          <template v-slot:actions>
+          <template #actions>
             <v-btn
               variant="text"
               @click="copySealedSecret(counter)"
