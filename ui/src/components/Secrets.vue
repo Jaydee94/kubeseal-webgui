@@ -207,9 +207,7 @@ metadata:
   name: {{ secretName }}
   namespace: {{ namespaceName }}
 spec:
-  encryptedData:
-{{ renderedSecrets }}
-                </pre>
+  encryptedData: {{ renderedSecrets }}</pre>
               </v-code>
             </template>
             <template #actions>
@@ -411,7 +409,7 @@ export default {
       var dataEntries = sealedSecrets.map((element) => {
         return `    ${element["key"]}: ${element["value"]}`;
       });
-      return dataEntries.join("\n");
+      return "\n" + dataEntries.join("\n");
     },
     copyRenderedSecrets: function () {
       let sealedSecretElement = this.$refs.sealedSecret;
