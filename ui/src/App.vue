@@ -1,7 +1,7 @@
 <template>
   <v-app>
     <v-app-bar :elevation="3">
-      <template v-slot:append>
+      <template #append>
         <DarkMode />
       </template>
       <Logo />

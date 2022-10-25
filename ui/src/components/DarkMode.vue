@@ -3,8 +3,8 @@
     v-model="state.darkMode"
     color="blue"
     label="Dark Mode"
-    @change="toggleDarkMode"
     class="ma-4"
+    @change="toggleDarkMode"
   />
 </template>
 
