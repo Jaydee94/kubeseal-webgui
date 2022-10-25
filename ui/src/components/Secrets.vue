@@ -205,20 +205,23 @@ metadata:
   namespace: {{ namespaceName }}
 spec:
   encryptedData:
-                {{ renderedSecrets }}</pre>
+{{ renderedSecrets }}</pre>
               </v-code>
             </template>
             <template #actions>
               <v-btn
                 v-if="clipboardAvailable"
-                block
                 variant="text"
                 @click="copyRenderedSecrets()"
               >
-                <v-icon aria-hidden="true">
-                  mdi-content-copy
-                </v-icon>
                 Copy to clipboard
+              </v-btn>
+              <v-spacer></v-spacer>
+              <v-btn
+                v-if="clipboardAvailable"
+                icon="mdi-content-copy"
+                @click="copyRenderedSecrets()"
+              >
               </v-btn>
             </template>
           </v-card>
@@ -248,10 +251,14 @@ spec:
               variant="text"
               @click="copySealedSecret(counter)"
             >
-              <v-icon aria-hidden="true">
-                mdi-content-copy
-              </v-icon>
               Copy to clipboard
+            </v-btn>
+            <v-spacer></v-spacer>
+            <v-btn
+              icon="mdi-content-copy"
+              variant="text"
+              @click="copySealedSecret(counter)"
+            >
             </v-btn>
           </template>
         </v-card>
