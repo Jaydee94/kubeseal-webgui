@@ -10,11 +10,10 @@
   "dependencies": {
     "core-js": "^3.25.5",
     "js-base64": "^3.7.2",
-    "roboto-fontface": "*",
+    "@fontsource/roboto": "*",
     "vue": "^3.1.0",
     "vue-select": "^4.0.0-beta.5",
-    "vuetify": "^3.0.0-beta.0",
-    "webfontloader": "^1.0.0"
+    "vuetify": "^3.0.0-beta.0"
   },
   "devDependencies": {
     "@babel/eslint-parser": "^7.19.1",
