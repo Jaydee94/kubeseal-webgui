@@ -1,0 +1,64 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v2.3.0
+    hooks:
+      - id: check-yaml
+        exclude: ^chart/kubeseal-webgui/templates/
+        files: ^mock/
+      - id: end-of-file-fixer
+        files: ^mock/
+      - id: trailing-whitespace
+        files: ^mock/
+  # - repo: https://github.com/PyCQA/pydocstyle
+  #   rev: 6.1.1
+  #   hooks:
+  #   - id: pydocstyle
+  #  - repo: https://github.com/PyCQA/prospector
+  #rev: 1.5.1
+  #hooks:
+  #- id: prospector
+  #args: ["--zero-exit"]
+  - repo: local
+    hooks:
+      # - id: mypy
+      #   name: mypy
+      #   entry: bash -c 'cd mock && poetry run mypy kubeseal-webgui-api'
+      #   language: system
+      - id: isort
+        name: isort (python)
+        args: ["--profile", "black"]
+        entry: bash -c 'cd mock && poetry run isort'
+        language: system
+        types: [python]
+        files: ^mock/
+      - id: pyupgrade
+        name: pyupgrade
+        entry: bash -c 'cd mock && poetry run pyupgrade'
+        language: system
+        files: ^mock/
+      - id: black
+        name: black
+        language: system
+        entry: bash -c 'cd mock && poetry run black .'
+        types: [python]
+        files: ^mock/
+      - id: flake8
+        name: flake8
+        entry: bash -c 'cd mock && poetry run flake8 --max-line-length=88 kswg_mock'
+        language: system
+        types: [python]
+        files: ^mock/
+      - id: tests
+        name: run test suite
+        entry: bash -c 'cd mock && poetry install && poetry run pytest -m "not (container or cluster)"'
+        language: system
+        types: [python]
+        pass_filenames: false
+        files: ^mock/
+        # stages: [push]
+  - repo: https://github.com/pre-commit/mirrors-eslint
+    rev: "v8.25.0" # Use the sha / tag you want to point at
+    hooks:
+      - id: eslint
+        files: \.[jt]sx?$ # *.js, *.jsx, *.ts and *.tsx
+        types: [file]

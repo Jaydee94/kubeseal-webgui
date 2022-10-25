@@ -34,11 +34,13 @@ export default {
 .header-first {
   color: #007bff;
   vertical-align: middle;
+  font-size: 2em;
 }
 
 .header-second {
   color: orange;
   vertical-align: middle;
+  font-size: 2em;
 }
 
 img {

@@ -10,7 +10,10 @@
       v-if="displayCreateSealedSecretForm"
       class="secrets-form"
     >
-      <div align="right">
+      <div
+        class="helper-info"
+        align="right"
+      >
         <v-btn
           id="help"
           icon="mdi-help"
@@ -430,3 +433,8 @@ export default {
   },
 };
 </script>
+<style>
+.helper-info {
+  margin-bottom: 10px;
+}
+</style>

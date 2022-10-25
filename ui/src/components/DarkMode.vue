@@ -1,7 +1,8 @@
 <template>
-  <v-col cols="2">
+  <v-col cols="1">
     <v-switch
       v-model="state.darkMode"
+      color="blue"
       label="Dark Mode"
       @change="toggleDarkMode"
     />

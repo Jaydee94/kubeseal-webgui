@@ -1,30 +1,32 @@
 <template>
   <v-container>
-    <v-row justify="center">
-      <v-col align-self="center">
-        <small
-          v-if="fetchConfigsSuccessful"
-          class="text-muted"
-        >
-          <span
-            v-for="(value, key, index) in configs"
-            :key="key"
+    <v-row>
+      <v-col>
+        <div class="app-config">
+          <small
+            v-if="fetchConfigsSuccessful"
+            class="text-muted"
           >
-            <span v-if="index != 0"> 🞄 </span><span>{{ key }}: {{ value }}</span>
-          </span>
-        </small>
-        <small
-          v-else-if="fetchConfigsSuccessful == false"
-          class="text-muted"
-        >
-          ⚠️ Could not retrieve application properties.
-        </small>
-        <small
-          v-else
-          class="text-muted"
-        >
-          ⏳ Loading application properties.
-        </small>
+            <span
+              v-for="(value, key, index) in configs"
+              :key="key"
+            >
+              <span v-if="index != 0"> 🞄 </span><span>{{ key }}: {{ value }}</span>
+            </span>
+          </small>
+          <small
+            v-else-if="fetchConfigsSuccessful == false"
+            class="text-muted"
+          >
+            ⚠️ Could not retrieve application properties.
+          </small>
+          <small
+            v-else
+            class="text-muted"
+          >
+            ⏳ Loading application properties.
+          </small>
+        </div>
       </v-col>
     </v-row>
   </v-container>
