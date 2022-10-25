@@ -1,15 +1,11 @@
 <template>
   <v-app>
-    <header>
-      <v-container>
-        <nav class="navbar navbar-light">
-          <v-row>
-            <Logo />
-            <DarkMode />
-          </v-row>
-        </nav>
-      </v-container>
-    </header>
+    <v-app-bar :elevation="3">
+      <template v-slot:append>
+        <DarkMode />
+      </template>
+      <Logo />
+    </v-app-bar>
     <v-main>
       <v-container>
         <Secrets />

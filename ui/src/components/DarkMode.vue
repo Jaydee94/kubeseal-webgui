@@ -1,12 +1,11 @@
 <template>
-  <v-col cols="1">
-    <v-switch
-      v-model="state.darkMode"
-      color="blue"
-      label="Dark Mode"
-      @change="toggleDarkMode"
-    />
-  </v-col>
+  <v-switch
+    v-model="state.darkMode"
+    color="blue"
+    label="Dark Mode"
+    @change="toggleDarkMode"
+    class="ma-4"
+  />
 </template>
 
 <script>
