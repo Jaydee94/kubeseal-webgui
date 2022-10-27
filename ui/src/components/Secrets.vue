@@ -178,15 +178,18 @@
             <v-btn
               block
               color="secondary"
+              prepend-icon="mdi-plus-box"
               @click="secrets.push({ key: '', value: '' })"
             >
               Add key-value pair
             </v-btn>
           </v-col>
+          <v-spacer />
           <v-col>
             <v-btn
               block
               variant="tonal"
+              prepend-icon="mdi-lock"
               @click="fetchEncodedSecrets()"
             >
               Encrypt
