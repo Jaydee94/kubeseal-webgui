@@ -1,4 +1,3 @@
-import 'vuetify/styles' // Global CSS has to be imported
 import { createApp } from 'vue'
 import { createVuetify } from 'vuetify'
 import App from './App.vue'
@@ -7,6 +6,7 @@ import * as directives from 'vuetify/directives'
 import { aliases, mdi } from 'vuetify/iconsets/mdi'
 
 import "@fontsource/roboto"
+import 'vuetify/styles' // Global CSS has to be imported
 import '@mdi/font/css/materialdesignicons.css' // Ensure you are using css-loader
 
 const app = createApp(App)
