@@ -70,7 +70,7 @@
               v-model="secretName"
               label="Secret name"
               trim
-              :rules="[rules.validDnsSubdomain]"
+              :rules="rules.validDnsSubdomain"
               :state="secretNameState"
               :disabled="['strict'].indexOf(scope) === -1"
             />
@@ -116,7 +116,7 @@
               label="Secret key"
               rows="1"
               clearable
-              :rules="[rules.validDnsSubdomain]"
+              :rules="rules.validDnsSubdomain"
             />
           </v-col>
           <v-col>
@@ -154,9 +154,9 @@
           <v-col>
             <v-alert
               v-model="hasErrorMessage"
-              border="start"
               closable
               prominent
+              border="start"
               type="warning"
               icon="mdi-flash"
               title="Error while encoding sensitive data"
@@ -313,7 +313,15 @@ export default {
       secrets: [{ key: "", value: "" }],
       sealedSecrets: [],
       clipboardAvailable: false,
-      rules: { validDnsSubdomain: value => validDnsSubdomain(value) || "Not a valid DNS subdomain" }
+      rules: {
+        validDnsSubdomain: [
+          value => value.length < 253 || "Longer than 253 chars",
+          value => !!value && /^[a-z0-9-.]*$/.test(value) || 'Invalid char. Must be one of lower chars, digits, dashes or dots.',
+          value => !!value && /^[a-z0-9]/.test(value) || 'Must start with a lower char or digit',
+          value => !!value && /[a-z0-9]$/.test(value) || 'Must end with a lower char or digit',
+          value => validDnsSubdomain(value) || "Not a valid DNS subdomain"
+        ]
+      }
     };
   },
   computed: {
@@ -353,7 +361,7 @@ export default {
   methods: {
     setErrorMessage(errorMessage) {
       this.errorMessage = errorMessage
-      this.hasErrorMessage = errorMessage !== null || errorMessage.length > 0
+      this.hasErrorMessage = !!errorMessage
     },
     fetchNamespaces: async function () {
       try {
