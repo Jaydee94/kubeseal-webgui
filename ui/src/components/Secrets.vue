@@ -71,7 +71,6 @@
               label="Secret name"
               trim
               :rules="rules.validDnsSubdomain"
-              :state="secretNameState"
               :disabled="['strict'].indexOf(scope) === -1"
             />
             <v-container id="password-help-block">
@@ -107,7 +106,7 @@
         </v-row>
 
         <v-row
-          v-for="(secret, counter) in secretsState"
+          v-for="(secret, counter) in secrets"
           :key="counter"
         >
           <v-col cols="3">
@@ -325,18 +324,6 @@ export default {
     };
   },
   computed: {
-    secretNameState: function () {
-      return validDnsSubdomain(this.secretName);
-    },
-    namespaceNameState: function () {
-      return validDnsSubdomain(this.namespaceName);
-    },
-    secretsState: function () {
-      return this.secrets.map((e) => {
-        e.state = validDnsSubdomain(e.key);
-        return e;
-      });
-    },
     hasNoSecrets: function () {
       if (this.secrets.length > 1) {
         return false;
