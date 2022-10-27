@@ -57,6 +57,7 @@
               v-model="namespaceName"
               :items="namespaces"
               label="Namespace name"
+              :disabled="['strict', 'namespace-wide'].indexOf(scope) === -1"
             />
             <v-container id="password-help-block">
               Select the target namespace where the sealed secret will be
@@ -71,6 +72,7 @@
               trim
               :rules="[rules.validDnsSubdomain]"
               :state="secretNameState"
+              :disabled="['strict'].indexOf(scope) === -1"
             />
             <v-container id="password-help-block">
               Specify name of the secret.
