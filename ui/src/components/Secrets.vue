@@ -315,6 +315,7 @@ export default {
       rules: {
         validDnsSubdomain: [
           value => value.length < 253 || "Longer than 253 chars",
+          value => !!value || 'Must not be empty',
           value => !!value && /^[a-z0-9-.]*$/.test(value) || 'Invalid char. Must be one of lower chars, digits, dashes or dots.',
           value => !!value && /^[a-z0-9]/.test(value) || 'Must start with a lower char or digit',
           value => !!value && /[a-z0-9]$/.test(value) || 'Must end with a lower char or digit',
