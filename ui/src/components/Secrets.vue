@@ -154,19 +154,23 @@
           <v-col>
             <v-alert
               v-model="hasErrorMessage"
+              border="start"
               closable
               prominent
               type="warning"
               icon="mdi-flash"
+              title="Error while encoding sensitive data"
             >
-              <p>
-                Error while encoding sensitive data. Please contact your
-                administrator and try again later.
-              </p>
-              <b>Error message: </b>
-              <p class="mt-3">
-                <code>{{ errorMessage }}</code>
-              </p>
+              <v-container>
+                <p>
+                  Please contact your
+                  administrator and try again later.
+                </p>
+                <b>Error message:</b>
+                <p>
+                  <code class="ma-4">{{ errorMessage }}</code>
+                </p>
+              </v-container>
             </v-alert>
           </v-col>
         </v-row>
@@ -300,6 +304,7 @@ export default {
       namespaces: [],
       scopes: ["strict", "cluster-wide", "namespace-wide"],
       errorMessage: "",
+      hasErrorMessage: false,
       displayName: "",
       displayCreateSealedSecretForm: true,
       secretName: "",
@@ -312,9 +317,6 @@ export default {
     };
   },
   computed: {
-    hasErrorMessage: function () {
-      return !(!this.errorMessage || 0 === this.errorMessage.length)
-    },
     secretNameState: function () {
       return validDnsSubdomain(this.secretName);
     },
@@ -346,8 +348,13 @@ export default {
     if (navigator && navigator.clipboard) {
       this.clipboardAvailable = true;
     }
+    this.setErrorMessage("")
   },
   methods: {
+    setErrorMessage(errorMessage) {
+      this.errorMessage = errorMessage
+      this.hasErrorMessage = errorMessage !== null || errorMessage.length > 0
+    },
     fetchNamespaces: async function () {
       try {
         let response = await fetch("/config.json");
@@ -357,7 +364,7 @@ export default {
         response = await fetch(`${apiUrl}/namespaces`);
         this.namespaces = await response.json();
       } catch (error) {
-        this.errorMessage = error;
+        this.setErrorMessage(error)
       }
     },
     fetchDisplayName: async function () {
@@ -405,7 +412,7 @@ export default {
           this.displayCreateSealedSecretForm = false;
         }
       } catch (error) {
-        this.errorMessage = error;
+        this.setErrorMessage(error)
       }
     },
     renderSecrets: function (sealedSecrets) {
