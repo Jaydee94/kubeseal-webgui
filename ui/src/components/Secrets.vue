@@ -154,7 +154,7 @@
             <v-btn
               prepend-icon="mdi-plus-box"
               color="accent"
-              @click="secrets.push({ key: '', value: '' })"
+              @click="secrets.push({ key: '', value: '', file: [] })"
             >
               Add key-value pair
             </v-btn>
@@ -342,7 +342,7 @@ export default {
       secretName: "",
       namespaceName: "",
       scope: "strict",
-      secrets: [{ key: "", value: "", file: "" }],
+      secrets: [{ key: "", value: "", file: [] }],
       sealedSecrets: [],
       clipboardAvailable: false,
       rules: {
@@ -369,7 +369,7 @@ export default {
       return secret.key === '' && secret.value === '';
     },
     hasFile: function () {
-      return this.secrets.map((e) => { return !!e.file && e.file.length > 0 })
+      return this.secrets.map((e) => { return e.file.length > 0 })
     },
     hasValue: function () {
       return this.secrets.map((e) => { return e.value !== '' })
