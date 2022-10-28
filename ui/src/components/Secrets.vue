@@ -16,6 +16,7 @@
       >
         <v-btn
           id="help"
+          variant="text"
           icon="mdi-help"
           class="ma-2"
         >
@@ -125,14 +126,38 @@
               auto-grow
               clearable
               label="Secret value"
+              :disabled="hasFile"
+            />
+          </v-col>
+          <v-col cols="2">
+            <v-file-input
+              v-model="secret.file"
+              show-size
+              dense
+              label="Upload File"
+              prepend-icon="mdi-file-upload-outline"
+              :rules="fileSize"
+              :disabled="hasValue"
             />
           </v-col>
           <v-col cols="1">
             <v-btn
               icon="mdi-delete"
+              variant="text"
               :disabled="hasNoSecrets"
               @click="removeSecret(counter)"
             />
+          </v-col>
+        </v-row>
+        <v-row>
+          <v-col>
+            <v-btn
+              prepend-icon="mdi-plus-box"
+              color="accent"
+              @click="secrets.push({ key: '', value: '' })"
+            >
+              Add key-value pair
+            </v-btn>
           </v-col>
         </v-row>
         <v-row>
@@ -173,23 +198,14 @@
             </v-alert>
           </v-col>
         </v-row>
-        <v-row>
-          <v-col>
-            <v-btn
-              block
-              color="secondary"
-              prepend-icon="mdi-plus-box"
-              @click="secrets.push({ key: '', value: '' })"
-            >
-              Add key-value pair
-            </v-btn>
-          </v-col>
-          <v-spacer />
-          <v-col>
+        <v-row justify="center">
+          <v-col cols="6">
             <v-btn
               block
               variant="tonal"
               prepend-icon="mdi-lock"
+              color="blue lighten-1"
+              :disabled="errorMessage != ''"
               @click="fetchEncodedSecrets()"
             >
               Encrypt
@@ -210,7 +226,10 @@
                 id="sealed-secret-result"
                 class="overflow-auto"
               >
-                <pre ref="sealedSecret">apiVersion: bitnami.com/v1alpha1
+                <pre
+                  ref="sealedSecret"
+                  class="output"
+                >apiVersion: bitnami.com/v1alpha1
 kind: SealedSecret
 metadata:
   name: {{ secretName }}
@@ -253,7 +272,7 @@ spec:
           </template>
           <template #text>
             <v-code class="overflow-auto">
-              <pre>{{ secret["value"] }}</pre>
+              <pre class="output">{{ secret["value"] }}</pre>
             </v-code>
           </template>
           <template #actions>
@@ -299,6 +318,17 @@ function validDnsSubdomain(name) {
   return re.test(name);
 }
 
+function readFileAsync(file) {
+  return new Promise((resolve, reject) => {
+    let reader = new FileReader();
+    reader.onload = () => {
+      resolve(reader.result);
+    };
+    reader.onerror = reject;
+    reader.readAsText(file);
+  })
+}
+
 export default {
   name: "Secrets",
   data: function () {
@@ -312,7 +342,7 @@ export default {
       secretName: "",
       namespaceName: "",
       scope: "strict",
-      secrets: [{ key: "", value: "" }],
+      secrets: [{ key: "", value: "", file: "" }],
       sealedSecrets: [],
       clipboardAvailable: false,
       rules: {
@@ -324,7 +354,10 @@ export default {
           value => !!value && /[a-z0-9]$/.test(value) || 'Must end with a lower char or digit',
           value => validDnsSubdomain(value) || "Not a valid DNS subdomain"
         ]
-      }
+      },
+      fileSize: [
+        files => !files || !files.some(file => file.size > 1048576) || 'File size should be less than 1 MB!'
+      ],
     };
   },
   computed: {
@@ -334,6 +367,14 @@ export default {
       }
       let secret = this.secrets[0];
       return secret.key === '' && secret.value === '';
+    },
+    hasFile: function () {
+      let secret = this.secrets[0];
+      return secret.file !== '';
+    },
+    hasValue: function () {
+      let secret = this.secrets[0];
+      return secret.value !== '';
     },
     renderedSecrets: function () {
       return this.renderSecrets(this.sealedSecrets);
@@ -378,12 +419,20 @@ export default {
           secret: this.secretName,
           namespace: this.namespaceName,
           scope: this.scope,
-          secrets: this.secrets.map((element) => {
-            return {
-              key: element.key,
-              value: Base64.encode(element.value),
-            };
-          }),
+          secrets: await Promise.all(this.secrets.map(async (element) => {
+            if (element.value) {
+              return {
+                key: element.key,
+                value: Base64.encode(element.value),
+              };
+            } else {
+              let fileContent = await readFileAsync(element.file[0])
+              return {
+                key: element.key,
+                file: Base64.encode(fileContent)
+              };
+            }
+          })),
         };
 
         let requestBody = JSON.stringify(requestObject, null, "\t");
