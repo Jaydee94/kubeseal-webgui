@@ -205,7 +205,7 @@
               variant="tonal"
               prepend-icon="mdi-lock"
               color="blue lighten-1"
-              :disabled="errorMessage != ''"
+              :disabled="hasErrorMessage"
               @click="fetchEncodedSecrets()"
             >
               Encrypt
