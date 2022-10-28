@@ -126,7 +126,7 @@
               auto-grow
               clearable
               label="Secret value"
-              :disabled="hasFile"
+              :disabled="hasFile[counter]"
             />
           </v-col>
           <v-col cols="2">
@@ -137,7 +137,7 @@
               label="Upload File"
               prepend-icon="mdi-file-upload-outline"
               :rules="fileSize"
-              :disabled="hasValue"
+              :disabled="hasValue[counter]"
             />
           </v-col>
           <v-col cols="1">
@@ -369,12 +369,10 @@ export default {
       return secret.key === '' && secret.value === '';
     },
     hasFile: function () {
-      let secret = this.secrets[0];
-      return secret.file !== '';
+      return this.secrets.map((e) => { return !!e.file && e.file.length > 0 })
     },
     hasValue: function () {
-      let secret = this.secrets[0];
-      return secret.value !== '';
+      return this.secrets.map((e) => { return e.value !== '' })
     },
     renderedSecrets: function () {
       return this.renderSecrets(this.sealedSecrets);
