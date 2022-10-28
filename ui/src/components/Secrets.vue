@@ -366,7 +366,7 @@ export default {
         return false;
       }
       let secret = this.secrets[0];
-      return secret.key === '' && secret.value === '';
+      return secret.key === '' && secret.value === '' && secret.file.length === 0;
     },
     hasFile: function () {
       return this.secrets.map((e) => { return e.file.length > 0 })
@@ -480,8 +480,9 @@ export default {
       if (this.secrets.length > 1) {
         this.secrets.splice(counter, 1)
       } else {
-        this.secrets[0].key = '';
-        this.secrets[0].value = '';
+        this.secrets[0].key = ''
+        this.secrets[0].value = ''
+        this.secrets[0].file = []
       }
     }
   },
