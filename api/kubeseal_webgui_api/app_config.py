@@ -5,12 +5,14 @@ from os import environ
 from pydantic import BaseSettings
 
 binary = environ.get("KUBESEAL_BINARY")
+mock = environ.get("MOCK_ENABLED", False)
 
 
 class AppSettings(BaseSettings):
     kubeseal_version: str
     kubeseal_binary: str = binary
-    mock_enabled: bool
+    kubeseal_cert: str = environ.get("KUBESEAL_CERT")
+    mock_enabled: bool = mock
     mock_namespace_count: int = 20
 
 
@@ -39,5 +41,4 @@ def get_kubeseal_version() -> str:
 
 settings = AppSettings(
     kubeseal_version=get_kubeseal_version(),
-    mock_enabled=environ.get("MOCK_ENABLED", False),
 )
