@@ -1,5 +1,6 @@
-import uvicorn
 from os import environ
+
+import uvicorn
 
 bind_address = environ.get("HOST", "127.0.0.1")
 listen_port = int(environ.get("PORT", "5000"))

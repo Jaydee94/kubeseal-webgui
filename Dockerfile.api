@@ -1,51 +1,49 @@
+FROM debian:latest as deps
+
+ARG KUBESEAL_VERSION=0.19.1
+ENV KUBESEAL_BINARY=/deps/kubeseal \
+    PRIVATEKEY=/dev/null \
+    PUBLICKEY=/deps/cert.pem
+
+WORKDIR /deps
+
+RUN apt update && apt install -y openssl curl
+RUN openssl req -x509 -days 365 -nodes -newkey rsa:4096 -keyout "$PRIVATEKEY" -out "$PUBLICKEY" -subj "/CN=sealed-secret/O=sealed-secret"
+RUN curl -Lsf -o - "https://github.com/bitnami-labs/sealed-secrets/releases/download/v${KUBESEAL_VERSION}/kubeseal-${KUBESEAL_VERSION}-linux-amd64.tar.gz" | \
+    tar -xzf - && \
+    chmod 0755 "${KUBESEAL_BINARY}"
+
 FROM python:3.9-slim
 
-ARG KUBESEAL_VERSION=0.18.5
+RUN pip install --upgrade pip
 
-ENV PORT=5000 \
-    HOST=0.0.0.0 \
-    BASE_PATH=/ \
-    UWSGI_NEED_APP=1 \
-    UWSGI_MASTER=1 \
-    UWSGI_PLUGIN=python3 \
-    UWSGI_MANAGE_SCRIPT_NAME=1 \
-    APP_HOME=/kubeseal-webgui
+USER root
 
-ENV KUBESEAL_BINARY="${APP_HOME}/bin/kubeseal" \
-    PATH="${APP_HOME}/bin:${PATH}" \
-    UWSGI_VIRTUALENV="${APP_HOME}"
+RUN adduser --gid 0 --home /usr/src/kubeseal-webgui --disabled-password app
 
-RUN set -xe ; \
-    apt update && \
-    apt -y install \
-    curl \
-    uwsgi-plugin-python3 && \
-    install -o 1001 -g 0 -m 775 -d "${APP_HOME}" && \
-    install -o 1001 -g 0 -m 775 -d /sources
+ARG KUBESEAL_VERSION=${KUBESEAL_VERSION}
+ARG APP_PATH="/usr/src/kubeseal-webgui"
 
-WORKDIR ${APP_HOME}
+USER app
 
-USER 1001:0
+RUN pip install --user --no-cache-dir \
+    install 'uvicorn' 'wheel' 'setuptools'
 
-COPY --chown=1001:0 api/ /sources
+ENV UVICORN_PORT=5000 \
+    UVICORN_HOST=0.0.0.0 \
+    UVICORN_NO_DATE_HEADER=1 \
+    UVICORN_NO_SERVER_HEADER=1 \
+    KUBESEAL_BINARY=/tmp/kubeseal
 
-RUN set -xe ; \
-    python3 -m venv "${APP_HOME}" && \
-    "${APP_HOME}/bin/pip" --no-cache-dir install --upgrade pip setuptools && \
-    "${APP_HOME}/bin/pip" --no-cache-dir install poetry wheel && \
-    "${APP_HOME}/bin/pip" --no-cache-dir install /sources && \
-    TMP_KUBE=$(mktemp -d) && \
-    cd "${TMP_KUBE}" && \
-    curl -f -L "https://github.com/bitnami-labs/sealed-secrets/releases/download/v${KUBESEAL_VERSION}/kubeseal-${KUBESEAL_VERSION}-linux-amd64.tar.gz" -o - | \
-    tar -xzvf - && \
-    mv kubeseal "${KUBESEAL_BINARY}" && \
-    cd "${APP_HOME}" && \
-    rm -rf "${TMP_KUBE}" && \
-    chmod -R g-w "${APP_HOME}" && \
-    chmod 0755 "${KUBESEAL_BINARY}" && \
-    install -m 0755 -o 1001 -g 0 /sources/bin/* "${APP_HOME}/bin/"
+WORKDIR ${APP_PATH}
 
-STOPSIGNAL SIGQUIT
+COPY api .
 
-ENTRYPOINT [ "/kubeseal-webgui/bin/docker-entrypoint.sh" ]
-CMD [ "uwsgi" ]
+RUN pip install --no-cache-dir .
+
+ENV PATH="${PATH}:${APP_PATH}/.local/bin"
+
+COPY --from=deps /deps/* /tmp/
+
+# CMD [ "uvicorn", "kubeseal_webgui_api.app:app" ]
+CMD [ "uvicorn", "kubeseal_webgui_api.app:app" ]
