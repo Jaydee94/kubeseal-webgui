@@ -12,7 +12,7 @@ This is a python based webapp for using Bitnami-Sealed-Secrets in a web-gui.
 
 This app uses the kubeseal binary of the original project: <https://github.com/bitnami-labs/sealed-secrets>
 
-Currently using version `0.17.5` of the kubeseal-binary.
+Currently using version `0.19.1` of the kubeseal-binary.
 
 The docker image can be found here: https://hub.docker.com/repository/docker/kubesealwebgui/kubeseal-webgui
 
@@ -65,25 +65,21 @@ You can use the new helm chart located inside the `chart` folder to deploy the n
 
 ### Requirements
 
-* Make sure you have Python 3.8 installed.
+* Make sure you have Python 3.9 installed.
 
 #### Setup API
 
 * Clone this repository and run `cd api`.
 * `python3 -m venv venv` (to create a virtual environment called `venv` that doesn't interfere with other projects)
 * `source venv/bin/activate` (to activate the virtual environment)
-* `python -m pip install -r requirements.txt` (to install all required packages for this project)
+* `python -m pip install .` (to install all required packages for this project)
 * `pytest` (should run all tests successfully)
 
 ### Local API testing
 
-* Setup **ORIGIN_URL** environment variable to the locally running ui port.
+* Running uvicorn server
 
-  `export ORIGIN_URL="http://localhost:8080"`
-
-* Running Flask server
-
-  `flask run --port 5000`
+  `export MOCK_ENABLED=true && uvicorn kubeseal_webgui_api.app:app`
 
 ## Working on the UI
 
@@ -91,8 +87,10 @@ You can use the new helm chart located inside the `chart` folder to deploy the n
 
 * Clone this repository and run `cd ui`.
 * You can either use `yarn` or `npm` for the following commands.
-* `yarn install` to install all dependencies 
+* `yarn install` to install all dependencies
+* `npm install` to install all dependencies
 
 ### Local UI testing
 
 * `yarn serve` to compile and start HTTP server on `port 8080` with hot-reloads for development
+* `npm run serve` to compile and start HTTP server on `port 8080` with hot-reloads for development
