@@ -145,7 +145,7 @@ def encrypt_value_or_file(
     binary,
     cert,
     scope,
-) -> str:
+) -> Dict:
     exec_kubeseal_command = [
         binary,
         "--raw",
