@@ -9,12 +9,12 @@ api:
   url: http://localhost:8080
   image:
     repository: kubesealwebgui/api
-    tag: 3.1.0
+    tag: 4.0.0
   environment: {}
 ui:
   image:
     repository: kubesealwebgui/ui
-    tag: 3.1.0
+    tag: 4.0.0
 image:
   pullPolicy: Always
 
