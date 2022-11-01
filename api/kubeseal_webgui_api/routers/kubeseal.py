@@ -113,7 +113,7 @@ def run_kubeseal_command(
         cleartext_secret = decode_base64_string(cleartext_secret_tuple["file"])
     else:
         raise ValueError("Missing 'value' or 'file' in request.")
-    sealed_secret = encrypt_value_or_file(
+    return encrypt_value_or_file(
         cleartext_secret_tuple,
         secret_namespace,
         secret_name,
@@ -122,8 +122,6 @@ def run_kubeseal_command(
         settings.kubeseal_cert,
         scope,
     )
-
-    return {"key": cleartext_secret_tuple["key"], "value": sealed_secret}
 
 
 def encrypt_value_or_file(
