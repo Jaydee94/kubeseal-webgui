@@ -89,13 +89,12 @@ def run_kubeseal(
         error_message = "Input of cleartext_secrets was not a list of dicts."
         raise ValueError(error_message)
 
-    sealed_secrets = []
-    for cleartext_secret_tuple in cleartext_secrets:
-        sealed_secret = run_kubeseal_command(
+    return [
+        run_kubeseal_command(
             cleartext_secret_tuple, secret_namespace, secret_name, scope
         )
-        sealed_secrets.append(sealed_secret)
-    return sealed_secrets
+        for cleartext_secret_tuple in cleartext_secrets
+    ]
 
 
 def valid_k8s_name(value: str) -> str:
