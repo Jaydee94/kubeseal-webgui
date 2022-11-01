@@ -50,6 +50,13 @@ def is_blank(value: str) -> bool:
     return value is None or value.strip() == ""
 
 
+def verify(name: str, value: str, mandatory=True):
+    if mandatory and is_blank(value):
+        error_message = f"{name} was not given"
+        LOGGER.error(error_message)
+        raise ValueError(error_message)
+
+
 def run_kubeseal(
     cleartext_secrets, secret_namespace, secret_name, scope=Scope.STRICT.value
 ) -> list:
@@ -64,23 +71,10 @@ def run_kubeseal(
             LOGGER.error(error_message)
             raise ValueError(error_message) from error
 
-    if is_blank(secret_namespace) and scope.needs_namespace():
-        error_message = "secret_namespace was not given"
-        LOGGER.error(error_message)
-        raise ValueError(error_message)
-
-    if is_blank(secret_name) and scope.needs_name():
-        error_message = "secret_name was not given"
-        LOGGER.error(error_message)
-        raise ValueError(error_message)
-
-    if secret_namespace is None or secret_namespace == "":
-        error_message = "secret_namespace was not given"
-        raise ValueError(error_message)
-
-    if secret_name is None or secret_name == "":
-        error_message = "secret_name was not given"
-        raise ValueError(error_message)
+    verify("secret_namespace", secret_name, scope.needs_namespace())
+    verify("secret_name", secret_name, scope.needs_name())
+    verify("secret_namespace", secret_namespace)
+    verify("secret_name", secret_name)
 
     list_of_non_dict_inputs = [
         element for element in cleartext_secrets if not isinstance(element, dict)
