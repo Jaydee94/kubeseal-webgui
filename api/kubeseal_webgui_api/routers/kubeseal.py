@@ -1,7 +1,7 @@
 import base64
 import logging
 import re
-import subprocess
+import subprocess  # noqa: S404 the binary has to be configured by an admin
 from enum import Enum
 from typing import Dict, List
 
@@ -158,7 +158,7 @@ def encrypt_value_or_file(
                 valid_k8s_name(secret_name),
             ]
         )
-    kubeseal_subprocess = subprocess.Popen(
+    kubeseal_subprocess = subprocess.Popen(  # noqa: S603 input has been checked above
         exec_kubeseal_command,
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
