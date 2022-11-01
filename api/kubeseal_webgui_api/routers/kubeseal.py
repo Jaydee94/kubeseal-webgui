@@ -117,7 +117,6 @@ def run_kubeseal_command(
         secret_namespace,
         scope,
     )
-    cleartext_secret = decode_base64_string(cleartext_secret_tuple["value"])
     if "value" in cleartext_secret_tuple:
         cleartext_secret = decode_base64_string(cleartext_secret_tuple["value"])
     elif "file" in cleartext_secret_tuple:
