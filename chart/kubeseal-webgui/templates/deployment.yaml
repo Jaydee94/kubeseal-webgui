@@ -24,7 +24,7 @@ spec:
         - name: "fetch-cert"
           image: "{{ .Values.api.image.repository }}:{{ .Values.api.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command: [ "/kubeseal-webgui/bin/kubeseal-fetch.sh", "/certs/kubeseal-cert.pem" ]
+          command: [ "/usr/src/kubeseal-webgui/kubeseal-webgui/bin/kubeseal-fetch.sh", "/certs/kubeseal-cert.pem" ]
           env:
             - name: KUBESEAL_CONTROLLER_NAME
               value: {{ .Values.sealedSecrets.controllerName | quote }}
@@ -46,7 +46,7 @@ spec:
             - name: ORIGIN_URL
               value: "{{ .Values.api.url }}"
             - name: KUBESEAL_CERT
-              value: "/kubeseal-webgui/cert/kubeseal-cert.pem"
+              value: "/usr/src/kubeseal-webgui/cert/kubeseal-cert.pem"
           ports:
             - name: api
               containerPort: 5000
@@ -64,10 +64,10 @@ spec:
           volumeMounts:
            {{- if .Values.sealedSecrets.autoFetchCert }}
             - name: sealed-secrets-certs
-              mountPath: /kubeseal-webgui/cert
+              mountPath: /usr/src/kubeseal-webgui/cert
            {{- else }}
             - name: sealed-secret-configmap
-              mountPath: /kubeseal-webgui/cert/kubeseal-cert.pem
+              mountPath: /usr/src/kubeseal-webgui/cert/kubeseal-cert.pem
               subPath: kubeseal-cert.pem
            {{- end }}
         - name: "ui"
