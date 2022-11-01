@@ -1,6 +1,7 @@
 import fastapi
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import kubernetes, config, kubeseal
+
+from .routers import config, kubernetes, kubeseal
 
 app = fastapi.FastAPI()
 
