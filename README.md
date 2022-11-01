@@ -18,7 +18,7 @@ The docker image can be found here: https://hub.docker.com/repository/docker/kub
 
 ## Demo
 
-![KubeSeal WebGui Demo](demo/kubseal-demo-3.0.0.gif)
+![KubeSeal WebGui Demo](demo/kubseal-demo-4.0.0.gif)
 
 ## Prerequisites
 
