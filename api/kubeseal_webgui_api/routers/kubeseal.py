@@ -61,15 +61,12 @@ def run_kubeseal(
     cleartext_secrets, secret_namespace, secret_name, scope=Scope.STRICT.value
 ) -> list:
     """Check input and initiate kubeseal-cli call."""
-    if is_blank(scope):
-        scope = Scope.STRICT
-    else:
-        try:
-            scope = Scope(scope)
-        except ValueError as error:
-            error_message = "scope is not of allowed value"
-            LOGGER.error(error_message)
-            raise ValueError(error_message) from error
+    try:
+        scope = Scope(scope or Scope.STRICT.value)
+    except ValueError as error:
+        error_message = "scope is not of allowed value"
+        LOGGER.error(error_message)
+        raise ValueError(error_message) from error
 
     verify("secret_namespace", secret_name, scope.needs_namespace())
     verify("secret_name", secret_name, scope.needs_name())
