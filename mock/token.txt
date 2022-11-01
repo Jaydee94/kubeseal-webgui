@@ -1,1 +1,0 @@
-insecure-mock-kubernetes-service-account-token

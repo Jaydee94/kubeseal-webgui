@@ -1,26 +1,11 @@
-"""Provides REST-API and kubeseal-cli specific functionality."""
 import logging
 
-from flask import abort
-from flask_restful import Resource
 from kubernetes import client, config
 
-LOGGER = logging.getLogger("kubeseal-webgui")
+LOGGER = logging.getLogger(__name__)
 
 
-class KubernetesNamespacesEndpoint(Resource):
-    """Provide REST-API for sealing sensitive data."""
-
-    @classmethod
-    def get(cls) -> list[str]:
-        """Retrieve cluster namespaces."""
-        try:
-            return get_incluster_namespaces()
-        except RuntimeError:
-            abort(500, "Can't get namespaces from server")
-
-
-def get_incluster_namespaces() -> list[str]:
+def kubernetes_namespaces_resolver() -> list[str]:
     """Retrieve a list of namespaces from current kubernetes cluster."""
     config.load_incluster_config()
     namespaces_list = []
