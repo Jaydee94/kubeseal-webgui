@@ -1,24 +1,25 @@
 <template>
-  <div id="app">
-    <header>
-      <b-container>
-        <nav class="navbar navbar-light">
-          <div class="container-fluid">
-            <Logo />
-            <DarkMode />
-          </div>
-        </nav>
-      </b-container>
-    </header>
-    <main>
-      <b-container>
+  <v-app>
+    <v-app-bar :elevation="3">
+      <template #append>
+        <DarkMode />
+      </template>
+      <Logo />
+    </v-app-bar>
+    <v-main>
+      <v-container>
         <Secrets />
-      </b-container>
-    </main>
-    <footer class="fixed-bottom">
+      </v-container>
+    </v-main>
+    <v-footer
+      inset
+      app
+      class="py-2"
+      width="auto"
+    >
       <AppConfig />
-    </footer>
-  </div>
+    </v-footer>
+  </v-app>
 </template>
 
 <script>
@@ -40,16 +41,4 @@ export default {
 
 <style scoped>
 
-main {
-  margin-bottom: 80px;
-}
-
-footer {
-  background: #eee;
-  height: 40px;
-}
-
-html.dark footer {
-  background: #333;
-}
 </style>

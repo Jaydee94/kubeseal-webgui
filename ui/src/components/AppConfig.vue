@@ -1,35 +1,29 @@
 <template>
-  <div class="app-config">
-    <b-container>
-      <b-row>
-        <b-col>
-          <small
-            v-if="fetchConfigsSuccessful"
-            class="text-muted"
-          >
-            <span
-              v-for="(value, key, index) in configs"
-              :key="key"
-            >
-              <span v-if="index != 0"> 🞄 </span><span>{{ key }}: {{ value }}</span>
-            </span>
-          </small>
-          <small
-            v-else-if="fetchConfigsSuccessful == false"
-            class="text-muted"
-          >
-            ⚠️ Could not retrieve application properties.
-          </small>
-          <small
-            v-else
-            class="text-muted"
-          >
-            ⏳ Loading application properties.
-          </small>
-        </b-col>
-      </b-row>
-    </b-container>
-  </div>
+  <v-container align="center">
+    <small
+      v-if="fetchConfigsSuccessful"
+      class="text-muted"
+    >
+      <span
+        v-for="(value, key, index) in configs"
+        :key="key"
+      >
+        <span v-if="index != 0"> ∙ </span><span>{{ key }}: {{ value }}</span>
+      </span>
+    </small>
+    <small
+      v-else-if="fetchConfigsSuccessful == false"
+      class="text-muted"
+    >
+      ⚠️ Could not retrieve application properties.
+    </small>
+    <small
+      v-else
+      class="text-muted"
+    >
+      ⏳ Loading application properties.
+    </small>
+  </v-container>
 </template>
 
 <script>
@@ -76,7 +70,7 @@ export default {
 </script>
 
 <style scoped>
-.app-config{
+.app-config {
   margin: 8px 0;
   text-align: center;
 }

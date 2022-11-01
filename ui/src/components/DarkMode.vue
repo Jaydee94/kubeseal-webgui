@@ -1,60 +1,54 @@
 <template>
-  <b-form-checkbox
-    v-model="useDarkTheme"
-    switch
-  >
-    <span class="align-bottom">Dark Mode ({{ useDarkTheme }}) </span>
-  </b-form-checkbox>
+  <v-switch
+    v-model="state.darkMode"
+    color="blue"
+    label="Dark Mode"
+    class="ma-4"
+    @change="toggleDarkMode"
+  />
 </template>
 
 <script>
-export default {
-  name: "DarkMode",
-  data() {
-    return {
-      useDarkTheme: '',
-    }
-  },
-  watch: {
-    useDarkTheme: function () {
-      if (this.useDarkTheme) {
-        document.documentElement.classList.add("dark")
-        localStorage.useDarkTheme = true
-      } else {
-        document.documentElement.classList.remove("dark")
-        localStorage.useDarkTheme = false
-      }
-    }
-  },
-  mounted: function() {
-    let result = false;
-    let isDarkModeSetToFalse = (localStorage.useDarkTheme === 'false');
-    let isDarkModeSetToTrue = (localStorage.useDarkTheme === 'true');
+import { useTheme } from 'vuetify'
+import { reactive } from 'vue';
+
+function isDarkModeEnabled(theme) {
+  let result = false;
+
+  if (localStorage.useDarkTheme) {
+    result = localStorage.useDarkTheme === 'true'
+  } else {
     let isSystemDarkModeSet = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
-    if (isDarkModeSetToFalse) {
-      result = false;
-    }
-
-    if (isDarkModeSetToTrue) {
+    if (isSystemDarkModeSet) {
       result = true;
     }
+  }
+  theme.global.name.value = result ? 'dark' : 'light'
+  return result;
+}
 
-    if (isSystemDarkModeSet && !isDarkModeSetToFalse) {
-      result = true;
+export default {
+  name: "DarkMode",
+  setup() {
+    const theme = useTheme()
+    const state = reactive({
+      darkMode: isDarkModeEnabled(theme)
+    })
+    return {
+      theme,
+      state
     }
-
-    this.useDarkTheme = result;
+  },
+  methods: {
+    toggleDarkMode: function () {
+      this.theme.global.name.value = this.state.darkMode ? 'dark' : 'light'
+      localStorage.useDarkTheme = this.theme.global.current.value.dark
+    }
   }
 }
 </script>
 
 <style scoped>
-#toggle-dark-mode {
-  margin-bottom: 0px;
-}
 
-span {
-  color: orange;
-}
 </style>
