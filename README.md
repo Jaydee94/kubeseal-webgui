@@ -79,7 +79,20 @@ You can use the new helm chart located inside the `chart` folder to deploy the n
 
 * Running uvicorn server
 
-  `export MOCK_ENABLED=true && uvicorn kubeseal_webgui_api.app:app`
+  ```bash
+  MOCK_ENABLED=true uvicorn kubeseal_webgui_api.app:app
+  ```
+
+  or use a container and set the environment variables there
+
+  ```bash
+  docker build -t api -f Dockerfile.api .
+  docker run --rm -t \
+   -p 5000:5000 \
+   -e MOCK_ENABLED=TRUE \
+   -e KUBESEAL_CERT=/tmp/cert.pem \
+   api
+  ```
 
 ## Working on the UI
 
