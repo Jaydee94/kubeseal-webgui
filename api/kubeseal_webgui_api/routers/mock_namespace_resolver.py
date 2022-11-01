@@ -2,9 +2,7 @@ import itertools
 import random
 from typing import List
 
-import fastapi
-
-router = fastapi.APIRouter()
+from kubeseal_webgui_api.app_config import settings
 
 adjectives = [
     "altered",
@@ -19,26 +17,36 @@ adjectives = [
     "diffing",
     "expensive",
     "fresh",
+    "fierce",
+    "floating",
+    "generous",
     "golden",
     "green",
     "growing",
+    "hidden",
+    "hideous",
     "interesting",
     "kubed",
     "mumbling",
+    "rusty",
     "singing",
     "small",
     "sniffing",
     "squared",
     "talking",
+    "trusty",
+    "wise",
     "walking",
     "zooming",
 ]
 nouns = [
     "ant",
     "bike",
+    "bird",
     "captain",
     "cheese",
     "clock",
+    "digit",
     "gorilla",
     "kraken",
     "number",
@@ -46,26 +54,35 @@ nouns = [
     "monitor",
     "moose",
     "moon",
+    "mouse",
     "news",
+    "newt",
+    "octopus",
+    "opossum",
+    "otter",
     "paper",
     "passenger",
     "potato",
     "ship",
     "spaceship",
+    "spaghetti",
     "spoon",
     "store",
     "tomcat",
     "trombone",
+    "unicorn",
+    "vine",
+    "whale",
 ]
 
 
-@router.get("/namespaces")
-def get_namespaces() -> List[str]:
+def mock_namespaces_resolver() -> List[str]:
+    count = settings.mock_namespace_count
     return sorted(
         {
             "-".join(words)
             for words in random.choices(  # noqa: S311 no security needed here
-                list(itertools.product(adjectives, nouns)), k=120
+                list(itertools.product(adjectives, nouns)), k=count
             )
         }
     )

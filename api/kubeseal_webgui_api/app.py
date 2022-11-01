@@ -30,4 +30,4 @@ app.include_router(
 
 @app.get("/")
 def root():
-    return {"status": "KubeSeal WebGui Mock"}
+    return {"status": "Kubeseal-WebGui API"}

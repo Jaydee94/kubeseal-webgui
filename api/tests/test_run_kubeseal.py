@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kubeseal_webgui_api.kubeseal import (
+from kubeseal_webgui_api.routers.kubeseal import (
     Scope,
     decode_base64_string,
     run_kubeseal,
