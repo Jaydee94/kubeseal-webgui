@@ -4,16 +4,16 @@ from os import environ
 
 from pydantic import BaseSettings
 
-binary = environ.get("KUBESEAL_BINARY")
-mock = environ.get("MOCK_ENABLED", False)
+binary = environ.get("KUBESEAL_BINARY", "/bin/false")
+mock = environ.get("MOCK_ENABLED", "False").lower() == "true"
 
 
 class AppSettings(BaseSettings):
     kubeseal_version: str
     kubeseal_binary: str = binary
-    kubeseal_cert: str = environ.get("KUBESEAL_CERT")
+    kubeseal_cert: str = environ.get("KUBESEAL_CERT", "/dev/null")
     mock_enabled: bool = mock
-    mock_namespace_count: int = 20
+    mock_namespace_count: int = 120
 
 
 LOGGER = logging.getLogger("kubeseal-webgui")
