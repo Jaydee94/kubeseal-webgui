@@ -1,6 +1,7 @@
 FROM debian:latest as deps
 
 ARG KUBESEAL_VERSION=0.19.1
+ARG KUBESEAL_ARCH=amd64
 ENV KUBESEAL_BINARY=/deps/kubeseal \
     PRIVATE_KEY=/dev/null \
     PUBLIC_KEY=/deps/cert.pem
@@ -9,25 +10,21 @@ WORKDIR /deps
 
 RUN apt update && apt install -y openssl curl
 RUN openssl req -x509 -days 365 -nodes -newkey rsa:4096 -keyout "$PRIVATE_KEY" -out "$PUBLIC_KEY" -subj "/CN=sealed-secret/O=sealed-secret"
-RUN curl -Lsf -o - "https://github.com/bitnami-labs/sealed-secrets/releases/download/v${KUBESEAL_VERSION}/kubeseal-${KUBESEAL_VERSION}-linux-amd64.tar.gz" | \
+RUN curl -Lsf -o - "https://github.com/bitnami-labs/sealed-secrets/releases/download/v${KUBESEAL_VERSION}/kubeseal-${KUBESEAL_VERSION}-linux-${KUBESEAL_ARCH}.tar.gz" | \
     tar -xzf - && \
     chmod 0755 "${KUBESEAL_BINARY}"
 
 FROM python:3.9-slim
 
-RUN pip install --upgrade pip
-
 USER root
 
-RUN adduser --gid 0 --home /usr/src/kubeseal-webgui --disabled-password app
+RUN adduser --gid 0 --home /kubeseal-webgui --disabled-password app
 
 ARG KUBESEAL_VERSION=${KUBESEAL_VERSION}
-ARG APP_PATH="/usr/src/kubeseal-webgui"
+ARG APP_PATH="/kubeseal-webgui"
 
 USER app
 
-RUN pip install --user --no-cache-dir \
-    install 'uvicorn' 'wheel' 'setuptools'
 
 ENV UVICORN_PORT=5000 \
     UVICORN_HOST=0.0.0.0 \
@@ -37,13 +34,17 @@ ENV UVICORN_PORT=5000 \
 
 WORKDIR ${APP_PATH}
 
-COPY api .
+COPY api src/
 
-RUN pip install --no-cache-dir .
+RUN python3 -m venv "${APP_PATH}" && \
+    . "${APP_PATH}/bin/activate" && \
+    pip install --upgrade pip && \
+    pip install --no-cache-dir 'uvicorn' 'wheel' 'setuptools' && \
+    pip install --no-cache-dir src/ && \
+    install --mode=755 --group=0 ./src/bin/* "${APP_PATH}/bin/"
 
-ENV PATH="${PATH}:${APP_PATH}/.local/bin"
+ENV PATH="${PATH}:${APP_PATH}/bin:${APP_PATH}/.local/bin"
 
 COPY --from=deps /deps/* /tmp/
 
-# CMD [ "uvicorn", "kubeseal_webgui_api.app:app" ]
 CMD [ "uvicorn", "kubeseal_webgui_api.app:app" ]
