@@ -52,8 +52,12 @@
       </div>
 
       <v-form>
-        <v-row class="d-flex">
-          <v-col>
+        <v-row>
+          <v-col
+            cols="12"
+            sm="6"
+            md="4"
+          >
             <v-autocomplete
               v-model="namespaceName"
               :items="namespaces"
@@ -65,7 +69,11 @@
               deployed.
             </v-container>
           </v-col>
-          <v-col>
+          <v-col
+            cols="12"
+            sm="6"
+            md="4"
+          >
             <v-text-field
               id="input-secret-name"
               v-model="secretName"
@@ -85,7 +93,10 @@
                   Subdomain</a></i>
             </v-container>
           </v-col>
-          <v-col>
+          <v-col
+            cols="12"
+            md="4"
+          >
             <v-select
               v-model="scope"
               :items="scopes"
@@ -110,7 +121,10 @@
           v-for="(secret, counter) in secrets"
           :key="counter"
         >
-          <v-col cols="3">
+          <v-col
+            cols="12"
+            md="3"
+          >
             <v-textarea
               v-model="secret.key"
               label="Secret key"
@@ -119,7 +133,11 @@
               :rules="rules.validDnsSubdomain"
             />
           </v-col>
-          <v-col>
+          <v-col
+            cols="12"
+            :sm="hasValue[counter] ? 11 : hasFile[counter] ? 1 : 6"
+            :md="hasValue[counter] ? 7 : hasFile[counter] ? 1 : 4"
+          >
             <v-textarea
               v-model="secret.value"
               rows="1"
@@ -129,7 +147,11 @@
               :disabled="hasFile[counter]"
             />
           </v-col>
-          <v-col cols="2">
+          <v-col
+            cols="12"
+            :sm="hasFile[counter] ? 11 : hasValue[counter] ? 1 : 6"
+            :md="hasFile[counter] ? 7 : hasValue[counter] ? 1 : 4"
+          >
             <v-file-input
               v-model="secret.file"
               show-size
@@ -140,7 +162,10 @@
               :disabled="hasValue[counter]"
             />
           </v-col>
-          <v-col cols="1">
+          <v-col
+            cols="12"
+            md="1"
+          >
             <v-btn
               icon="mdi-delete"
               variant="text"
@@ -199,7 +224,10 @@
           </v-col>
         </v-row>
         <v-row justify="center">
-          <v-col cols="6">
+          <v-col
+            cols="12"
+            sm="6"
+          >
             <v-btn
               block
               variant="tonal"
