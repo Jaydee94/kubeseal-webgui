@@ -123,14 +123,16 @@
         >
           <v-col
             cols="12"
-            md="3"
+            md="4"
           >
             <v-textarea
               v-model="secret.key"
               label="Secret key"
               rows="1"
               clearable
+              prepend-icon="mdi-delete"
               :rules="rules.validDnsSubdomain"
+              @click:prepend="removeSecret(counter)"
             />
           </v-col>
           <v-col
@@ -160,17 +162,6 @@
               prepend-icon="mdi-file-upload-outline"
               :rules="fileSize"
               :disabled="hasValue[counter]"
-            />
-          </v-col>
-          <v-col
-            cols="12"
-            md="1"
-          >
-            <v-btn
-              icon="mdi-delete"
-              variant="text"
-              :disabled="hasNoSecrets"
-              @click="removeSecret(counter)"
             />
           </v-col>
         </v-row>
