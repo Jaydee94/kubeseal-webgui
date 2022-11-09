@@ -131,7 +131,7 @@
               rows="1"
               clearable
               prepend-icon="mdi-delete"
-              :rules="rules.validDnsSubdomain"
+              :rules="rules.validSecretKey"
               @click:prepend="removeSecret(counter)"
             />
           </v-col>
@@ -372,6 +372,10 @@ export default {
           value => !!value && /^[a-z0-9]/.test(value) || 'Must start with a lower char or digit',
           value => !!value && /[a-z0-9]$/.test(value) || 'Must end with a lower char or digit',
           value => validDnsSubdomain(value) || "Not a valid DNS subdomain"
+        ],
+        validSecretKey: [
+          value => !!value || 'Must not be empty',
+          value => !!value && /^[a-z0-9_.-]*$/i.test(value) || 'Invalid char. Must be one of lower chars, digits, dash, underscore or dot.'
         ]
       },
       fileSize: [
