@@ -251,8 +251,8 @@
                 >apiVersion: bitnami.com/v1alpha1
 kind: SealedSecret
 metadata:
-  name: {{ secretName }}
-  namespace: {{ namespaceName }}
+  name: {{ secretName ? secretName : "# no secret name given" }}
+  namespace: {{ namespaceName ? namespaceName : "# no namespace name given" }}
 spec:
   encryptedData: {{ renderedSecrets }}</pre>
               </v-code>
