@@ -14,7 +14,10 @@ This app uses the kubeseal binary of the original project: <https://github.com/b
 
 Currently using version `0.19.1` of the kubeseal-binary.
 
-The docker image can be found here: https://hub.docker.com/repository/docker/kubesealwebgui/kubeseal-webgui
+The docker image can be found here:
+
+- https://hub.docker.com/repository/docker/kubesealwebgui/ui
+- https://hub.docker.com/repository/docker/kubesealwebgui/api
 
 ## Demo
 
