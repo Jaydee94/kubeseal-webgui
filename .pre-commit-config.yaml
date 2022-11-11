@@ -41,7 +41,7 @@ repos:
         files: ^api/
       - id: flake8
         name: flake8
-        entry: bash -c 'cd api && poetry run flake8 --max-line-length=88 kubeseal_webui_api'
+        entry: bash -c 'cd api && poetry run flake8 --max-line-length=88 kubeseal_webgui_api'
         language: system
         types: [python]
         files: ^api/

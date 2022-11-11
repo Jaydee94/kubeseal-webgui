@@ -3,7 +3,7 @@ import logging
 import re
 import subprocess  # noqa: S404 the binary has to be configured by an admin
 from enum import Enum
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -15,9 +15,10 @@ LOGGER = logging.getLogger(__name__)
 
 
 class Data(BaseModel):
-    secret: str
-    namespace: str
+    secret: Optional[str]
+    namespace: Optional[str]
     secrets: List[Dict[str, str]]
+    scope: str
 
 
 class Scope(Enum):
@@ -39,6 +40,7 @@ def encrypt(data: Data) -> list:
             data.secrets,
             data.namespace,
             data.secret,
+            data.scope,
         )
     except (KeyError, ValueError) as e:
         raise HTTPException(400, f"Invalid data for sealing secrets: {e}")
@@ -46,11 +48,11 @@ def encrypt(data: Data) -> list:
         raise HTTPException(500, "Server is dreaming...")
 
 
-def is_blank(value: str) -> bool:
+def is_blank(value: Optional[str]) -> bool:
     return value is None or value.strip() == ""
 
 
-def verify(name: str, value: str, mandatory=True):
+def verify(name: str, value: Optional[str], mandatory=True):
     if mandatory and is_blank(value):
         error_message = f"{name} was not given"
         LOGGER.error(error_message)
@@ -58,20 +60,21 @@ def verify(name: str, value: str, mandatory=True):
 
 
 def run_kubeseal(
-    cleartext_secrets, secret_namespace, secret_name, scope=Scope.STRICT.value
+    cleartext_secrets: List[Dict[str, str]],
+    secret_namespace: Optional[str],
+    secret_name: Optional[str],
+    scope_value: str = Scope.STRICT.value,
 ) -> list:
     """Check input and initiate kubeseal-cli call."""
     try:
-        scope = Scope(scope or Scope.STRICT.value)
+        scope = Scope(scope_value or Scope.STRICT.value)
     except ValueError as error:
         error_message = "scope is not of allowed value"
         LOGGER.error(error_message)
         raise ValueError(error_message) from error
 
-    verify("secret_namespace", secret_name, scope.needs_namespace())
+    verify("secret_namespace", secret_namespace, scope.needs_namespace())
     verify("secret_name", secret_name, scope.needs_name())
-    verify("secret_namespace", secret_namespace)
-    verify("secret_name", secret_name)
 
     list_of_non_dict_inputs = [
         element for element in cleartext_secrets if not isinstance(element, dict)
@@ -95,9 +98,9 @@ def valid_k8s_name(value: str) -> str:
 
 
 def run_kubeseal_command(
-    cleartext_secret_tuple: Dict,
-    secret_namespace,
-    secret_name,
+    cleartext_secret_tuple: Dict[str, str],
+    secret_namespace: Optional[str],
+    secret_name: Optional[str],
     scope: Scope = Scope.STRICT,
 ):
     LOGGER.info(

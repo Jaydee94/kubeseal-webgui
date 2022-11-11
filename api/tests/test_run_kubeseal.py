@@ -101,7 +101,7 @@ def test_run_kubeseal_with_wrong_scope(scope: str):
         run_kubeseal([{"key": "foo", "value": "something"}], "namespace", "name", scope)
 
 
-@patch("kubeseal_webgui_api.kubeseal.run_kubeseal_command")
+@patch("kubeseal_webgui_api.routers.kubeseal.run_kubeseal_command")
 @pytest.mark.parametrize("scope", list(Scope))
 def test_run_kubeseal_with_scope(mock_run_command: MagicMock, scope: Scope):
     encoded_value = b64encode(b"something").decode("ascii")
@@ -120,7 +120,7 @@ def test_run_kubeseal_with_scope(mock_run_command: MagicMock, scope: Scope):
     mock_run_command.assert_called_with(secrets[0], "namespace", "name", scope)
 
 
-@patch("kubeseal_webgui_api.kubeseal.run_kubeseal_command")
+@patch("kubeseal_webgui_api.routers.kubeseal.run_kubeseal_command")
 @pytest.mark.parametrize("scope", list(Scope))
 def test_run_kubeseal_with_scope_needed_params_only(
     mock_run_command: MagicMock, scope: Scope
@@ -132,14 +132,14 @@ def test_run_kubeseal_with_scope_needed_params_only(
             "value": encoded_value,
         }
     ]
-    if not scope.needs_namespace():
-        namespace = None
-    else:
+    if scope.needs_namespace():
         namespace = "namespace"
-    if not scope.needs_name():
-        name = None
     else:
+        namespace = None
+    if scope.needs_name():
         name = "name"
+    else:
+        name = None
     run_kubeseal(
         secrets,
         namespace,
@@ -183,7 +183,9 @@ def test_run_kubeseal_without_k8s_cluster():
     # when run_kubeseal is called
     # then raise RuntimeError
     with pytest.raises(RuntimeError) as error_cert_missing:
-        run_kubeseal([{"key": "foo", "value": "YmFy"}], "secretNamespace", "secretName")
+        run_kubeseal(
+            [{"key": "foo", "value": "YmFy"}], "secret-namespace", "secret-name"
+        )
     assert "/kubeseal-webgui/cert/kubeseal-cert.pem: no such file or directory" in str(
         error_cert_missing
     )
