@@ -42,6 +42,9 @@ The command removes all the Kubernetes components associated with the chart and 
 | `nameOverride`                            | Name-Override for the objects                   | `""`                             |
 | `fullnameOverride`                        | Fullname-Override for the objects               | `""`                             |
 | `serviceaccount.create`                   | Add serviceaccount for listing namespaces       | `true`                           |
+| `tolerations`                             | Add tolerations to the deployment.              | `{}`                             |
+| `affinity`                                | Add affinity rules to the deployment.           | `[]`                             |
+| `nodeSelector`                            | Add a nodeSelector to the deployment.           | `{}`                             |
 | `displayName`                             | Optional display name for the kubeseal instance | `""`                             |
 | `resources.limits.cpu`                    | Limits CPU                                      | `100m`                           |
 | `resources.limits.memory`                 | Limits memory                                   | `256Mi`                          |

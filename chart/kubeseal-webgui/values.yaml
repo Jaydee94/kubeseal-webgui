@@ -9,12 +9,12 @@ api:
   url: http://localhost:8080
   image:
     repository: kubesealwebgui/api
-    tag: 4.0.2
+    tag: 4.0.3
   environment: {}
 ui:
   image:
     repository: kubesealwebgui/ui
-    tag: 4.0.2
+    tag: 4.0.3
 image:
   pullPolicy: Always
 
@@ -27,6 +27,12 @@ displayName: ""
 # Set this value to false if you already have a default serviceaccount who is allowed to list namespaces.
 serviceaccount:
   create: true
+
+affinity: {}
+
+tolerations: []
+
+nodeSelector: {}
 
 # Setup resources for the pod
 resources:
