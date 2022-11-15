@@ -159,12 +159,17 @@ def test_run_kubeseal_with_cli():
 
 
 @pytest.mark.cluster()
+@patch(
+    "kubeseal_webgui_api.app_config.settings.kubeseal_binary", "/bin/no-such-thing-here"
+)
 def test_run_kubeseal_without_cli():
     # given k8s cluster but no kubeseal cli
     # when run_kubeseal is called
     # then raise RuntimeError
     with pytest.raises(RuntimeError):
-        run_kubeseal([{"key": "foo", "value": "YmFy"}], "secretNamespace", "secretName")
+        run_kubeseal(
+            [{"key": "foo", "value": "YmFy"}], "secret-namespace", "secret-name"
+        )
 
 
 def test_run_kubeseal_with_invalid_secrets_list_but_otherwise_valid_inputs():
