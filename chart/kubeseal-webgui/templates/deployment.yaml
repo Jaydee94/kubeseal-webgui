@@ -75,8 +75,10 @@ spec:
             httpGet:
               path: /
               port: api
+          {{- with .Values.resources }}
           resources:
-            {{- toYaml .Values.resources | nindent 12 }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           volumeMounts:
            {{- if .Values.sealedSecrets.autoFetchCert }}
             - name: sealed-secrets-certs

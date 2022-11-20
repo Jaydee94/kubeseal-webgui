@@ -15,7 +15,12 @@ helm template chart/kubeseal-webgui/ | kubectl apply -f - --namespace <namespace
 To install the chart with the release name `my-release`:
 
 ```console
-helm template --name my-release chart/kubeseal-webgui/ | kubectl apply -f - --namespace <namespacename>
+helm template \
+    --namespace <namespacename> \
+    --release-name my-release \
+    --create-namespace \
+    chart/kubeseal-webgui/ \
+| kubectl apply -f - --namespace <namespacename>
 ```
 
 ## Uninstalling the Chart
@@ -23,7 +28,11 @@ helm template --name my-release chart/kubeseal-webgui/ | kubectl apply -f - --na
 To uninstall/delete the my-release deployment:
 
 ```console
-helm template --name my-release chart/kubeseal-webgui/ | kubectl delete -f - --namespace <namespacename>
+helm template \
+    --namespace <namespacename> \
+    --release-name my-release \
+    chart/kubeseal-webgui/ \
+| kubectl delete -f - --namespace <namespacename>
 ```
 
 The command removes all the Kubernetes components associated with the chart and deletes the release.

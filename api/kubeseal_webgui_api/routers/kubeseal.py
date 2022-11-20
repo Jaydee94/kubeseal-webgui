@@ -18,7 +18,7 @@ class Data(BaseModel):
     secret: Optional[str]
     namespace: Optional[str]
     secrets: List[Dict[str, str]]
-    scope: str
+    scope: Optional[str]
 
 
 class Scope(Enum):
@@ -40,7 +40,7 @@ def encrypt(data: Data) -> list:
             data.secrets,
             data.namespace,
             data.secret,
-            data.scope,
+            data.scope or Scope.STRICT.value,
         )
     except (KeyError, ValueError) as e:
         raise HTTPException(400, f"Invalid data for sealing secrets: {e}")
@@ -159,13 +159,18 @@ def encrypt_value_or_file(
                 valid_k8s_name(secret_name),
             ]
         )
-    kubeseal_subprocess = subprocess.Popen(  # noqa: S603 input has been checked above
-        exec_kubeseal_command,
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        encoding="utf-8",
-    )
+    try:
+        kubeseal_subprocess = (
+            subprocess.Popen(  # noqa: S603 input has been checked above
+                exec_kubeseal_command,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                encoding="utf-8",
+            )
+        )
+    except FileNotFoundError as file_error:
+        raise RuntimeError("Could not find kubeseal binary") from file_error
 
     output, error = kubeseal_subprocess.communicate(input=cleartext_secret)
 

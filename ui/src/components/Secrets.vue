@@ -276,7 +276,6 @@ spec:
         </v-col>
       </v-row>
       <v-row
-        v-if="clipboardAvailable"
         dense
         align-content="center"
       >
@@ -296,6 +295,7 @@ spec:
           </template>
           <template #actions>
             <v-btn
+              v-if="clipboardAvailable"
               variant="text"
               @click="copySealedSecret(counter)"
             >
@@ -303,6 +303,7 @@ spec:
             </v-btn>
             <v-spacer />
             <v-btn
+              v-if="clipboardAvailable"
               icon="mdi-content-copy"
               variant="text"
               @click="copySealedSecret(counter)"
