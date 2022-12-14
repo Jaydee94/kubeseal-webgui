@@ -1,7 +1,12 @@
+import logging
+
 import fastapi
 from fastapi.middleware.cors import CORSMiddleware
 
+from .app_config import fetch_sealed_secrets_cert
 from .routers import config, kubernetes, kubeseal
+
+LOGGER = logging.getLogger("uvicorn")
 
 app = fastapi.FastAPI()
 
@@ -26,6 +31,13 @@ app.include_router(
 app.include_router(
     kubeseal.router,
 )
+
+
+@app.on_event("startup")
+def startup_event():
+    LOGGER.info("Running startup tasks...")
+    fetch_sealed_secrets_cert()
+    LOGGER.info("Startup tasks complete.")
 
 
 @app.get("/")

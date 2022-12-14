@@ -56,6 +56,12 @@ If your default serviceaccount has this RBAC rule already you could disable `ser
 When upgrading to `3.0.X` you dont need to deploy a ingress route to the api. The nginx serving the ui will proxy the requests to the api.
 You can use the new helm chart located inside the `chart` folder to deploy the new kubseal-webgui version.
 
+## Upgrade from 4.0.X to 4.1.X
+
+When upgrading from `4.0.X` to `4.1.X` you need to use the provided helm chart in version `>=5.0.0` **if you use the autofetch certificate feature**.
+This is because the autofetch certificate functionality is no longer executed as an initContainer. 
+The api container will fetch the certificate from the sealed-secrets controller on application startup.
+
 ### Get Public-Cert from sealed-secrets controller
 
 (Login to your kubernetes cluster first)

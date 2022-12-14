@@ -31,25 +31,6 @@ spec:
       nodeSelector:
       {{ toYaml .Values.nodeSelector | nindent 8 }}
       {{- end }}
-      {{- if .Values.sealedSecrets.autoFetchCert }}
-      initContainers:
-        - name: "fetch-cert"
-          image: "{{ .Values.api.image.repository }}:{{ .Values.api.image.tag }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command: [ "/kubeseal-webgui/bin/kubeseal-fetch.sh", "/certs/kubeseal-cert.pem" ]
-          env:
-            - name: KUBESEAL_CONTROLLER_NAME
-              value: {{ .Values.sealedSecrets.controllerName | quote }}
-            - name: KUBESEAL_CONTROLLER_NAMESPACE
-              value: {{ .Values.sealedSecrets.controllerNamespace | quote }}
-          volumeMounts:
-            - mountPath: /certs
-              name: sealed-secrets-certs
-          {{- if .Values.autoFetchCertResources }}
-          resources:
-            {{- toYaml .Values.autoFetchCertResources | nindent 12 }}
-          {{- end }}
-      {{- end }}
       containers:
         - name: "api"
           image: "{{ .Values.api.image.repository }}:{{ .Values.api.image.tag }}"
@@ -63,6 +44,14 @@ spec:
               value: "{{ .Values.api.url }}"
             - name: KUBESEAL_CERT
               value: "/kubeseal-webgui/cert/kubeseal-cert.pem"
+            {{- if .Values.sealedSecrets.autoFetchCert }}
+            - name: KUBESEAL_AUTOFETCH
+              value: "true"
+            - name: KUBESEAL_CONTROLLER_NAME
+              value: {{ .Values.sealedSecrets.controllerName | quote }}
+            - name: KUBESEAL_CONTROLLER_NAMESPACE
+              value: {{ .Values.sealedSecrets.controllerNamespace | quote }}
+            {{- end }}
           ports:
             - name: api
               containerPort: 5000
@@ -71,10 +60,12 @@ spec:
             httpGet:
               path: /
               port: api
+            initialDelaySeconds: 20
           readinessProbe:
             httpGet:
               path: /
               port: api
+            initialDelaySeconds: 20
           {{- with .Values.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
@@ -99,10 +90,12 @@ spec:
             httpGet:
               path: /
               port: ui
+            initialDelaySeconds: 10
           readinessProbe:
             httpGet:
               path: /
               port: ui
+            initialDelaySeconds: 10
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
