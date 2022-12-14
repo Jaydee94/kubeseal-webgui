@@ -22,7 +22,7 @@ LOGGER = logging.getLogger("uvicorn")
 
 
 def fetch_sealed_secrets_cert():
-    if mock or not autofetch == "true":
+    if mock or autofetch == "false":
         return
 
     sealed_secrets_namespace = environ.get(
