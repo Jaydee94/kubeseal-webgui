@@ -43,14 +43,6 @@ resources:
     cpu: 20m
     memory: 256Mi
 
-autoFetchCertResources:
-  limits:
-    cpu: 100m
-    memory: 256Mi
-  requests:
-    cpu: 20m
-    memory: 256Mi
-
 # Setup an ingress route optionally
 
 ingress:

@@ -59,10 +59,6 @@ The command removes all the Kubernetes components associated with the chart and 
 | `resources.limits.memory`                 | Limits memory                                   | `256Mi`                          |
 | `resources.requests.cpu`                  | Requests CPU                                    | `20m`                            |
 | `resources.requests.memory`               | Requests memory                                 | `20m`                            |
-| `autoFetchCertResources.limits.cpu`       | Limits CPU of initContainer                     | `100m`                           |
-| `autoFetchCertResources.limits.memory`    | Limits memory of initContainer                  | `256Mi`                          |
-| `autoFetchCertResources.requests.cpu`     | Requests CPU of initContainer                   | `20m`                            |
-| `autoFetchCertResources.requests.memory`  | Requests memory of initContainer                | `20m`                            |
 | `ingress.enabled`                         | Enable an ingress route                         | `false`                          |
 | `ingress.annotations`                     | Additional annotations for the ingress object.  | `{}`                             |
 | `ingress.ingressClassName`                | Additional ingressClassName.                    | `""`                             |
