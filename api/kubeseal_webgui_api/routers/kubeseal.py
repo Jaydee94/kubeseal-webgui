@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from kubeseal_webgui_api.app_config import settings
 
 router = APIRouter()
-LOGGER = logging.getLogger("uvicorn")
+LOGGER = logging.getLogger("kubeseal-webgui")
 
 
 class Data(BaseModel):

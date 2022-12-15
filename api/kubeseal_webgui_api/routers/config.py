@@ -5,7 +5,7 @@ import fastapi
 
 from kubeseal_webgui_api.app_config import settings
 
-LOGGER = logging.getLogger("uvicorn")
+LOGGER = logging.getLogger("kubeseal-webgui")
 router = fastapi.APIRouter()
 
 

@@ -50,4 +50,4 @@ ENV PATH="${PATH}:${APP_PATH}/bin:${APP_PATH}/.local/bin"
 
 COPY --from=deps /deps/* /tmp/
 
-CMD [ "uvicorn", "kubeseal_webgui_api.app:app" ]
+CMD [ "uvicorn", "--log-config", "src/config/logging_config.yaml", "kubeseal_webgui_api.app:app"]

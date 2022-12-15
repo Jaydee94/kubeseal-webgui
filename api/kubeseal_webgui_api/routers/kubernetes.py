@@ -10,7 +10,7 @@ from kubeseal_webgui_api.routers.kubernetes_namespace_resolver import (
 from kubeseal_webgui_api.routers.mock_namespace_resolver import mock_namespaces_resolver
 
 router = fastapi.APIRouter()
-LOGGER = logging.getLogger("uvicorn")
+LOGGER = logging.getLogger("kubeseal-webgui")
 
 if settings.mock_enabled:
     namespace_resolver = mock_namespaces_resolver

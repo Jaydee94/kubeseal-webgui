@@ -79,6 +79,9 @@ spec:
               mountPath: /kubeseal-webgui/cert/kubeseal-cert.pem
               subPath: kubeseal-cert.pem
            {{- end }}
+            - name: sealed-secret-configmap
+              mountPath: /kubeseal-webgui/src/config/logging_config.yaml
+              subPath: logging_config.yaml
         - name: "ui"
           image: "{{ .Values.ui.image.repository }}:{{ .Values.ui.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}

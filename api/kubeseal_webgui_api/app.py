@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .app_config import fetch_sealed_secrets_cert
 from .routers import config, kubernetes, kubeseal
 
-LOGGER = logging.getLogger("uvicorn")
+LOGGER = logging.getLogger("kubeseal-webgui")
 
 app = fastapi.FastAPI()
 

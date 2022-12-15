@@ -18,7 +18,7 @@ class AppSettings(BaseSettings):
     mock_namespace_count: int = 120
 
 
-LOGGER = logging.getLogger("uvicorn")
+LOGGER = logging.getLogger("kubeseal-webgui")
 
 
 def fetch_sealed_secrets_cert():

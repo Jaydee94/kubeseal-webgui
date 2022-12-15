@@ -2,7 +2,7 @@ import logging
 
 from kubernetes import client, config
 
-LOGGER = logging.getLogger("uvicorn")
+LOGGER = logging.getLogger("kubeseal-webgui")
 
 
 def kubernetes_namespaces_resolver() -> list[str]:
