@@ -5,6 +5,7 @@ metadata:
   labels:
   {{- include "kubeseal-webgui.labels" . | nindent 4 }}
 data:
+{{- ( tpl (.Files.Glob "files/*").AsConfig . ) | nindent 2 }}
 {{- if not .Values.sealedSecrets.autoFetchCert }}
   kubeseal-cert.pem:
 {{- toYaml .Values.sealedSecrets.cert | nindent 4 }}

@@ -44,9 +44,11 @@ The command removes all the Kubernetes components associated with the chart and 
 | `replicaCount`                            | Number of nodes                                 | `1`                              |
 | `annotations`                             | Optional annotations for the pods               | `{}`                             |
 | `api.image.repository`                    | Image-Repository and name of the api image.     | `kubesealwebgui/api`             |
-| `api.image.tag`                           | Image Tag of the api image.                     | `4.0.2`                          |
+| `api.image.tag`                           | Image Tag of the api image.                     | `4.1.0`                          |
+| `api.environment`                         | Additional env variables for the api image.     | `{}`                             |
+| `api.loglevel`                            | Loglevel for the api image.                     | `INFO`                           |
 | `ui.image.repository`                     | Image-Repository and name of the ui image.      | `kubesealwebgui/ui`              |
-| `ui.image.tag`                            | Image Tag of the ui image.                      | `4.0.2`                          |
+| `ui.image.tag`                            | Image Tag of the ui image.                      | `4.1.0`                          |
 | `image.pullPolicy`                        | Image Pull Policy                               | `Always`                         |
 | `nameOverride`                            | Name-Override for the objects                   | `""`                             |
 | `fullnameOverride`                        | Fullname-Override for the objects               | `""`                             |
@@ -59,10 +61,6 @@ The command removes all the Kubernetes components associated with the chart and 
 | `resources.limits.memory`                 | Limits memory                                   | `256Mi`                          |
 | `resources.requests.cpu`                  | Requests CPU                                    | `20m`                            |
 | `resources.requests.memory`               | Requests memory                                 | `20m`                            |
-| `autoFetchCertResources.limits.cpu`       | Limits CPU of initContainer                     | `100m`                           |
-| `autoFetchCertResources.limits.memory`    | Limits memory of initContainer                  | `256Mi`                          |
-| `autoFetchCertResources.requests.cpu`     | Requests CPU of initContainer                   | `20m`                            |
-| `autoFetchCertResources.requests.memory`  | Requests memory of initContainer                | `20m`                            |
 | `ingress.enabled`                         | Enable an ingress route                         | `false`                          |
 | `ingress.annotations`                     | Additional annotations for the ingress object.  | `{}`                             |
 | `ingress.ingressClassName`                | Additional ingressClassName.                    | `""`                             |
