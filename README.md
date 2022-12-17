@@ -12,7 +12,7 @@ This is a python based webapp for using Bitnami-Sealed-Secrets in a web-gui.
 
 This app uses the kubeseal binary of the original project: <https://github.com/bitnami-labs/sealed-secrets>
 
-Currently using version `0.19.1` of the kubeseal-binary.
+Currently using version `0.19.3` of the kubeseal-binary.
 
 The docker images can be found here:
 
