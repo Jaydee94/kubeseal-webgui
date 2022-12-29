@@ -89,7 +89,7 @@ The api container will fetch the certificate from the sealed-secrets controller 
 * Running uvicorn server
 
   ```bash
-  MOCK_ENABLED=true uvicorn kubeseal_webgui_api.app:app
+  MOCK_ENABLED=true poetry run uvicorn kubeseal_webgui_api.app:app --port 5000
   ```
 
   or use a container and set the environment variables there
