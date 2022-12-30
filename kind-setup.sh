@@ -4,6 +4,8 @@
 
 set -eo pipefail
 
+API_URL="https://$(hostname -f):7143"
+
 cat <<EOF | kind create cluster --name chart-testing --wait 3m --config=-
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
@@ -44,7 +46,7 @@ helm template \
     --create-namespace \
     --namespace kubeseal-webgui \
     --set api.image.tag=snapshot \
-    --set api.url=http://$(hostname -f):7180 \
+    --set api.url="${API_URL}" \
     --set autoFetchCertResources=null \
     --set image.pullPolicy=Never \
     --set ingress.enabled=true \
@@ -60,6 +62,68 @@ kubectl wait --namespace kubeseal-webgui \
   --selector=app=kubeseal-webgui \
   --timeout=90s
 
+for _i in {1..3}; do
+    curl -i -k -D - -f "${API_URL}" ||
+        sleep 5
+done
+
+kubectl create namespace e2e
+strict_secret=$(
+  echo '{"secret": "strict-secret", "namespace": "e2e", "scope": "strict", "secrets": [{"key": "a-secret","value": "YQ=="}]}' |
+    curl -f -H 'content-type: application/json' -X POST -k --data @- "${API_URL}/secrets" |
+    jq -r -s '.[0][] | select(.key=="a-secret") | "a-secret: " + .value')
+namespace_secret=$(
+  echo '{"namespace": "e2e", "scope": "namespace-wide", "secrets": [{"key": "a-secret","value": "YQ=="}]}' |
+    curl -f -H 'content-type: application/json' -X POST -k --data @- "${API_URL}/secrets" |
+    jq -r -s '.[0][] | select(.key=="a-secret") | "a-secret: " + .value')
+cluster_secret=$(
+  echo '{"scope": "cluster-wide", "secrets": [{"key": "different-secret","value": "YQ=="}]}' |
+    curl -f -H 'content-type: application/json' -X POST -k --data @- "${API_URL}/secrets" |
+    jq -r -s '.[0][] | select(.key=="different-secret") | "a-secret: " + .value')
+
+cat <<EOF | kubectl apply -n e2e -f -
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: strict-secret
+  namespace: e2e
+  annotations: {  }
+spec:
+  encryptedData:
+    ${strict_secret}
+EOF
+
+
+cat <<EOF | kubectl apply -n e2e -f -
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: namespace-secret
+  namespace: e2e
+  annotations: { sealedsecrets.bitnami.com/namespace-wide: "true" }
+spec:
+  encryptedData:
+    ${namespace_secret}
+EOF
+
+cat <<EOF | kubectl apply -n e2e -f -
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: cluster-secret
+  namespace: e2e
+  annotations: { sealedsecrets.bitnami.com/cluster-wide: "true" }
+spec:
+  encryptedData:
+    ${cluster_secret}
+EOF
+
 sleep 5
 
-curl -vvv -D - -f http://$(hostname -f):7180
+for secret_name in strict-secret namespace-secret cluster-secret; do
+  echo -n "Testing ${secret_name} "
+  test "$(kubectl get secret "${secret_name}" -n e2e \
+  -o go-template --template '{{ index .data "a-secret" }}')" = "YQ==" ||
+ { echo ERR; exit 1; } &&
+ echo OK
+done
