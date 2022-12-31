@@ -253,6 +253,7 @@ kind: SealedSecret
 metadata:
   name: {{ secretName ? secretName : "# no secret name given" }}
   namespace: {{ namespaceName ? namespaceName : "# no namespace name given" }}
+  annotations: {{ sealedSecretsAnnotations }}
 spec:
   encryptedData: {{ renderedSecrets }}</pre>
               </v-code>
@@ -400,6 +401,12 @@ export default {
     },
     renderedSecrets: function () {
       return this.renderSecrets(this.sealedSecrets);
+    },
+    sealedSecretsAnnotations: function () {
+      if (this.scope === "strict") {
+        return {}
+      }
+      return `{ sealedsecrets.bitnami.com/${this.scope}: \"true\" }`
     }
   },
   beforeMount() {
