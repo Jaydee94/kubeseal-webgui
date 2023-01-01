@@ -16,8 +16,8 @@ Currently using version `0.19.3` of the kubeseal-binary.
 
 The docker images can be found here:
 
-- https://hub.docker.com/repository/docker/kubesealwebgui/ui
-- https://hub.docker.com/repository/docker/kubesealwebgui/api
+* https://hub.docker.com/repository/docker/kubesealwebgui/ui
+* https://hub.docker.com/repository/docker/kubesealwebgui/api
 
 ## Demo
 
@@ -59,7 +59,7 @@ You can use the new helm chart located inside the `chart` folder to deploy the n
 ## Upgrade from 4.0.X to 4.1.X
 
 When upgrading from `4.0.X` to `4.1.X` you need to use the provided helm chart in version `>=5.0.0` **if you use the autofetch certificate feature**.
-This is because the autofetch certificate functionality is no longer executed as an initContainer. 
+This is because the autofetch certificate functionality is no longer executed as an initContainer.
 The api container will fetch the certificate from the sealed-secrets controller on application startup.
 
 ### Get Public-Cert from sealed-secrets controller
@@ -89,7 +89,7 @@ The api container will fetch the certificate from the sealed-secrets controller 
 * Running uvicorn server
 
   ```bash
-  MOCK_ENABLED=true poetry run uvicorn kubeseal_webgui_api.app:app --port 5000
+  MOCK_ENABLED=true poetry run uvicorn kubeseal_webgui_api.app:app --port 5000 --log-config config/logging_config.yaml
   ```
 
   or use a container and set the environment variables there
