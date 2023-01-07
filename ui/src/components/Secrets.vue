@@ -251,8 +251,8 @@
                 >apiVersion: bitnami.com/v1alpha1
 kind: SealedSecret
 metadata:
-  name: {{ secretName ? secretName : "# no secret name given" }}
-  namespace: {{ namespaceName ? namespaceName : "# no namespace name given" }}
+  name: {{ secretName? secretName: "# no secret name given" }}
+  namespace: {{ namespaceName? namespaceName: "# no namespace name given" }}
   annotations: {{ sealedSecretsAnnotations }}
 spec:
   encryptedData: {{ renderedSecrets }}</pre>
@@ -346,7 +346,7 @@ function readFileAsync(file) {
       resolve(reader.result);
     };
     reader.onerror = reject;
-    reader.readAsText(file);
+    reader.readAsDataURL(file);
   })
 }
 
@@ -456,9 +456,11 @@ export default {
               };
             } else {
               let fileContent = await readFileAsync(element.file[0])
+              // we get a dataurl, so split the header from the data and use data, only
+              fileContent = fileContent.split(",")[1]
               return {
                 key: element.key,
-                file: Base64.encode(fileContent)
+                file: fileContent
               };
             }
           })),
