@@ -50,7 +50,7 @@ helm template \
     --set autoFetchCertResources=null \
     --set image.pullPolicy=Never \
     --set ingress.enabled=true \
-    --set ingress.hostname=$(hostname -f) \
+    --set ingress.hostname="$(hostname -f)" \
     --set resources=null \
     --set sealedSecrets.autoFetchCert=true \
     --set ui.image.tag=snapshot \

@@ -5,6 +5,7 @@ import pytest
 
 from kubeseal_webgui_api.routers.kubeseal import (
     Scope,
+    decode_base64_bytearray,
     decode_base64_string,
     run_kubeseal,
     valid_k8s_name,
@@ -210,3 +211,23 @@ def test_decode_base64_string(base64_input, expected_output):
     """
     base64_encoded_string = decode_base64_string(base64_input)
     assert base64_encoded_string == expected_output
+
+
+@pytest.mark.parametrize(
+    ("base64_input", "expected_output"),
+    [
+        ("YWJjZGVm", b"abcdef"),
+        ("w6TDtsO8", "äöü".encode("utf-8")),
+        ("LV8jIT8kwqc=", "-_#!?$§".encode("utf-8")),
+    ],
+)
+def test_decode_base64_bytearray(base64_input, expected_output):
+    """
+    Test decode_base64_bytearray.
+
+    Given a tuple with a Base64 input string and the corresponding output bytearray.
+    When calling decode_base64_bytearray on input string.
+    Then return the corresponding output bytearray.
+    """
+    decoded = decode_base64_bytearray(base64_input)
+    assert decoded == bytearray(expected_output)
