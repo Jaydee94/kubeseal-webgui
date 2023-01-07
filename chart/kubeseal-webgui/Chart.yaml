@@ -1,5 +1,5 @@
 apiVersion: v2
 name: kubeseal-webgui
 description: A Helm chart for installing kubeseal-webgui
-version: 5.0.0
-appVersion: 4.1.0
+version: 5.1.0
+appVersion: 4.2.0
