@@ -3,24 +3,10 @@
 * Installs the python based webapp for kubeseal-webgui
 
 ## TL;DR
-
-**Clone this repository** and use **helm** to install the kubeseal-webgui
-
 ```console
-helm template chart/kubeseal-webgui/ | kubectl apply -f - --namespace <namespacename>
-```
-
-## Installing the Chart
-
-To install the chart with the release name `my-release`:
-
-```console
-helm template \
-    --namespace <namespacename> \
-    --release-name my-release \
-    --create-namespace \
-    chart/kubeseal-webgui/ \
-| kubectl apply -f - --namespace <namespacename>
+helm repo add kubesealwebgui https://jaydee94.github.io/kubeseal-webgui/
+helm repo update
+helm install kubeseal-webgui kubesealwebgui/kubeseal-webgui --namespace <namespacename>
 ```
 
 ## Uninstalling the Chart
@@ -28,11 +14,7 @@ helm template \
 To uninstall/delete the my-release deployment:
 
 ```console
-helm template \
-    --namespace <namespacename> \
-    --release-name my-release \
-    chart/kubeseal-webgui/ \
-| kubectl delete -f - --namespace <namespacename>
+helm uninstall kubeseal-webgui kubesealwebgui/kubeseal-webgui --namespace <namespacename>
 ```
 
 The command removes all the Kubernetes components associated with the chart and deletes the release.
