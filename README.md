@@ -41,7 +41,7 @@ helm install kubesealwebgui/kubeseal-webgui --set example_required_value="foobar
 
 ## Usage
 
-Mount the public certificate of your sealed secrets controller to `/kubeseal-webgui/cert/kubeseal-cert.pem` in the Docker container.
+Mount the public certificate of your sealed secrets controller to `/kubeseal-webgui/cert/kubeseal-cert.pem` in the container.
 
 Please use the [helm chart](https://github.com/Jaydee94/kubeseal-webgui/tree/master/chart/kubeseal-webgui) which is included in this repository.
 
