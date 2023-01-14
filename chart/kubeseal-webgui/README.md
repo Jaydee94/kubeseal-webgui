@@ -7,6 +7,9 @@
 helm repo add kubesealwebgui https://jaydee94.github.io/kubeseal-webgui/
 helm repo update
 helm install kubeseal-webgui kubesealwebgui/kubeseal-webgui --namespace <namespacename>
+
+# with ingress and autofetch certificate
+helm install kubeseal-webgui kubesealwebgui/kubeseal-webgui --namespace <namespacename> --set ingress.enabled=true --set api.url="http://kubeseal-webgui.example.com" --set sealedSecrets.autoFetchCert=true
 ```
 
 ## Uninstalling the Chart
