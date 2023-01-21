@@ -1,7 +1,5 @@
-import json
 import logging
 from os import environ
-from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient

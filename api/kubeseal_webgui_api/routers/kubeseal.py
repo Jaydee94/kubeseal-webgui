@@ -2,45 +2,25 @@ import base64
 import logging
 import re
 import subprocess  # noqa: S404 the binary has to be configured by an admin
-from enum import Enum
-from typing import Dict, List, Optional, Union, overload
+from typing import List, Optional, Union, overload
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
 
 from kubeseal_webgui_api.app_config import settings
+from kubeseal_webgui_api.routers.models import Data, KeyValuePair, Scope, Secret
 
 router = APIRouter()
 LOGGER = logging.getLogger("kubeseal-webgui")
 
 
-class Data(BaseModel):
-    secret: Optional[str]
-    namespace: Optional[str]
-    secrets: List[Dict[str, str]]
-    scope: Optional[str]
-
-
-class Scope(Enum):
-    STRICT = "strict"
-    CLUSTER_WIDE = "cluster-wide"
-    NAMESPACE_WIDE = "namespace-wide"
-
-    def needs_name(self):
-        return self not in (Scope.CLUSTER_WIDE, Scope.NAMESPACE_WIDE)
-
-    def needs_namespace(self):
-        return self is not Scope.CLUSTER_WIDE
-
-
-@router.post("/secrets")
-def encrypt(data: Data) -> list:
+@router.post("/secrets", response_model=List[KeyValuePair])
+def encrypt(data: Data) -> list[KeyValuePair]:
     try:
         return run_kubeseal(
             data.secrets,
             data.namespace,
             data.secret,
-            data.scope or Scope.STRICT.value,
+            data.scope or Scope.STRICT,
         )
     except (KeyError, ValueError) as e:
         raise HTTPException(400, f"Invalid data for sealing secrets: {e}")
@@ -60,24 +40,18 @@ def verify(name: str, value: Optional[str], mandatory=True):
 
 
 def run_kubeseal(
-    cleartext_secrets: List[Dict[str, str]],
+    cleartext_secrets: List[Secret],
     secret_namespace: Optional[str],
     secret_name: Optional[str],
-    scope_value: str = Scope.STRICT.value,
-) -> list:
+    scope: Scope = Scope.STRICT,
+) -> list[KeyValuePair]:
     """Check input and initiate kubeseal-cli call."""
-    try:
-        scope = Scope(scope_value or Scope.STRICT.value)
-    except ValueError as error:
-        error_message = "scope is not of allowed value"
-        LOGGER.error(error_message)
-        raise ValueError(error_message) from error
 
     verify("secret_namespace", secret_namespace, scope.needs_namespace())
     verify("secret_name", secret_name, scope.needs_name())
 
     list_of_non_dict_inputs = [
-        element for element in cleartext_secrets if not isinstance(element, dict)
+        element for element in cleartext_secrets if not isinstance(element, Secret)
     ]
     if cleartext_secrets and list_of_non_dict_inputs:
         error_message = "Input of cleartext_secrets was not a list of dicts."
@@ -98,20 +72,20 @@ def valid_k8s_name(value: str) -> str:
 
 
 def run_kubeseal_command(
-    cleartext_secret_tuple: Dict[str, str],
+    cleartext_secret_tuple: Secret,
     secret_namespace: Optional[str],
     secret_name: Optional[str],
     scope: Scope = Scope.STRICT,
-):
+) -> KeyValuePair:
     LOGGER.info(
         "Sealing secret '%s.%s' for namespace '%s' with scope '%s'.",
         secret_name,
-        cleartext_secret_tuple["key"],
+        cleartext_secret_tuple.key,
         secret_namespace,
         scope,
     )
-    if "value" in cleartext_secret_tuple:
-        cleartext_secret = decode_base64_string(cleartext_secret_tuple["value"])
+    if cleartext_secret_tuple.value is not None:
+        cleartext_secret = decode_base64_string(cleartext_secret_tuple.value)
         return encrypt_value_or_file(
             cleartext_secret_tuple,
             secret_namespace,
@@ -121,13 +95,13 @@ def run_kubeseal_command(
             settings.kubeseal_cert,
             scope,
         )
-    if "file" in cleartext_secret_tuple:
-        cleartext_secret = decode_base64_bytearray(cleartext_secret_tuple["file"])
+    if cleartext_secret_tuple.file is not None:
+        file_secret = decode_base64_bytearray(cleartext_secret_tuple.file)
         return encrypt_value_or_file(
             cleartext_secret_tuple,
             secret_namespace,
             secret_name,
-            cleartext_secret,
+            file_secret,
             settings.kubeseal_binary,
             settings.kubeseal_cert,
             scope,
@@ -146,7 +120,7 @@ def encrypt_value_or_file(
     cert,
     scope,
     encoding: str = "utf-8",
-) -> Dict:
+) -> KeyValuePair:
     ...
 
 
@@ -160,7 +134,7 @@ def encrypt_value_or_file(
     cert,
     scope,
     encoding: None = None,
-) -> Dict:
+) -> KeyValuePair:
     ...
 
 
@@ -173,7 +147,7 @@ def encrypt_value_or_file(
     cert,
     scope,
     encoding: Optional[str] = "utf-8",
-) -> Dict:
+) -> KeyValuePair:
     kubeseal_command_cmd = construct_kubeseal_cmd(
         secret_namespace, secret_name, binary, cert, scope
     )
@@ -204,7 +178,7 @@ def encrypt_value_or_file(
         raise RuntimeError(error_message)
 
     sealed_secret = "".join(output.split("\n"))
-    return {"key": cleartext_secret_tuple["key"], "value": sealed_secret}
+    return KeyValuePair(key=cleartext_secret_tuple.key, value=sealed_secret)
 
 
 def construct_kubeseal_cmd(secret_namespace, secret_name, binary, cert, scope):

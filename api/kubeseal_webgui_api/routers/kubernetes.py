@@ -18,7 +18,7 @@ else:
     namespace_resolver = kubernetes_namespaces_resolver
 
 
-@router.get("/namespaces")
+@router.get("/namespaces", response_model=List[str])
 def get_namespaces() -> List[str]:
     try:
         return namespace_resolver()
