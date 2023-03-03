@@ -4,6 +4,7 @@ on:
     types:
       - opened
       - reopened
+      - edited
   push:
     branches:
       - main
