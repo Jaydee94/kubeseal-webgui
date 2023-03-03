@@ -4,9 +4,7 @@ on:
     types:
       - opened
       - reopened
-    branches:
-      - main
-      - master
+      - synchronize
   push:
     branches:
       - main
