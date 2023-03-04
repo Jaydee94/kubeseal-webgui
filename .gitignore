@@ -10,6 +10,5 @@ chart/kubeseal-webgui/values-local.yaml
 test.sh
 test.yaml
 *.pyc
-.dockerignore
 .coverage
 .venv/
