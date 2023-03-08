@@ -8,9 +8,9 @@
     "lint": "vue-cli-service lint"
   },
   "dependencies": {
+    "@fontsource/roboto": "*",
     "core-js": "^3.29.0",
     "js-base64": "^3.7.5",
-    "@fontsource/roboto": "*",
     "vue": "^3.2.47",
     "vuetify": "^3.1.8"
   },
@@ -25,8 +25,10 @@
     "eslint": "^8.35.0",
     "eslint-plugin-vue": "^9.9.0",
     "node-sass": "^7.0.3",
+    "prettier": "^2.8.4",
     "sass-loader": "^13",
     "vue-cli-plugin-vuetify": "~2.5.8",
+    "vue-eslint-parser": "^8.3.0",
     "webpack": "^5.75.0",
     "webpack-plugin-vuetify": "^2.0.1"
   },
