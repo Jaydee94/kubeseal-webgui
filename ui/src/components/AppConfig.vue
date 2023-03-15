@@ -1,33 +1,38 @@
 <template>
-  <v-container align="center">
-    <small
-      v-if="fetchConfigsSuccessful"
-      class="text-muted"
-    >
-      <span
-        v-for="(value, key, index) in configs"
-        :key="key"
+  <v-footer class="d-flex flex-column">
+    <div class="px-1 py-1">
+      <small
+        v-if="fetchConfigsSuccessful"
+        class="text-muted"
       >
-        <span v-if="index != 0"> ∙ </span><span>{{ key }}: {{ value }}</span>
-      </span>
-    </small>
-    <small
-      v-else-if="fetchConfigsSuccessful == false"
-      class="text-muted"
-    >
-      ⚠️ Could not retrieve application properties.
-    </small>
-    <small
-      v-else
-      class="text-muted"
-    >
-      ⏳ Loading application properties.
-    </small>
-  </v-container>
+        <span
+          v-for="(value, key, index) in configs"
+          :key="key"
+        >
+          <span v-if="index != 0"> ∙ </span><span>{{ key }}: {{ value }}</span>
+        </span>
+      </small>
+      <small
+        v-else-if="fetchConfigsSuccessful == false"
+        class="text-muted"
+      >
+        ⚠️ Could not retrieve application properties.
+      </small>
+      <small
+        v-else
+        class="text-muted"
+      >
+        ⏳ Loading application properties.
+      </small>
+    </div>
+
+    <div class="px-1 py-1">
+      <small>{{ new Date().getFullYear() }} — Kubeseal-Webgui</small>
+    </div>
+  </v-footer>
 </template>
 
 <script>
-
 export default {
   name: "AppConfig",
   data: function () {
@@ -45,8 +50,10 @@ export default {
       try {
         let response_config = await fetch("/config.json");
         let data_config = await response_config.clone().json();
-        let kubeseal_webgui_ui_version = data_config["kubeseal_webgui_ui_version"];
-        let kubeseal_webgui_api_version = data_config["kubeseal_webgui_api_version"];
+        let kubeseal_webgui_ui_version =
+          data_config["kubeseal_webgui_ui_version"];
+        let kubeseal_webgui_api_version =
+          data_config["kubeseal_webgui_api_version"];
         let data = await response_config.clone().json();
         let apiUrl = data["api_url"];
 
@@ -55,7 +62,7 @@ export default {
         if (response.ok && response_config.ok) {
           this.fetchConfigsSuccessful = true;
         } else {
-          this.fetchConfigsSuccessful = false
+          this.fetchConfigsSuccessful = false;
         }
         let configs = await response.json();
         this.configs = configs;
@@ -75,4 +82,3 @@ export default {
   text-align: center;
 }
 </style>
-

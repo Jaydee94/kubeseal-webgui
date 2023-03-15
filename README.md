@@ -12,7 +12,7 @@ This is a python based webapp for using Bitnami-Sealed-Secrets in a web-gui.
 
 This app uses the kubeseal binary of the original project: <https://github.com/bitnami-labs/sealed-secrets>
 
-Currently using version `0.19.3` of the kubeseal-binary.
+Currently using version `0.19.5` of the kubeseal-binary.
 
 The docker images can be found here:
 
@@ -74,7 +74,7 @@ The api container will fetch the certificate from the sealed-secrets controller 
 
 ### Requirements
 
-* Make sure you have Python 3.9 installed.
+* Make sure you have Python 3.10 installed.
 
 #### Setup API
 

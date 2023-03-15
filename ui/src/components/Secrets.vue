@@ -22,14 +22,14 @@
         >
           <v-icon>mdi-help</v-icon>
           <v-tooltip activator="parent">
-            <div>
-              Usage
+            <div>Usage</div>
+            <div align="left">
+              The entered values will be encrypted using the
+              <b>kubeseal</b> cli.
             </div>
             <div align="left">
-              The entered values will be encrypted using the <b>kubeseal</b> cli.
-            </div>
-            <div align="left">
-              Kubeseal encrypts a plaintext secret using a configured public key.
+              Kubeseal encrypts a plaintext secret using a configured public
+              key.
             </div>
             <br>
             <div align="left">
@@ -89,8 +89,7 @@
                 <a
                   target="_blank"
                   href="https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names"
-                >DNS
-                  Subdomain</a></i>
+                >DNS Subdomain</a></i>
             </v-container>
           </v-col>
           <v-col
@@ -111,8 +110,7 @@
                 <a
                   target="_blank"
                   href="https://github.com/bitnami-labs/sealed-secrets#scopes"
-                >Scopes for sealed
-                  secrets</a></i>
+                >Scopes for sealed secrets</a></i>
             </v-container>
           </v-col>
         </v-row>
@@ -185,8 +183,7 @@
                 <a
                   target="_blank"
                   href="https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names"
-                >DNS
-                  Subdomain</a></i>
+                >DNS Subdomain</a></i>
             </v-container>
           </v-col>
         </v-row>
@@ -202,10 +199,7 @@
               title="Error while encoding sensitive data"
             >
               <v-container>
-                <p>
-                  Please contact your
-                  administrator and try again later.
-                </p>
+                <p>Please contact your administrator and try again later.</p>
                 <b>Error message:</b>
                 <p>
                   <code class="ma-4">{{ errorMessage }}</code>
@@ -248,11 +242,12 @@
                 <pre
                   ref="sealedSecret"
                   class="output"
-                >apiVersion: bitnami.com/v1alpha1
+                >
+apiVersion: bitnami.com/v1alpha1
 kind: SealedSecret
 metadata:
-  name: {{ secretName? secretName: "# no secret name given" }}
-  namespace: {{ namespaceName? namespaceName: "# no namespace name given" }}
+  name: {{ secretName ? secretName : "# no secret name given" }}
+  namespace: {{ namespaceName ? namespaceName : "# no namespace name given" }}
   annotations: {{ sealedSecretsAnnotations }}
 spec:
   encryptedData: {{ renderedSecrets }}</pre>
@@ -318,7 +313,9 @@ spec:
             block
             variant="tonal"
             class="flex-fill"
-            @click="displayCreateSealedSecretForm = !displayCreateSealedSecretForm"
+            @click="
+              displayCreateSealedSecretForm = !displayCreateSealedSecretForm
+            "
           >
             Encrypt more secrets
           </v-btn>
@@ -347,7 +344,7 @@ function readFileAsync(file) {
     };
     reader.onerror = reject;
     reader.readAsDataURL(file);
-  })
+  });
 }
 
 export default {
@@ -368,20 +365,31 @@ export default {
       clipboardAvailable: false,
       rules: {
         validDnsSubdomain: [
-          value => value.length < 253 || "Longer than 253 chars",
-          value => !!value || 'Must not be empty',
-          value => !!value && /^[a-z0-9-.]*$/.test(value) || 'Invalid char. Must be one of lower chars, digits, dashes or dots.',
-          value => !!value && /^[a-z0-9]/.test(value) || 'Must start with a lower char or digit',
-          value => !!value && /[a-z0-9]$/.test(value) || 'Must end with a lower char or digit',
-          value => validDnsSubdomain(value) || "Not a valid DNS subdomain"
+          (value) => value.length < 253 || "Longer than 253 chars",
+          (value) => !!value || "Must not be empty",
+          (value) =>
+            (!!value && /^[a-z0-9-.]*$/.test(value)) ||
+            "Invalid char. Must be one of lower chars, digits, dashes or dots.",
+          (value) =>
+            (!!value && /^[a-z0-9]/.test(value)) ||
+            "Must start with a lower char or digit",
+          (value) =>
+            (!!value && /[a-z0-9]$/.test(value)) ||
+            "Must end with a lower char or digit",
+          (value) => validDnsSubdomain(value) || "Not a valid DNS subdomain",
         ],
         validSecretKey: [
-          value => !!value || 'Must not be empty',
-          value => !!value && /^[a-z0-9_.-]*$/i.test(value) || 'Invalid char. Must be one of lower chars, digits, dash, underscore or dot.'
-        ]
+          (value) => !!value || "Must not be empty",
+          (value) =>
+            (!!value && /^[a-z0-9_.-]*$/i.test(value)) ||
+            "Invalid char. Must be one of lower chars, digits, dash, underscore or dot.",
+        ],
       },
       fileSize: [
-        files => !files || !files.some(file => file.size > 1048576) || 'File size should be less than 1 MB!'
+        (files) =>
+          !files ||
+          !files.some((file) => file.size > 1048576) ||
+          "File size should be less than 1 MB!",
       ],
     };
   },
@@ -391,23 +399,29 @@ export default {
         return false;
       }
       let secret = this.secrets[0];
-      return secret.key === '' && secret.value === '' && secret.file.length === 0;
+      return (
+        secret.key === "" && secret.value === "" && secret.file.length === 0
+      );
     },
     hasFile: function () {
-      return this.secrets.map((e) => { return e.file.length > 0 })
+      return this.secrets.map((e) => {
+        return e.file.length > 0;
+      });
     },
     hasValue: function () {
-      return this.secrets.map((e) => { return e.value !== '' })
+      return this.secrets.map((e) => {
+        return e.value !== "";
+      });
     },
     renderedSecrets: function () {
       return this.renderSecrets(this.sealedSecrets);
     },
     sealedSecretsAnnotations: function () {
       if (this.scope === "strict") {
-        return {}
+        return {};
       }
-      return `{ sealedsecrets.bitnami.com/${this.scope}: \"true\" }`
-    }
+      return `{ sealedsecrets.bitnami.com/${this.scope}: \"true\" }`;
+    },
   },
   beforeMount() {
     this.fetchNamespaces();
@@ -417,12 +431,12 @@ export default {
     if (navigator && navigator.clipboard) {
       this.clipboardAvailable = true;
     }
-    this.setErrorMessage("")
+    this.setErrorMessage("");
   },
   methods: {
     setErrorMessage(errorMessage) {
-      this.errorMessage = errorMessage
-      this.hasErrorMessage = !!errorMessage
+      this.errorMessage = errorMessage;
+      this.hasErrorMessage = !!errorMessage;
     },
     fetchNamespaces: async function () {
       try {
@@ -433,7 +447,7 @@ export default {
         response = await fetch(`${apiUrl}/namespaces`);
         this.namespaces = await response.json();
       } catch (error) {
-        this.setErrorMessage(error)
+        this.setErrorMessage(error);
       }
     },
     fetchDisplayName: async function () {
@@ -448,22 +462,24 @@ export default {
           secret: this.secretName,
           namespace: this.namespaceName,
           scope: this.scope,
-          secrets: await Promise.all(this.secrets.map(async (element) => {
-            if (element.value) {
-              return {
-                key: element.key,
-                value: Base64.encode(element.value),
-              };
-            } else {
-              let fileContent = await readFileAsync(element.file[0])
-              // we get a dataurl, so split the header from the data and use data, only
-              fileContent = fileContent.split(",")[1]
-              return {
-                key: element.key,
-                file: fileContent
-              };
-            }
-          })),
+          secrets: await Promise.all(
+            this.secrets.map(async (element) => {
+              if (element.value) {
+                return {
+                  key: element.key,
+                  value: Base64.encode(element.value),
+                };
+              } else {
+                let fileContent = await readFileAsync(element.file[0]);
+                // we get a dataurl, so split the header from the data and use data, only
+                fileContent = fileContent.split(",")[1];
+                return {
+                  key: element.key,
+                  file: fileContent,
+                };
+              }
+            })
+          ),
         };
 
         let requestBody = JSON.stringify(requestObject, null, "\t");
@@ -484,14 +500,14 @@ export default {
         if (!response.ok) {
           throw Error(
             "No sealed secrets in response from backend: " +
-            (await response.text())
+              (await response.text())
           );
         } else {
           this.sealedSecrets = await response.json();
           this.displayCreateSealedSecretForm = false;
         }
       } catch (error) {
-        this.setErrorMessage(error)
+        this.setErrorMessage(error);
       }
     },
     renderSecrets: function (sealedSecrets) {
@@ -502,22 +518,22 @@ export default {
     },
     copyRenderedSecrets: function () {
       let sealedSecretElement = this.$refs.sealedSecret;
-      console.log("sealedSecretElement: ", sealedSecretElement)
-      let sealedSecretContent = sealedSecretElement.innerText.trim()
+      console.log("sealedSecretElement: ", sealedSecretElement);
+      let sealedSecretContent = sealedSecretElement.innerText.trim();
       navigator.clipboard.writeText(sealedSecretContent);
     },
     copySealedSecret: function (counter) {
-      navigator.clipboard.writeText(this.sealedSecrets[counter].value)
+      navigator.clipboard.writeText(this.sealedSecrets[counter].value);
     },
     removeSecret: function (counter) {
       if (this.secrets.length > 1) {
-        this.secrets.splice(counter, 1)
+        this.secrets.splice(counter, 1);
       } else {
-        this.secrets[0].key = ''
-        this.secrets[0].value = ''
-        this.secrets[0].file = []
+        this.secrets[0].key = "";
+        this.secrets[0].value = "";
+        this.secrets[0].file = [];
       }
-    }
+    },
   },
 };
 </script>
