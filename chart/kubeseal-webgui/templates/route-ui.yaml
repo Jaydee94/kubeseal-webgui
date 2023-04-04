@@ -11,7 +11,9 @@ metadata:
 {{ toYaml . | indent 4 }}
 {{- end }}
 spec:
+{{- if ne .Values.route.hostname "" }}
   host: {{ .Values.route.hostname | quote }}
+{{- end }}
   to:
     kind: Service
     name: {{ include "kubeseal-webgui.fullname" . }}
