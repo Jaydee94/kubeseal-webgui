@@ -11,7 +11,7 @@ metadata:
 {{ toYaml . | indent 4 }}
 {{- end }}
 spec:
-{{- if ne .Values.route.hostname "" }}
+{{- if .Values.route.hostname }}
   host: {{ .Values.route.hostname | quote }}
 {{- end }}
   to:
