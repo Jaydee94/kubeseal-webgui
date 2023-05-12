@@ -24,7 +24,7 @@
     "@vue/compiler-sfc": "^3.2.47",
     "eslint": "^8.35.0",
     "eslint-plugin-vue": "^9.9.0",
-    "node-sass": "^7.0.3",
+    "node-sass": "^8.0.0",
     "prettier": "^2.8.4",
     "sass-loader": "^13",
     "vue-cli-plugin-vuetify": "~2.5.8",
