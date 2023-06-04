@@ -3,7 +3,8 @@ import logging
 import fastapi
 from fastapi.middleware.cors import CORSMiddleware
 
-from .app_config import fetch_sealed_secrets_cert
+from .app_config import settings
+from .dependencies import get_kubeseal_client
 from .routers import config, kubernetes, kubeseal
 
 LOGGER = logging.getLogger("kubeseal-webgui")
@@ -36,7 +37,10 @@ app.include_router(
 @app.on_event("startup")
 def startup_event():
     LOGGER.info("Running startup tasks...")
-    fetch_sealed_secrets_cert()
+    if settings.kubeseal_autofetch:
+        with open(settings.kubeseal_cert, "w") as file:
+            LOGGER.info("Saving certificate in '%s'", settings.kubeseal_cert)
+            file.write(get_kubeseal_client().get_certificate())
     LOGGER.info("Startup tasks complete.")
 
 
