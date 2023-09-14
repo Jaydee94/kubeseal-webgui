@@ -3,23 +3,8 @@
 version: '2.4'
 
 services:
-  mock:
-    image: kubesealwebgui/mock
-    build:
-      context: mock
-    restart: 'on-failure'
-    networks:
-      - app
-    volumes:
-      - './mock/ssl:/data/ssl:ro'
-      - './mock:/usr/src/kswg_mock:ro'
-    environment:
-      UVICORN_PORT: '6443'
-      UVICORN_SSL_KEYFILE: /data/ssl/mock-key.pem
-      UVICORN_SSL_CERTFILE: /data/ssl/mock.pem
-      UVICORN_SSL_CA_CERTS: /data/ssl/ca.pem
   ui:
-    image: kubesealwebgui/ui
+    image: docker.io/kubesealwebgui/ui:4.2.2
     build:
       context: .
       dockerfile: Dockerfile.ui
@@ -34,23 +19,24 @@ services:
       API_HOST: api
       PUBLIC_HOST: 127.0.0.1
   api:
-    image: kubesealwebgui/api
+    image: docker.io/kubesealwebgui/api:4.2.2
     build:
       context: .
       dockerfile: Dockerfile.api
     restart: 'on-failure'
-    depends_on:
-      - mock
     networks:
       - app
+    ports:
+      - '127.0.0.1:5000:5000'
     volumes:
-      - './mock/ssl/ca.pem:/var/run/secrets/kubernetes.io/serviceaccount/ca.crt:ro'
-      - './mock/token.txt:/var/run/secrets/kubernetes.io/serviceaccount/token:ro'
+      - type: bind
+        source: ./api/kubeseal_webgui_api
+        target: /kubeseal-webgui/lib/python3.10/site-packages/kubeseal_webgui_api
+        read_only: true
     environment:
-      KUBERNETES_SERVICE_HOST: mock
-      KUBERNETES_SERVICE_PORT: 6443
       ORIGIN_URL: 'http://127.0.0.1:5000/'
-      KUBESEAL_CERT: '/var/run/secrets/kubernetes.io/serviceaccount/ca.crt'
+      MOCK_ENABLED: "True"
+      MOCK_NAMESPACE_COUNT: "10"
 
 networks:
   app:

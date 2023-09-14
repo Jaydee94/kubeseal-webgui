@@ -1,28 +1,22 @@
 import logging
 from typing import List
 
-import fastapi
+from fastapi import APIRouter, Depends, HTTPException
 
-from kubeseal_webgui_api.app_config import settings
-from kubeseal_webgui_api.routers.kubernetes_namespace_resolver import (
-    kubernetes_namespaces_resolver,
-)
-from kubeseal_webgui_api.routers.mock_namespace_resolver import mock_namespaces_resolver
+from kubeseal_webgui_api.dependencies import get_kubernetes_client
+from kubeseal_webgui_api.internal import KubernetesClient
 
-router = fastapi.APIRouter()
 LOGGER = logging.getLogger("kubeseal-webgui")
-
-if settings.mock_enabled:
-    namespace_resolver = mock_namespaces_resolver
-else:
-    namespace_resolver = kubernetes_namespaces_resolver
+router = APIRouter()
 
 
 @router.get("/namespaces", response_model=List[str])
-def get_namespaces() -> List[str]:
+def get_namespaces(
+    client: KubernetesClient = Depends(get_kubernetes_client),  # noqa: B008
+) -> List[str]:
     try:
-        return namespace_resolver()
+        return client.get_namespaces()
     except RuntimeError:
-        raise fastapi.HTTPException(
+        raise HTTPException(
             status_code=500, detail="Can't get namespaces from cluster."
         )

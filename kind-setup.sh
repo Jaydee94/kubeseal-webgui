@@ -122,8 +122,13 @@ sleep 5
 
 for secret_name in strict-secret namespace-secret cluster-secret; do
   echo -n "Testing ${secret_name} "
-  test "$(kubectl get secret "${secret_name}" -n e2e \
-  -o go-template --template '{{ index .data "a-secret" }}')" = "YQ==" ||
- { echo ERR; exit 1; } &&
- echo OK
+  secret_value=$(kubectl get secret "${secret_name}" -n e2e \
+    -o go-template --template '{{ index .data "a-secret" }}')
+  if test "$secret_value" = "YQ=="; then
+    echo OK
+  else
+    echo ERR
+    echo "Unexpected secret value '${secret_value}'" 1>&2
+    exit 1
+  fi
 done
