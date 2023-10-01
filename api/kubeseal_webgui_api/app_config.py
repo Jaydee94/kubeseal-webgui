@@ -2,7 +2,7 @@ import logging
 import subprocess
 from os import environ
 
-from pydantic import BaseSettings
+from pydantic_settings import BaseSettings
 
 binary = environ.get("KUBESEAL_BINARY", "/bin/false")
 mock = environ.get("MOCK_ENABLED", "False").lower() == "true"
