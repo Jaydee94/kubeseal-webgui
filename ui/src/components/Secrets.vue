@@ -404,14 +404,10 @@ export default {
       );
     },
     hasFile: function () {
-      return this.secrets.map((e) => {
-        return e.file.length > 0;
-      });
+      return this.secrets.map((e) => e.file.length > 0);
     },
     hasValue: function () {
-      return this.secrets.map((e) => {
-        return e.value !== "";
-      });
+      return this.secrets.map((e) => e.value !== "");
     },
     renderedSecrets: function () {
       return this.renderSecrets(this.sealedSecrets);
@@ -500,7 +496,7 @@ export default {
         if (!response.ok) {
           throw Error(
             "No sealed secrets in response from backend: " +
-              (await response.text())
+            (await response.text())
           );
         } else {
           this.sealedSecrets = await response.json();
@@ -511,9 +507,9 @@ export default {
       }
     },
     renderSecrets: function (sealedSecrets) {
-      var dataEntries = sealedSecrets.map((element) => {
-        return `    ${element["key"]}: ${element["value"]}`;
-      });
+      var dataEntries = sealedSecrets.map((element) =>
+        `    ${element["key"]}: ${element["value"]}`
+      );
       return "\n" + dataEntries.join("\n");
     },
     copyRenderedSecrets: function () {
