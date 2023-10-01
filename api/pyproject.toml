@@ -5,17 +5,18 @@ description = "A python based backend for the kubeseal binary."
 authors = ["Jan Herber <janherber@gmx.de>"]
 license = "Apache-2.0"
 readme = "README.md"
-packages = [{include = "kubeseal_webgui_api"}]
+packages = [{ include = "kubeseal_webgui_api" }]
 
 [tool.poetry.dependencies]
 python = "^3.10"
 Jinja2 = "^3.1.2"
 PyYAML = "^6.0"
 kubernetes = "^26.1.0"
-fastapi = "^0.92.0"
+fastapi = "^0.103.2"
 JSON-log-formatter = "^0.5.1"
 uvicorn = "^0.20.0"
-pydantic = "^1.10.5"
+pydantic = "^2.0.0"
+pydantic-settings = "^2.0.3"
 
 [tool.poetry.group.dev.dependencies]
 black = "^22.8.0"
@@ -24,10 +25,10 @@ isort = "^5.10.1"
 flake8 = "^5.0.4"
 pydocstyle = "^6.1.1"
 pytest-cov = "^4.0.0"
-pytest-flask = "^1.2.0"
 flake8-awesome = "^1.3.0"
 mypy = "^0.991"
 pyupgrade = "^3.0.0"
+httpx = "^0.25.0"
 
 [build-system]
 requires = ["poetry-core"]
@@ -37,5 +38,7 @@ build-backend = "poetry.core.masonry.api"
 profile = "black"
 
 [tool.pytest.ini_options]
-markers = ["cluster: marks test that requires a k8s cluster in their environment",
-  "container: marks test that requires the container environment"]
+markers = [
+  "cluster: marks test that requires a k8s cluster in their environment",
+  "container: marks test that requires the container environment",
+]

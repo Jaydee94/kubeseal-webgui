@@ -1,7 +1,7 @@
 from enum import Enum
-from typing import List, Optional
+from typing import Any, List, Optional
 
-from pydantic import BaseModel, root_validator
+from pydantic import BaseModel, ConfigDict, model_validator
 
 
 def to_camel(value: str) -> str:
@@ -11,10 +11,7 @@ def to_camel(value: str) -> str:
 
 class WebGuiConfig(BaseModel):
     kubeseal_version: str
-
-    class Config:
-        alias_generator = to_camel
-        allow_population_by_field_name = True
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
 class KeyValuePair(BaseModel):
@@ -27,15 +24,15 @@ class Secret(BaseModel):
     value: Optional[str] = None
     file: Optional[str] = None
 
-    @root_validator
+    @model_validator(mode="after")
     @classmethod
-    def value_or_file_set(cls, values):
-        file, value = values.get("file"), values.get("value")
+    def value_or_file_set(cls, secret: Any):
+        file, value = secret.file, secret.value
         if file and value:
             raise AssertionError("Only one field of 'value' or 'file' can be used")
         if file is None and value is None:
             raise AssertionError("One field of 'value' or 'file' has to be set")
-        return values
+        return secret
 
 
 class Scope(str, Enum):
@@ -51,7 +48,7 @@ class Scope(str, Enum):
 
 
 class Data(BaseModel):
-    secret: Optional[str]
-    namespace: Optional[str]
+    secret: Optional[str] = None
+    namespace: Optional[str] = None
     secrets: List[Secret]
-    scope: Optional[Scope]
+    scope: Optional[Scope] = None
