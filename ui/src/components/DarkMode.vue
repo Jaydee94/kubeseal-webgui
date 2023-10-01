@@ -1,6 +1,6 @@
 <template>
   <v-switch
-    v-model="state.darkMode"
+    v-model="darkMode"
     color="blue"
     label="Dark Mode"
     class="ma-4"
@@ -8,9 +8,9 @@
   />
 </template>
 
-<script>
+<script setup>
 import { useTheme } from 'vuetify'
-import { reactive } from 'vue';
+import { ref } from 'vue';
 
 function isDarkModeEnabled(theme) {
   let result = false;
@@ -28,27 +28,13 @@ function isDarkModeEnabled(theme) {
   return result;
 }
 
-export default {
-  name: "DarkMode",
-  setup() {
-    const theme = useTheme()
-    const state = reactive({
-      darkMode: isDarkModeEnabled(theme)
-    })
-    return {
-      theme,
-      state
-    }
-  },
-  methods: {
-    toggleDarkMode: function () {
-      this.theme.global.name.value = this.state.darkMode ? 'dark' : 'light'
-      localStorage.useDarkTheme = this.theme.global.current.value.dark
-    }
-  }
+const theme = useTheme()
+const darkMode = ref(isDarkModeEnabled(theme))
+
+function toggleDarkMode() {
+  this.theme.global.name.value = this.darkMode.value ? 'dark' : 'light'
+  localStorage.useDarkTheme = this.theme.global.current.value.dark
 }
 </script>
 
-<style scoped>
-
-</style>
+<style scoped></style>
