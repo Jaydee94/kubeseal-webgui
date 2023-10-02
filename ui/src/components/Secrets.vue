@@ -158,7 +158,7 @@
               dense
               label="Upload File"
               prepend-icon="mdi-file-upload-outline"
-              :rules="fileSize"
+              :rules="rules.fileSize"
               :disabled="hasValue[counter]"
             />
           </v-col>
@@ -315,7 +315,7 @@ spec:
             class="flex-fill"
             @click="
               displayCreateSealedSecretForm = !displayCreateSealedSecretForm
-            "
+              "
           >
             Encrypt more secrets
           </v-btn>
@@ -325,8 +325,36 @@ spec:
   </div>
 </template>
 
-<script>
+<script setup>
+import { ref, computed, onBeforeMount, onMounted } from 'vue'
 import { Base64 } from "js-base64";
+
+const namespaces = ref([])
+const scopes = ref(["strict", "cluster-wide", "namespace-wide"])
+const errorMessage = ref("")
+const hasErrorMessage = ref(false)
+const displayName = ref("")
+const displayCreateSealedSecretForm = ref(true)
+const secretName = ref("")
+const namespaceName = ref("")
+const scope = ref("strict")
+const secrets = ref([{ key: "", value: "", file: [] }])
+const sealedSecrets = ref([])
+const sealedSecret = ref()
+const clipboardAvailable = ref(false)
+
+onBeforeMount(async () => {
+  const config = await fetchConfig();
+  await fetchNamespaces(config);
+  await fetchDisplayName(config);
+})
+
+onMounted(() => {
+  if (navigator && navigator.clipboard) {
+    clipboardAvailable.value = true;
+  }
+  setErrorMessage("");
+})
 
 function validDnsSubdomain(name) {
   if (!name) {
@@ -347,192 +375,166 @@ function readFileAsync(file) {
   });
 }
 
-export default {
-  name: "Secrets",
-  data: function () {
-    return {
-      namespaces: [],
-      scopes: ["strict", "cluster-wide", "namespace-wide"],
-      errorMessage: "",
-      hasErrorMessage: false,
-      displayName: "",
-      displayCreateSealedSecretForm: true,
-      secretName: "",
-      namespaceName: "",
-      scope: "strict",
-      secrets: [{ key: "", value: "", file: [] }],
-      sealedSecrets: [],
-      clipboardAvailable: false,
-      rules: {
-        validDnsSubdomain: [
-          (value) => value.length < 253 || "Longer than 253 chars",
-          (value) => !!value || "Must not be empty",
-          (value) =>
-            (!!value && /^[a-z0-9-.]*$/.test(value)) ||
-            "Invalid char. Must be one of lower chars, digits, dashes or dots.",
-          (value) =>
-            (!!value && /^[a-z0-9]/.test(value)) ||
-            "Must start with a lower char or digit",
-          (value) =>
-            (!!value && /[a-z0-9]$/.test(value)) ||
-            "Must end with a lower char or digit",
-          (value) => validDnsSubdomain(value) || "Not a valid DNS subdomain",
-        ],
-        validSecretKey: [
-          (value) => !!value || "Must not be empty",
-          (value) =>
-            (!!value && /^[a-z0-9_.-]*$/i.test(value)) ||
-            "Invalid char. Must be one of lower chars, digits, dash, underscore or dot.",
-        ],
-      },
-      fileSize: [
-        (files) =>
-          !files ||
-          !files.some((file) => file.size > 1048576) ||
-          "File size should be less than 1 MB!",
-      ],
+
+const rules = {
+  validDnsSubdomain: [
+    (value) => value.length < 253 || "Longer than 253 chars",
+    (value) => !!value || "Must not be empty",
+    (value) =>
+      (!!value && /^[a-z0-9-.]*$/.test(value)) ||
+      "Invalid char. Must be one of lower chars, digits, dashes or dots.",
+    (value) =>
+      (!!value && /^[a-z0-9]/.test(value)) ||
+      "Must start with a lower char or digit",
+    (value) =>
+      (!!value && /[a-z0-9]$/.test(value)) ||
+      "Must end with a lower char or digit",
+    (value) => validDnsSubdomain(value) || "Not a valid DNS subdomain",
+  ],
+  validSecretKey: [
+    (value) => !!value || "Must not be empty",
+    (value) =>
+      (!!value && /^[a-z0-9_.-]*$/i.test(value)) ||
+      "Invalid char. Must be one of lower chars, digits, dash, underscore or dot.",
+  ],
+  fileSize: [
+    (files) =>
+      !files ||
+      !files.some((file) => file.size > 1048576) ||
+      "File size should be less than 1 MB!",
+  ]
+}
+
+const hasNoSecrets = computed(() => {
+  if (secrets.value.length > 1) {
+    return false
+  }
+  const secret = secrets.value[0]
+  return (
+    secret.key === "" && secret.value === "" && secret.file.length === 0
+  )
+})
+
+const hasFile = computed(() =>
+  secrets.value.map((e) => e.file.length > 0))
+const hasValue = computed(() =>
+  secrets.value.map((e) => e.value !== "")
+)
+const renderedSecrets = computed(() =>
+  renderSecrets(sealedSecrets.value)
+)
+const sealedSecretsAnnotations = computed(() => {
+  if (scope.value === "strict") {
+    return '{}';
+  }
+  return `{ sealedsecrets.bitnami.com/${scope.value}: \"true\" }`;
+})
+
+function setErrorMessage(newErrorMessage) {
+  errorMessage.value = newErrorMessage;
+  hasErrorMessage.value = !!newErrorMessage;
+}
+
+async function fetchConfig() {
+  try {
+    const response = await fetch("/config.json")
+    return await response.json();
+  } catch (error) {
+    setErrorMessage(error)
+  }
+}
+
+async function fetchNamespaces(config) {
+  try {
+    const response = await fetch(`${config.api_url}/namespaces`);
+    namespaces.value = await response.json();
+  } catch (error) {
+    setErrorMessage(error);
+  }
+}
+
+async function fetchDisplayName(config) {
+  displayName.value = config.display_name;
+}
+
+async function fetchEncodedSecrets() {
+  try {
+    const requestObject = {
+      secret: secretName.value,
+      namespace: namespaceName.value,
+      scope: scope.value,
+      secrets: await Promise.all(
+        secrets.value.map(async (element) => {
+          if (element.value) {
+            return {
+              key: element.key,
+              value: Base64.encode(element.value),
+            };
+          } else {
+            let fileContent = await readFileAsync(element.file[0]);
+            // we get a dataurl, so split the header from the data and use data, only
+            fileContent = fileContent.split(",")[1];
+            return {
+              key: element.key,
+              file: fileContent,
+            };
+          }
+        })
+      ),
     };
-  },
-  computed: {
-    hasNoSecrets: function () {
-      if (this.secrets.length > 1) {
-        return false;
-      }
-      let secret = this.secrets[0];
-      return (
-        secret.key === "" && secret.value === "" && secret.file.length === 0
+
+    const requestBody = JSON.stringify(requestObject, null, "\t");
+
+    const config = await fetchConfig()
+
+    const response = await fetch(`${config.api_url}/secrets`, {
+      method: "POST",
+      headers: {
+        // 'Origin': 'http://localhost:8080',
+        "Content-Type": "application/json",
+      },
+      body: requestBody,
+    });
+
+    if (!response.ok) {
+      throw Error(
+        "No sealed secrets in response from backend: " +
+        (await response.text())
       );
-    },
-    hasFile: function () {
-      return this.secrets.map((e) => e.file.length > 0);
-    },
-    hasValue: function () {
-      return this.secrets.map((e) => e.value !== "");
-    },
-    renderedSecrets: function () {
-      return this.renderSecrets(this.sealedSecrets);
-    },
-    sealedSecretsAnnotations: function () {
-      if (this.scope === "strict") {
-        return {};
-      }
-      return `{ sealedsecrets.bitnami.com/${this.scope}: \"true\" }`;
-    },
-  },
-  beforeMount() {
-    this.fetchNamespaces();
-    this.fetchDisplayName();
-  },
-  mounted: function () {
-    if (navigator && navigator.clipboard) {
-      this.clipboardAvailable = true;
+    } else {
+      sealedSecrets.value = await response.json();
+      displayCreateSealedSecretForm.value = false;
     }
-    this.setErrorMessage("");
-  },
-  methods: {
-    setErrorMessage(errorMessage) {
-      this.errorMessage = errorMessage;
-      this.hasErrorMessage = !!errorMessage;
-    },
-    fetchNamespaces: async function () {
-      try {
-        let response = await fetch("/config.json");
-        let data = await response.json();
-        let apiUrl = data["api_url"];
+  } catch (error) {
+    setErrorMessage(error);
+  }
+}
 
-        response = await fetch(`${apiUrl}/namespaces`);
-        this.namespaces = await response.json();
-      } catch (error) {
-        this.setErrorMessage(error);
-      }
-    },
-    fetchDisplayName: async function () {
-      let response = await fetch("/config.json");
-      let data = await response.json();
-      let dName = data["display_name"];
-      this.displayName = dName;
-    },
-    fetchEncodedSecrets: async function () {
-      try {
-        var requestObject = {
-          secret: this.secretName,
-          namespace: this.namespaceName,
-          scope: this.scope,
-          secrets: await Promise.all(
-            this.secrets.map(async (element) => {
-              if (element.value) {
-                return {
-                  key: element.key,
-                  value: Base64.encode(element.value),
-                };
-              } else {
-                let fileContent = await readFileAsync(element.file[0]);
-                // we get a dataurl, so split the header from the data and use data, only
-                fileContent = fileContent.split(",")[1];
-                return {
-                  key: element.key,
-                  file: fileContent,
-                };
-              }
-            })
-          ),
-        };
+const renderSecrets = (sealedSecrets) => {
+  const dataEntries = sealedSecrets.map((element) =>
+    `    ${element["key"]}: ${element["value"]}`
+  );
+  return "\n" + dataEntries.join("\n");
+}
 
-        let requestBody = JSON.stringify(requestObject, null, "\t");
+function copyRenderedSecrets() {
+  const sealedSecretContent = sealedSecret.value.innerText.trim();
+  navigator.clipboard.writeText(sealedSecretContent);
+}
 
-        let response = await fetch("/config.json");
-        let data = await response.json();
-        let apiUrl = data["api_url"];
+function copySealedSecret(counter) {
+  navigator.clipboard.writeText(sealedSecrets.value[counter].value);
+}
 
-        response = await fetch(`${apiUrl}/secrets`, {
-          method: "POST",
-          headers: {
-            // 'Origin': 'http://localhost:8080',
-            "Content-Type": "application/json",
-          },
-          body: requestBody,
-        });
-
-        if (!response.ok) {
-          throw Error(
-            "No sealed secrets in response from backend: " +
-            (await response.text())
-          );
-        } else {
-          this.sealedSecrets = await response.json();
-          this.displayCreateSealedSecretForm = false;
-        }
-      } catch (error) {
-        this.setErrorMessage(error);
-      }
-    },
-    renderSecrets: function (sealedSecrets) {
-      var dataEntries = sealedSecrets.map((element) =>
-        `    ${element["key"]}: ${element["value"]}`
-      );
-      return "\n" + dataEntries.join("\n");
-    },
-    copyRenderedSecrets: function () {
-      let sealedSecretElement = this.$refs.sealedSecret;
-      console.log("sealedSecretElement: ", sealedSecretElement);
-      let sealedSecretContent = sealedSecretElement.innerText.trim();
-      navigator.clipboard.writeText(sealedSecretContent);
-    },
-    copySealedSecret: function (counter) {
-      navigator.clipboard.writeText(this.sealedSecrets[counter].value);
-    },
-    removeSecret: function (counter) {
-      if (this.secrets.length > 1) {
-        this.secrets.splice(counter, 1);
-      } else {
-        this.secrets[0].key = "";
-        this.secrets[0].value = "";
-        this.secrets[0].file = [];
-      }
-    },
-  },
-};
+function removeSecret(counter) {
+  if (secrets.value.length > 1) {
+    secrets.value.splice(counter, 1);
+  } else {
+    secrets.value[0] = { key: "", value: "", file: [] }
+  }
+}
 </script>
+
 <style>
 .helper-info {
   margin-bottom: 10px;
