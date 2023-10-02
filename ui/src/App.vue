@@ -22,23 +22,11 @@
   </v-app>
 </template>
 
-<script>
+<script setup>
 import Secrets from './components/Secrets.vue'
 import Logo from './components/Logo.vue'
 import DarkMode from './components/DarkMode.vue'
 import AppConfig from './components/AppConfig.vue'
-
-export default {
-  name: 'App',
-  components: {
-    Secrets,
-    Logo,
-    DarkMode,
-    AppConfig
-  }
-}
 </script>
 
-<style scoped>
-
-</style>
+<style scoped></style>
