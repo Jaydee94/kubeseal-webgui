@@ -12,21 +12,6 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  show_event_data:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Show context info
-        env:
-          CONTEXT: ${{ toJson(github.event) }}
-          BASE_REF: ${{ github.event.pull_request.base.repo.full_name }}
-          HEAD_REF: ${{ github.event.pull_request.head.repo.full_name }}
-          EVENT_NAME: ${{ github.event_name }}
-        run: |
-          echo "   event: $EVENT_NAME"
-          echo "base_ref: $BASE_REF"
-          echo "head_ref: $HEAD_REF"
-          echo
-          echo "${CONTEXT}"
   build-and-push-image:
     runs-on: ubuntu-latest
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
