@@ -19,11 +19,11 @@ jobs:
         env:
           CONTEXT: ${{ toJson(github.event) }}
         run: |
-        echo "   event: ${{ github.event_name }}"
-        echo "base_ref: ${{ github.event.base_ref.repo.full_name }}"
-        echo "     ref: ${{ github.event.ref.repo.full_name }}"
-        echo
-        echo "${CONTEXT}"
+          echo "   event: ${{ github.event_name }}"
+          echo "base_ref: ${{ github.event.base_ref.repo.full_name }}"
+          echo "     ref: ${{ github.event.ref.repo.full_name }}"
+          echo
+          echo "${CONTEXT}"
   build-and-push-image:
     runs-on: ubuntu-latest
     if: ${{ github.event_name != 'pull_request' || github.event.ref.repo.full_name == github.event.base_ref.repo.full_name }}
