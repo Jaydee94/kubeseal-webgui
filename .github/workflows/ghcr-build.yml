@@ -29,6 +29,10 @@ jobs:
       packages: write
 
     steps:
+      - env:
+          EVENT_CONTEXT: ${{ toJson(github.event) }}
+        run: |
+          echo $EVENT_CONTEXT
       - name: Checkout repository
         uses: actions/checkout@v4
 
