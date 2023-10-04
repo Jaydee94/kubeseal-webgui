@@ -14,7 +14,7 @@ env:
 jobs:
   build-and-push-image:
     runs-on: ubuntu-latest
-    if: ${{ !github.event.pull_request || (github.event.ref.repo.full_name == github.repository) }}
+    if: ${{ !github.event.pull_request || github.event.ref.repo.full_name == github.event.base_ref.repo.full_name }}
     strategy:
         fail-fast: false
         matrix:
@@ -30,10 +30,6 @@ jobs:
       packages: write
 
     steps:
-      - env:
-          EVENT_CONTEXT: ${{ toJson(github.event) }}
-        run: |
-          echo $EVENT_CONTEXT
       - name: Checkout repository
         uses: actions/checkout@v4
 
