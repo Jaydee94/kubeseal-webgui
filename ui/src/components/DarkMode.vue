@@ -32,8 +32,8 @@ const theme = useTheme()
 const darkMode = ref(isDarkModeEnabled(theme))
 
 function toggleDarkMode() {
-  this.theme.global.name.value = this.darkMode.value ? 'dark' : 'light'
-  localStorage.useDarkTheme = this.theme.global.current.value.dark
+  theme.global.name.value = darkMode.value ? 'dark' : 'light'
+  localStorage.useDarkTheme = theme.global.current.value.dark
 }
 </script>
 

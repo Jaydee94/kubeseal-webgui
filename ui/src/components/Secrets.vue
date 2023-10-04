@@ -1,56 +1,17 @@
 <template>
   <div class="secrets-component">
-    <h3
+    <v-container
       v-if="displayName"
+      class="text-subtitle-1"
       align="center"
     >
       {{ displayName }}
-    </h3>
+    </v-container>
     <div
       v-if="displayCreateSealedSecretForm"
       class="secrets-form"
     >
-      <div
-        class="helper-info"
-        align="right"
-      >
-        <v-btn
-          id="help"
-          variant="text"
-          icon="mdi-help"
-          class="ma-2"
-        >
-          <v-icon>mdi-help</v-icon>
-          <v-tooltip activator="parent">
-            <div>Usage</div>
-            <div align="left">
-              The entered values will be encrypted using the
-              <b>kubeseal</b> cli.
-            </div>
-            <div align="left">
-              Kubeseal encrypts a plaintext secret using a configured public
-              key.
-            </div>
-            <br>
-            <div align="left">
-              You can encrypt multiple <b>&lt;key&gt; &lt;value&gt;</b> pairs
-              inside one
-            </div>
-            <div align="left">
-              Kubernetes secret object.
-            </div>
-            <br>
-            <div align="left">
-              For more information about <b>sealed-secrets</b>
-              <a
-                target="_blank"
-                href="https://github.com/bitnami-labs/sealed-secrets"
-              >click here</a>.
-            </div>
-          </v-tooltip>
-        </v-btn>
-      </div>
-
+      <br>
       <v-form>
         <v-row>
           <v-col
@@ -64,7 +25,10 @@
               label="Namespace name"
               :disabled="['strict', 'namespace-wide'].indexOf(scope) === -1"
             />
-            <v-container id="password-help-block">
+            <v-container
+              id="password-help-block"
+              class="text-caption"
+            >
               Select the target namespace where the sealed secret will be
               deployed.
             </v-container>
@@ -79,10 +43,14 @@
               v-model="secretName"
               label="Secret name"
               trim
+              clearable
               :rules="rules.validDnsSubdomain"
               :disabled="['strict'].indexOf(scope) === -1"
             />
-            <v-container id="password-help-block">
+            <v-container
+              id="password-help-block"
+              class="text-caption"
+            >
               Specify name of the secret.
               <br>
               <i>The secret name must be of type:
@@ -103,7 +71,10 @@
               :plain="true"
               label="Scope"
             />
-            <v-container id="scope-help-block">
+            <v-container
+              id="scope-help-block"
+              class="text-caption"
+            >
               Specify scope of the secret.
               <br>
               <i>
@@ -156,6 +127,7 @@
               v-model="secret.file"
               show-size
               dense
+              clearable
               label="Upload File"
               prepend-icon="mdi-file-upload-outline"
               :rules="rules.fileSize"
@@ -176,7 +148,10 @@
         </v-row>
         <v-row>
           <v-col>
-            <v-container block>
+            <v-container
+              class="text-caption"
+              block
+            >
               Specify sensitive value and corresponding key of the secret.
               <br>
               <i>The key must be of type:
