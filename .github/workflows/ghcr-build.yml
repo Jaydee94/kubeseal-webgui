@@ -18,15 +18,18 @@ jobs:
       - name: Show context info
         env:
           CONTEXT: ${{ toJson(github.event) }}
+          BASE_REF: ${{ github.event.pull_request.base.repo.full_name }}
+          HEAD_REF: ${{ github.event.pull_request.head.repo.full_name }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
-          echo "   event: ${{ github.event_name }}"
-          echo "base_ref: ${{ github.event.base_ref.repo.full_name }}"
-          echo "     ref: ${{ github.event.ref.repo.full_name }}"
+          echo "   event: $EVENT_NAME"
+          echo "base_ref: $BASE_REF"
+          echo "head_ref: $HEAD_REF"
           echo
           echo "${CONTEXT}"
   build-and-push-image:
     runs-on: ubuntu-latest
-    if: ${{ github.event_name != 'pull_request' || github.event.ref.repo.full_name == github.event.base_ref.repo.full_name }}
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     strategy:
         fail-fast: false
         matrix:
