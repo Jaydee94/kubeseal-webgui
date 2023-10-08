@@ -23,10 +23,10 @@ jobs:
             include:
                 - context: .
                   dockerfile: Dockerfile.api
-                  image: ghcr.io/${{ github.repository }}-api
+                  image: ghcr.io/${{ github.repository }}/api
                 - context: .
                   dockerfile: Dockerfile.ui
-                  image: ghcr.io/${{ github.repository }}-ui
+                  image: ghcr.io/${{ github.repository }}/ui
     permissions:
       contents: read
       packages: write
