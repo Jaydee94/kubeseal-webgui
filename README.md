@@ -114,5 +114,5 @@ The api container will fetch the certificate from the sealed-secrets controller 
 
 ### Local UI testing
 
-* `yarn serve` to compile and start HTTP server on `port 8080` with hot-reloads for development
-* `npm run serve` to compile and start HTTP server on `port 8080` with hot-reloads for development
+* `yarn dev` to compile and start HTTP server on `port 8080` with hot-reloads for development
+* `npm run dev` to compile and start HTTP server on `port 8080` with hot-reloads for development

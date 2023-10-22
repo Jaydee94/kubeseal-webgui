@@ -1,24 +1,29 @@
 # kubeseal-webgui
 
 ## Project setup
-```
-yarn install
+
+```console
+npm install
 ```
 
 ### Compiles and hot-reloads for development
-```
-yarn serve
+
+```console
+npm run dev
 ```
 
 ### Compiles and minifies for production
-```
-yarn build
+
+```console
+npm run build
 ```
 
 ### Lints and fixes files
-```
-yarn lint
+
+```console
+npm run lint
 ```
 
 ### Customize configuration
-See [Configuration Reference](https://cli.vuejs.org/config/).
+
+See [Configuration Reference](https://vitejs.dev/config/).

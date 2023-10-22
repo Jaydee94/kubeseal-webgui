@@ -8,7 +8,7 @@
       <img
         id="logo-img"
         alt="Kubeseal-Webgui Logo"
-        :src="require('@/assets/logo.png')"
+        src="@/assets/logo.png"
       >
       <span class="header-first">kubeseal</span>
       <span class="header-second">-webgui</span>
