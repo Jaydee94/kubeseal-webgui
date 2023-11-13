@@ -1,4 +1,4 @@
-FROM node:lts AS ui-build-stage
+FROM node:lts-slim AS ui-build-stage
 COPY ui/ /ui
 WORKDIR /ui
 RUN npm install --legacy-peer-deps && npm run build
