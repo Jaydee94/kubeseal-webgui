@@ -54,6 +54,7 @@ helm template \
     --set resources=null \
     --set sealedSecrets.autoFetchCert=true \
     --set ui.image.tag=snapshot \
+    --set securityContext.runAsUser=1042 \
     chart/kubeseal-webgui \
     | kubectl apply -f - --namespace kubeseal-webgui
 
