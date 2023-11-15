@@ -1,6 +1,6 @@
 FROM debian:latest as deps
 
-ARG KUBESEAL_VERSION=0.24.3
+ARG KUBESEAL_VERSION=0.24.4
 ARG KUBESEAL_ARCH=amd64
 ENV KUBESEAL_BINARY=/deps/kubeseal \
     PRIVATE_KEY=/dev/null \
@@ -47,6 +47,8 @@ RUN python3 -m venv "${APP_PATH}" && \
     pip install --no-cache-dir 'uvicorn' 'wheel' 'setuptools' && \
     pip install --no-cache-dir src/ && \
     install --mode=755 --group=0 ./src/bin/* "${APP_PATH}/bin/"
+
+RUN chmod +X "${APP_PATH}"
 
 ENV PATH="${PATH}:${APP_PATH}/bin:${APP_PATH}/.local/bin"
 
