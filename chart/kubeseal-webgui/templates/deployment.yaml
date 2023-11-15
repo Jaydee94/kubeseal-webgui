@@ -16,6 +16,10 @@ spec:
       annotations:
         {{ toYaml .Values.annotations | nindent 8 }}
     spec:
+      {{- with .Values.securityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       {{- if .Values.serviceaccount.create }}
       serviceAccountName: kubeseal-webgui
       {{- end }}

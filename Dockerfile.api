@@ -21,11 +21,13 @@ FROM python:3.10-slim
 
 USER root
 
-RUN adduser --gid 0 --home /kubeseal-webgui --disabled-password app
-
-ARG KUBESEAL_VERSION=${KUBESEAL_VERSION}
 ARG APP_PATH="/kubeseal-webgui"
 ARG APP_PORT=5000
+ARG KUBESEAL_VERSION=${KUBESEAL_VERSION}
+
+RUN adduser --gid 0 --home "${APP_PATH}" --disabled-password app \
+    && chmod 0750 "${APP_PATH}"
+
 
 USER app
 
