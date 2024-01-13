@@ -1,6 +1,6 @@
 FROM debian:latest as deps
 
-ARG KUBESEAL_VERSION=0.24.4
+ARG KUBESEAL_VERSION=0.24.5
 ARG KUBESEAL_ARCH=amd64
 ENV KUBESEAL_BINARY=/deps/kubeseal \
     PRIVATE_KEY=/dev/null \
