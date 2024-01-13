@@ -28,6 +28,9 @@ ARG KUBESEAL_VERSION=${KUBESEAL_VERSION}
 RUN adduser --gid 0 --home "${APP_PATH}" --disabled-password app \
     && chmod 0750 "${APP_PATH}"
 
+RUN apt-get update && \
+    apt-get upgrade -y
+
 
 USER app
 
@@ -45,8 +48,8 @@ COPY api src/
 
 RUN python3 -m venv "${APP_PATH}" && \
     . "${APP_PATH}/bin/activate" && \
-    pip install --upgrade pip && \
     pip install --no-cache-dir 'uvicorn' 'wheel' 'setuptools' && \
+    pip install --upgrade 'pip' 'uvicorn' 'wheel' 'setuptools' && \
     pip install --no-cache-dir src/ && \
     install --mode=755 --group=0 ./src/bin/* "${APP_PATH}/bin/"
 
