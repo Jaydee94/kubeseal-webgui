@@ -1,6 +1,6 @@
 FROM debian:latest as deps
 
-ARG KUBESEAL_VERSION=0.24.4
+ARG KUBESEAL_VERSION=0.24.5
 ARG KUBESEAL_ARCH=amd64
 ENV KUBESEAL_BINARY=/deps/kubeseal \
     PRIVATE_KEY=/dev/null \
@@ -28,6 +28,10 @@ ARG KUBESEAL_VERSION=${KUBESEAL_VERSION}
 RUN adduser --gid 0 --home "${APP_PATH}" --disabled-password app \
     && chmod 0750 "${APP_PATH}"
 
+RUN apt-get update && \
+    apt-get upgrade -y && \
+    apt-get clean
+
 
 USER app
 
@@ -45,8 +49,8 @@ COPY api src/
 
 RUN python3 -m venv "${APP_PATH}" && \
     . "${APP_PATH}/bin/activate" && \
-    pip install --upgrade pip && \
     pip install --no-cache-dir 'uvicorn' 'wheel' 'setuptools' && \
+    pip install --no-cache-dir --upgrade 'pip' 'uvicorn' 'wheel' 'setuptools' && \
     pip install --no-cache-dir src/ && \
     install --mode=755 --group=0 ./src/bin/* "${APP_PATH}/bin/"
 
