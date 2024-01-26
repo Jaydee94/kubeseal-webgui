@@ -29,7 +29,7 @@ RUN adduser --gid 0 --home "${APP_PATH}" --disabled-password app \
     && chmod 0750 "${APP_PATH}"
 
 RUN apt-get update && \
-    apt-get upgrade -y \
+    apt-get upgrade -y && \
     apt-get clean
 
 
