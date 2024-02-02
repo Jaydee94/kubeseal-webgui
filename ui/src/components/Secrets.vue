@@ -13,6 +13,21 @@
     >
       <br>
       <v-form>
+        <v-row justify="center" v-if="Object.keys(environments).length > 0">
+            <v-col
+            cols="12"
+            sm="6"
+            md="4"
+            >
+              <v-select
+              v-model="selectedEnvironment"
+              :items="Object.keys(environments)"
+              :select-size="1"
+              :plain="true"
+              label="Environments"
+              />
+          </v-col>
+        </v-row>
         <v-row>
           <v-col
             cols="12"
@@ -172,7 +187,7 @@
               border="start"
               type="warning"
               icon="mdi-flash"
-              title="Error while encoding sensitive data"
+              title="An Error occured:"
             >
               <v-container>
                 <p>Please contact your administrator and try again later.</p>
@@ -302,8 +317,20 @@ spec:
 </template>
 
 <script setup>
-import { ref, computed, onBeforeMount, onMounted } from 'vue'
+import { ref, computed, onBeforeMount, onMounted, watch } from 'vue'
 import { Base64 } from "js-base64";
+
+let config;
+
+onBeforeMount(async () => {
+  config = await fetchConfig();
+  await fetchNamespaces();
+  await fetchDisplayName(config);
+  await fetchEnvironments(config);
+
+  // Assuming you have a default environment or set the selectedEnvironment accordingly
+  selectedEnvironment.value = Object.keys(environments?.value)[0];
+})
 
 const namespaces = ref([])
 const scopes = ref(["strict", "cluster-wide", "namespace-wide"])
@@ -318,12 +345,21 @@ const secrets = ref([{ key: "", value: "", file: [] }])
 const sealedSecrets = ref([])
 const sealedSecret = ref()
 const clipboardAvailable = ref(false)
+const selectedEnvironment = ref("")
+const environments = ref({})
 
-onBeforeMount(async () => {
-  const config = await fetchConfig();
-  await fetchNamespaces(config);
-  await fetchDisplayName(config);
-})
+const resetErrorState = () => {
+  setErrorMessage("");
+  hasErrorMessage.value = false;
+};
+
+watch(selectedEnvironment, async (newSelectedEnvironment) => {
+  if (newSelectedEnvironment) {
+    resetErrorState();
+    await fetchNamespaces();
+  }
+});
+
 
 onMounted(() => {
   if (navigator && navigator.clipboard) {
@@ -413,6 +449,12 @@ const sealedSecretsAnnotations = computed(() => {
   return `{ sealedsecrets.bitnami.com/${scope.value}: "true" }`;
 })
 
+const selectedApiUrl = computed(() => {
+  return environments.value
+    ? environments.value[selectedEnvironment.value]
+    : config?.api_url;
+});
+
 function setErrorMessage(newErrorMessage) {
   errorMessage.value = newErrorMessage;
   hasErrorMessage.value = !!newErrorMessage;
@@ -420,16 +462,23 @@ function setErrorMessage(newErrorMessage) {
 
 async function fetchConfig() {
   try {
-    const response = await fetch("/config.json")
+    const response = await fetch("/config.json");
+    if (!response.ok) {
+      throw Error(`Failed to fetch config.json: ${response.statusText}`);
+    }
     return await response.json();
   } catch (error) {
-    setErrorMessage(error)
+    setErrorMessage(error.message);
+    return {};
   }
 }
 
-async function fetchNamespaces(config) {
+async function fetchNamespaces() {
   try {
-    const response = await fetch(`${config.api_url}/namespaces`);
+    // Clear the namespaces array before making a new request
+    namespaces.value = [];
+
+    const response = await fetch(`${selectedApiUrl.value}/namespaces`);
     namespaces.value = await response.json();
   } catch (error) {
     setErrorMessage(error);
@@ -438,6 +487,20 @@ async function fetchNamespaces(config) {
 
 async function fetchDisplayName(config) {
   displayName.value = config.display_name;
+}
+
+async function fetchEnvironments(config) {
+  try {
+    // Initialize environments with the default API URL
+    environments.value = { default: config.api_url };
+
+    // Check if additional environments are defined in config
+    if (config.environments) {
+      environments.value = { ...environments.value, ...config.environments };
+    }
+  } catch (error) {
+    setErrorMessage(error);
+  }
 }
 
 async function fetchEncodedSecrets() {
@@ -468,9 +531,7 @@ async function fetchEncodedSecrets() {
 
     const requestBody = JSON.stringify(requestObject, null, "\t");
 
-    const config = await fetchConfig()
-
-    const response = await fetch(`${config.api_url}/secrets`, {
+    const response = await fetch(`${selectedApiUrl.value}/secrets`, {
       method: "POST",
       headers: {
         // 'Origin': 'http://localhost:8080',
@@ -487,6 +548,7 @@ async function fetchEncodedSecrets() {
     } else {
       sealedSecrets.value = await response.json();
       displayCreateSealedSecretForm.value = false;
+      setErrorMessage("");
     }
   } catch (error) {
     setErrorMessage(error);
