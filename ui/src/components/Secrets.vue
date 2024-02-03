@@ -27,7 +27,7 @@
         />
       </v-col>
     </v-row>
-      <br>
+    <v-divider class="mt-2 mb-6"></v-divider>
       <v-form>
         <v-row>
           <v-col
@@ -161,38 +161,38 @@
         <v-row>
           <v-col>
             <v-btn
-              prepend-icon="mdi-plus-box"
-              color="accent"
-              @click="secrets.push({ key: '', value: '', file: [] })"
+            prepend-icon="mdi-plus-box"
+            color="accent"
+            @click="secrets.push({ key: '', value: '', file: [] })"
             >
-              Add key-value pair
-            </v-btn>
-          </v-col>
-        </v-row>
-        <v-row>
-          <v-col>
-            <v-container
-              class="text-caption"
-              block
-            >
-              Specify sensitive value and corresponding key of the secret.
-              <br>
-              <i>The key must be of type:
-                <a
-                  target="_blank"
-                  href="https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names"
-                >DNS Subdomain</a></i>
-            </v-container>
-          </v-col>
-        </v-row>
-        <v-row>
-          <v-col>
-            <v-alert
-              v-model="hasErrorMessage"
-              closable
-              prominent
-              border="start"
-              type="warning"
+            Add key-value pair
+          </v-btn>
+        </v-col>
+      </v-row>
+      <v-row>
+        <v-col>
+          <v-container
+          class="text-caption"
+          block
+          >
+          Specify sensitive value and corresponding key of the secret.
+          <br>
+          <i>The key must be of type:
+            <a
+            target="_blank"
+            href="https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names"
+            >DNS Subdomain</a></i>
+          </v-container>
+        </v-col>
+      </v-row>
+      <v-row>
+        <v-col>
+          <v-alert
+          v-model="hasErrorMessage"
+          closable
+          prominent
+          border="start"
+          type="warning"
               icon="mdi-flash"
               title="An Error occured:"
             >
@@ -208,8 +208,8 @@
         </v-row>
         <v-row justify="center">
           <v-col
-            cols="12"
-            sm="6"
+            cols="6"
+            sm="3"
           >
             <v-btn
               block
@@ -221,6 +221,13 @@
             >
               Encrypt
             </v-btn>
+            <v-container
+              v-if="isEncryptButtonDisabled && !hasErrorMessage"
+              class="text-caption mt-2"
+              align="center"
+            >
+              Please fill out the form before encrypting.
+            </v-container>
           </v-col>
         </v-row>
       </v-form>
@@ -305,15 +312,17 @@ spec:
           </template>
         </v-card>
       </v-row>
-      <v-row>
-        <v-col class="d-flex">
+      <v-row justify="center">
+        <v-col 
+        class="d-flex"
+        cols="7"
+        sm="4">
           <v-btn
             block
             variant="tonal"
             class="flex-fill"
-            @click="
-              displayCreateSealedSecretForm = !displayCreateSealedSecretForm
-              "
+            prepend-icon="mdi-autorenew"
+            @click="resetForm"
           >
             Encrypt more secrets
           </v-btn>
@@ -358,6 +367,17 @@ const environments = ref({})
 const resetErrorState = () => {
   setErrorMessage("");
   hasErrorMessage.value = false;
+};
+
+const resetForm = () => {
+  displayCreateSealedSecretForm.value = true;
+  secretName.value = "";
+  namespaceName.value = "";
+  scope.value = "strict";
+  secrets.value = [{ key: "", value: "", file: [] }];
+  sealedSecrets.value = [];
+  hasErrorMessage.value = false;
+  errorMessage.value = "";
 };
 
 watch(selectedEnvironment, async (newSelectedEnvironment) => {
@@ -466,6 +486,14 @@ function setErrorMessage(newErrorMessage) {
   errorMessage.value = newErrorMessage;
   hasErrorMessage.value = !!newErrorMessage;
 }
+
+const isEncryptButtonDisabled = computed(() => {
+  return (
+    !secretName.value ||
+    !namespaceName.value ||
+    secrets.value.some(secret => !secret.key || (!secret.value && !secret.file.length))
+  );
+});
 
 async function fetchConfig() {
   try {
