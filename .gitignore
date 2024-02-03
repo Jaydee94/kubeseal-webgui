@@ -12,3 +12,4 @@ test.yaml
 *.pyc
 .coverage
 .venv/
+.vscode/

@@ -8,10 +8,12 @@ binary = environ.get("KUBESEAL_BINARY", "/bin/false")
 mock = environ.get("MOCK_ENABLED", "False").lower() == "true"
 autofetch = environ.get("KUBESEAL_AUTOFETCH", "false")
 kubeseal_cert = environ.get("KUBESEAL_CERT", "/kubeseal-webgui/cert/kubeseal-cert.pem")
+origin_url = environ.get("ORIGIN_URL", "")
 
 
 class AppSettings(BaseSettings):
     kubeseal_version: str
+    origin_url: str = origin_url
     kubeseal_binary: str = binary
     kubeseal_cert: str = environ.get("KUBESEAL_CERT", "/dev/null")
     mock_enabled: bool = mock
