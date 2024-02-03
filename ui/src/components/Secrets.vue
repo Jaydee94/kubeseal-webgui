@@ -23,7 +23,7 @@
         :select-size="1"
         :plain="true"
         label="Select Environment"
-        variant="solo-filled"
+        variant="outlined"
         />
       </v-col>
     </v-row>
@@ -40,6 +40,7 @@
               :items="namespaces"
               label="Namespace name"
               :disabled="['strict', 'namespace-wide'].indexOf(scope) === -1"
+              variant="solo-inverted"
             />
             <v-container
               id="password-help-block"
@@ -60,6 +61,7 @@
               label="Secret name"
               trim
               clearable
+              variant="solo-inverted"
               :rules="rules.validDnsSubdomain"
               :disabled="['strict'].indexOf(scope) === -1"
             />
@@ -86,6 +88,7 @@
               :select-size="1"
               :plain="true"
               label="Scope"
+              variant="solo-inverted"
             />
             <v-container
               id="scope-help-block"
@@ -116,6 +119,7 @@
               rows="1"
               clearable
               prepend-icon="mdi-delete"
+              variant="solo-inverted"
               :rules="rules.validSecretKey"
               @click:prepend="removeSecret(counter)"
             />
@@ -131,6 +135,7 @@
               auto-grow
               clearable
               label="Secret value"
+              variant="solo-inverted"
               :disabled="hasFile[counter]"
             />
           </v-col>
@@ -146,6 +151,7 @@
               clearable
               label="Upload File"
               prepend-icon="mdi-file-upload-outline"
+              variant="outlined"
               :rules="rules.fileSize"
               :disabled="hasValue[counter]"
               :multiple="false"
