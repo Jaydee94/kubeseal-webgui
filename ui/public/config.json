@@ -2,5 +2,9 @@
   "api_url": "http://localhost:5000",
   "display_name": "Test",
   "kubeseal_webgui_ui_version": "dev",
-  "kubeseal_webgui_api_version": "dev"
+  "kubeseal_webgui_api_version": "dev",
+  "environments": {
+    "cluster-a": "http://localhost:5000",
+    "cluster-b": "http://localhost:5001"
+  }
 }
