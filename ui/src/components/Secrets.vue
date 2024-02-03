@@ -1,5 +1,9 @@
 <template>
   <div class="secrets-component">
+    <div
+      v-if="displayCreateSealedSecretForm"
+      class="secrets-form"
+    >
     <v-container
       v-if="displayName"
       class="text-subtitle-1"
@@ -7,27 +11,24 @@
     >
       {{ displayName }}
     </v-container>
-    <div
-      v-if="displayCreateSealedSecretForm"
-      class="secrets-form"
-    >
+    <v-row justify="end">
+      <v-col
+      cols="3"
+      sm="3"
+      md="3"
+      >
+        <v-select
+        v-model="selectedEnvironment"
+        :items="Object.keys(environments)"
+        :select-size="1"
+        :plain="true"
+        label="Select Environment"
+        variant="solo-filled"
+        />
+      </v-col>
+    </v-row>
       <br>
       <v-form>
-        <v-row justify="center" v-if="Object.keys(environments).length > 0">
-            <v-col
-            cols="12"
-            sm="6"
-            md="4"
-            >
-              <v-select
-              v-model="selectedEnvironment"
-              :items="Object.keys(environments)"
-              :select-size="1"
-              :plain="true"
-              label="Environments"
-              />
-          </v-col>
-        </v-row>
         <v-row>
           <v-col
             cols="12"
@@ -479,9 +480,10 @@ async function fetchNamespaces() {
     namespaces.value = [];
 
     const response = await fetch(`${selectedApiUrl.value}/namespaces`);
+    
     namespaces.value = await response.json();
   } catch (error) {
-    setErrorMessage(error);
+    setErrorMessage(`Failed to fetch namespaces. Error Message: ${error.message}.`);
   }
 }
 
@@ -491,12 +493,12 @@ async function fetchDisplayName(config) {
 
 async function fetchEnvironments(config) {
   try {
-    // Initialize environments with the default API URL
-    environments.value = { default: config.api_url };
-
-    // Check if additional environments are defined in config
-    if (config.environments) {
-      environments.value = { ...environments.value, ...config.environments };
+    if (!config.environments || Object.keys(config.environments).length === 0) {
+      // If environments are not defined or empty, use the default API URL
+      environments.value = { default: config.api_url };
+    } else {
+      // If environments are defined in config.json, use them
+      environments.value = config.environments;
     }
   } catch (error) {
     setErrorMessage(error);
