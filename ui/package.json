@@ -11,21 +11,21 @@
   },
   "dependencies": {
     "@fontsource/roboto": "*",
-    "core-js": "^3.29.0",
-    "js-base64": "^3.7.5",
-    "vue": "^3.3.4",
-    "vuetify": "^3.1.8"
+    "core-js": "^3.35.1",
+    "js-base64": "^3.7.6",
+    "vue": "^3.4.15",
+    "vuetify": "^3.5.2"
   },
   "devDependencies": {
-    "@rushstack/eslint-patch": "^1.3.3",
-    "@vitejs/plugin-vue": "^4.4.0",
+    "@rushstack/eslint-patch": "^1.7.2",
+    "@vitejs/plugin-vue": "^4.6.2",
     "@vue/eslint-config-prettier": "^8.0.0",
-    "eslint": "^8.49.0",
-    "eslint-plugin-vue": "^9.17.0",
-    "prettier": "^3.0.3",
-    "vite": "^4.4.11",
-    "@mdi/font": "^7.1.96",
-    "vite-plugin-vuetify": "^1.0.0"
+    "eslint": "^8.56.0",
+    "eslint-plugin-vue": "^9.21.1",
+    "prettier": "^3.2.4",
+    "vite": "^4.5.2",
+    "@mdi/font": "^7.4.47",
+    "vite-plugin-vuetify": "^1.0.2"
   },
   "browserslist": [
     "> 1%",
