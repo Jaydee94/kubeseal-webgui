@@ -25,7 +25,7 @@ fullnameOverride: ""
 # Optionally setup a display name for your kubeseal-webgui instance.
 displayName: ""
 
-# Set this value to specify a ServiceAccount who is allowed to list namespaces.
+# Set this value to specify a ServiceAccount that is allowed to list namespaces.
 # Leave empty to use the ServiceAccount shipped with this chart.
 # If you use a custom ServiceAccount it must be able to list namespaces in your cluster.
 customServiceAccountName: ""
