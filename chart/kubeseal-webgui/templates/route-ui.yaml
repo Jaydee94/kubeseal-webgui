@@ -20,8 +20,10 @@ spec:
     weight: 100
   port:
     targetPort: ui
+  {{- if .Values.route.tls.enabled }}
   tls:
     termination: {{ .Values.route.tls.termination }}
     insecureEdgeTerminationPolicy: {{ .Values.route.tls.insecureEdgeTerminationPolicy }}
+  {{- end }}
   wildcardPolicy: None
 {{- end }}

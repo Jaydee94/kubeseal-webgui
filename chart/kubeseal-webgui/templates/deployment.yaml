@@ -20,9 +20,7 @@ spec:
       securityContext:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- if .Values.serviceaccount.create }}
-      serviceAccountName: kubeseal-webgui
-      {{- end }}
+      serviceAccountName: {{ .Values.customServiceAccountName | default "kubeseal-webgui" | quote }}
       {{- if .Values.tolerations }}
       tolerations:
       {{ toYaml .Values.tolerations | nindent 8 }}

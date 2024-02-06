@@ -1,4 +1,4 @@
-{{- if .Values.serviceaccount.create }}
+{{- if not .Values.customServiceAccountName }}
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
