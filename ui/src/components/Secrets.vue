@@ -476,25 +476,21 @@ const sealedSecretsAnnotations = computed(() => {
   return `{ sealedsecrets.bitnami.com/${scope.value}: "true" }`;
 })
 
-const selectedApiUrl = computed(() => {
-  return environments.value
-    ? environments.value[selectedEnvironment.value]
-    : config?.api_url;
-});
+const selectedApiUrl = computed(() => environments?.value[selectedEnvironment.value] || config?.api_url);
+
 
 function setErrorMessage(newErrorMessage) {
   errorMessage.value = newErrorMessage;
   hasErrorMessage.value = !!newErrorMessage;
 }
 
-const isEncryptButtonDisabled = computed(() => {
+const isEncryptButtonEnabled = computed(() => {
   return (
-    !secretName.value ||
-    !namespaceName.value ||
-    secrets.value.some(secret => !secret.key || (!secret.value && !secret.file.length))
+    secretName.value &&
+    namespaceName.value &&
+    secrets.value.every(secret => secret.key && (secret.value || secret.file.length))
   );
 });
-
 async function fetchConfig() {
   try {
     const response = await fetch("/config.json");
@@ -510,13 +506,12 @@ async function fetchConfig() {
 
 async function fetchNamespaces() {
   try {
-    // Clear the namespaces array before making a new request
-    namespaces.value = [];
-
+    
     const response = await fetch(`${selectedApiUrl.value}/namespaces`);
     
     namespaces.value = await response.json();
   } catch (error) {
+    namespaces.value = [];
     setErrorMessage(`Failed to fetch namespaces. Error Message: ${error.message}.`);
   }
 }
