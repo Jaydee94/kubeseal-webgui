@@ -194,7 +194,7 @@
           border="start"
           type="warning"
               icon="mdi-flash"
-              title="An Error occured:"
+              title="An Error occurred:"
             >
               <v-container>
                 <p>Please contact your administrator and try again later.</p>
