@@ -20,17 +20,9 @@ async def lifespan(fastapi_app: fastapi.FastAPI):  # noqa: ANN201 skipcq: PYL-W0
 
 app = fastapi.FastAPI(lifespan=lifespan)
 
-origins = [
-    "http://localhost:8080",
-]
-if settings.origin_url:
-    origins.append(settings.origin_url)
-
-LOGGER.info(origins)
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=[settings.origin_url],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
