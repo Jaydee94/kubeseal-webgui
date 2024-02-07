@@ -5,7 +5,7 @@ metadata:
   name: kubeseal-webgui-list-namespaces
   labels:
     {{- include "kubeseal-webgui.labels" . | nindent 4 }}
-{{- with .Values.route.annotations }}
+{{- with .Values.annotations }}
   annotations:
 {{ toYaml . | indent 4 }}
 {{- end }}

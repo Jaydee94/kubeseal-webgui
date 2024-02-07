@@ -1,0 +1,29 @@
+
+{{- if .Values.api.route.enabled -}}
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ include "kubeseal-webgui.fullname" . }}-api
+  labels:
+    {{- include "kubeseal-webgui.labels" . | nindent 4 }}
+{{- with .Values.api.route.annotations }}
+  annotations:
+{{ toYaml . | indent 4 }}
+{{- end }}
+spec:
+{{- if .Values.api.route.hostname }}
+  host: {{ .Values.api.route.hostname | quote }}
+{{- end }}
+  to:
+    kind: Service
+    name: {{ include "kubeseal-webgui.fullname" . }}-api
+    weight: 100
+  port:
+    targetPort: api
+  {{- if .Values.api.route.tls.enabled }}
+  tls:
+    termination: {{ .Values.api.route.tls.termination }}
+    insecureEdgeTerminationPolicy: {{ .Values.api.route.tls.insecureEdgeTerminationPolicy }}
+  {{- end }}
+  wildcardPolicy: None
+{{- end }}
