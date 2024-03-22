@@ -11,13 +11,13 @@
   },
   "dependencies": {
     "@fontsource/roboto": "*",
-    "core-js": "^3.36.0",
+    "core-js": "^3.36.1",
     "js-base64": "^3.7.7",
     "vue": "^3.4.21",
-    "vuetify": "^3.5.9"
+    "vuetify": "^3.5.11"
   },
   "devDependencies": {
-    "@rushstack/eslint-patch": "^1.7.2",
+    "@rushstack/eslint-patch": "^1.8.0",
     "@vitejs/plugin-vue": "^4.6.2",
     "@vue/eslint-config-prettier": "^8.0.0",
     "eslint": "^8.57.0",
