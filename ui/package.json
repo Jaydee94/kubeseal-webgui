@@ -11,18 +11,18 @@
   },
   "dependencies": {
     "@fontsource/roboto": "*",
-    "core-js": "^3.35.1",
-    "js-base64": "^3.7.6",
-    "vue": "^3.4.15",
-    "vuetify": "^3.5.2"
+    "core-js": "^3.36.1",
+    "js-base64": "^3.7.7",
+    "vue": "^3.4.21",
+    "vuetify": "^3.5.11"
   },
   "devDependencies": {
-    "@rushstack/eslint-patch": "^1.7.2",
+    "@rushstack/eslint-patch": "^1.8.0",
     "@vitejs/plugin-vue": "^4.6.2",
     "@vue/eslint-config-prettier": "^8.0.0",
-    "eslint": "^8.56.0",
-    "eslint-plugin-vue": "^9.21.1",
-    "prettier": "^3.2.4",
+    "eslint": "^8.57.0",
+    "eslint-plugin-vue": "^9.23.0",
+    "prettier": "^3.2.5",
     "vite": "^4.5.2",
     "@mdi/font": "^7.4.47",
     "vite-plugin-vuetify": "^1.0.2"
