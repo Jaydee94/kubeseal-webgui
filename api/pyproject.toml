@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "kubeseal-webgui-api"
-version = "4.2.5"
+version = "4.2.6"
 description = "A python based backend for the kubeseal binary."
 authors = ["Jan Herber <janherber@gmx.de>"]
 license = "Apache-2.0"
@@ -12,7 +12,7 @@ python = "^3.10"
 Jinja2 = "^3.1.2"
 PyYAML = "^6.0"
 kubernetes = "^26.1.0"
-fastapi = "^0.103.2"
+fastapi = "^0.109.1"
 JSON-log-formatter = "^0.5.1"
 uvicorn = "^0.20.0"
 pydantic = "^2.0.0"
