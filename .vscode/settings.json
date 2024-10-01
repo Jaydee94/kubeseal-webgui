@@ -1,15 +1,3 @@
 {
-    "python.formatting.provider": "black",
-    "python.linting.enabled": true,
-    "python.linting.flake8Enabled": true,
-    "python.linting.flake8Args": [
-        "--max-line-length=88"
-    ],
     "editor.formatOnSave": true,
-    "python.linting.pydocstyleEnabled": true,
-    "python.sortImports.args": [
-        "--profile",
-        "black"
-    ],
-    "python.pythonPath": "/home/johannes/.local/share/virtualenvs/api-xC2vGvZU/bin/python3.8",
 }
