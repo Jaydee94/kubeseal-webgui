@@ -11,7 +11,7 @@ LOGGER = logging.getLogger("kubeseal-webgui")
 
 
 @asynccontextmanager
-async def lifespan(app: fastapi.FastAPI):  # noqa: ANN201
+async def lifespan(fastapi_app: fastapi.FastAPI):  # noqa: ANN201 skipcq: PYL-W0613
     LOGGER.info("Running startup tasks...")
     fetch_sealed_secrets_cert()
     LOGGER.info("Startup tasks complete.")
