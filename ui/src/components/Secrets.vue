@@ -132,6 +132,7 @@
               prepend-icon="mdi-file-upload-outline"
               :rules="rules.fileSize"
               :disabled="hasValue[counter]"
+              :multiple="false"
             />
           </v-col>
         </v-row>
@@ -380,16 +381,6 @@ const rules = {
   ]
 }
 
-const hasNoSecrets = computed(() => {
-  if (secrets.value.length > 1) {
-    return false
-  }
-  const secret = secrets.value[0]
-  return (
-    secret.key === "" && secret.value === "" && secret.file.length === 0
-  )
-})
-
 const missingSecretData = computed(() =>
   !secrets.value.every((e) =>
     e.key !== "" &&
@@ -419,7 +410,7 @@ const sealedSecretsAnnotations = computed(() => {
   if (scope.value === "strict") {
     return '{}';
   }
-  return `{ sealedsecrets.bitnami.com/${scope.value}: \"true\" }`;
+  return `{ sealedsecrets.bitnami.com/${scope.value}: "true" }`;
 })
 
 function setErrorMessage(newErrorMessage) {
@@ -463,7 +454,7 @@ async function fetchEncodedSecrets() {
               value: Base64.encode(element.value),
             };
           } else {
-            let fileContent = await readFileAsync(element.file[0]);
+            let fileContent = await readFileAsync(element.file);
             // we get a dataurl, so split the header from the data and use data, only
             fileContent = fileContent.split(",")[1];
             return {
