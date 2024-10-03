@@ -21,7 +21,7 @@ class AppSettings(BaseSettings):
 LOGGER = logging.getLogger("kubeseal-webgui")
 
 
-def fetch_sealed_secrets_cert():
+def fetch_sealed_secrets_cert() -> None:
     if mock or autofetch == "false":
         return
 

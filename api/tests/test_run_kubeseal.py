@@ -170,7 +170,7 @@ def test_run_kubeseal_with_invalid_secrets_list_but_otherwise_valid_inputs():
     with pytest.raises(
         ValueError, match="Input of cleartext_secrets was not a list of dicts."
     ):
-        run_kubeseal(["this-should-be-a-dict-object"], "secretNamespace", "secretName")
+        run_kubeseal(["this-should-be-a-dict-object"], "secretNamespace", "secretName")  # type: ignore
 
 
 @pytest.mark.container()
