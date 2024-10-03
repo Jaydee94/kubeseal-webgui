@@ -381,16 +381,6 @@ const rules = {
   ]
 }
 
-const hasNoSecrets = computed(() => {
-  if (secrets.value.length > 1) {
-    return false
-  }
-  const secret = secrets.value[0]
-  return (
-    secret.key === "" && secret.value === "" && secret.file.length === 0
-  )
-})
-
 const hasFile = computed(() =>
   secrets.value.map((e) => e.file.length > 0))
 const hasValue = computed(() =>
@@ -403,7 +393,7 @@ const sealedSecretsAnnotations = computed(() => {
   if (scope.value === "strict") {
     return '{}';
   }
-  return `{ sealedsecrets.bitnami.com/${scope.value}: \"true\" }`;
+  return `{ sealedsecrets.bitnami.com/${scope.value}: "true" }`;
 })
 
 function setErrorMessage(newErrorMessage) {
