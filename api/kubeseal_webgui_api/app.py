@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 import logging
 
 import fastapi
@@ -8,7 +9,16 @@ from .routers import config, kubernetes, kubeseal
 
 LOGGER = logging.getLogger("kubeseal-webgui")
 
-app = fastapi.FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: fastapi.FastAPI):  # noqa: ANN201
+    LOGGER.info("Running startup tasks...")
+    fetch_sealed_secrets_cert()
+    LOGGER.info("Startup tasks complete.")
+    yield
+
+
+app = fastapi.FastAPI(lifespan=lifespan)
 
 origins = [
     "http://localhost:8080",
@@ -33,13 +43,6 @@ app.include_router(
 )
 
 
-@app.on_event("startup")
-def startup_event():
-    LOGGER.info("Running startup tasks...")
-    fetch_sealed_secrets_cert()
-    LOGGER.info("Startup tasks complete.")
-
-
 @app.get("/")
-def root():
+def root() -> dict[str, str]:
     return {"status": "Kubeseal-WebGui API"}
