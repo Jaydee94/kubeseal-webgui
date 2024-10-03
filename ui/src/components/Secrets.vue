@@ -194,7 +194,7 @@
               variant="tonal"
               prepend-icon="mdi-lock"
               color="blue lighten-1"
-              :disabled="hasErrorMessage"
+              :disabled="notReadyToEncode"
               @click="fetchEncodedSecrets()"
             >
               Encrypt
@@ -380,6 +380,23 @@ const rules = {
       "File size should be less than 1 MB!",
   ]
 }
+
+const missingSecretData = computed(() =>
+  !secrets.value.every((e) =>
+    e.key !== "" &&
+    (
+      e.value !== "" ||
+      (e.file.length == 1 && e.file[0] instanceof Blob || e.file[0] instanceof File)
+    )
+  )
+)
+
+const notReadyToEncode = computed(() =>
+  hasErrorMessage.value ||
+  missingSecretData.value ||
+  scope.value === "strict" && (namespaceName.value === "" || secretName.value === "") ||
+  scope.value === "namespace-wide" && namespaceName.value === ""
+)
 
 const hasFile = computed(() =>
   secrets.value.map((e) => e.file.length > 0))
