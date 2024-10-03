@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, List, Optional
+from typing import List, Optional, Self
 
 from pydantic import BaseModel, ConfigDict, model_validator
 
@@ -25,14 +25,13 @@ class Secret(BaseModel):
     file: Optional[str] = None
 
     @model_validator(mode="after")
-    @classmethod
-    def value_or_file_set(cls, secret: Any):
-        file, value = secret.file, secret.value
+    def value_or_file_set(self: Self) -> Self:
+        file, value = self.file, self.value
         if file and value:
             raise AssertionError("Only one field of 'value' or 'file' can be used")
         if file is None and value is None:
             raise AssertionError("One field of 'value' or 'file' has to be set")
-        return secret
+        return self
 
 
 class Scope(str, Enum):
@@ -40,10 +39,10 @@ class Scope(str, Enum):
     CLUSTER_WIDE = "cluster-wide"
     NAMESPACE_WIDE = "namespace-wide"
 
-    def needs_name(self):
+    def needs_name(self: Self) -> bool:
         return self not in (Scope.CLUSTER_WIDE, Scope.NAMESPACE_WIDE)
 
-    def needs_namespace(self):
+    def needs_namespace(self: Self) -> bool:
         return self is not Scope.CLUSTER_WIDE
 
 

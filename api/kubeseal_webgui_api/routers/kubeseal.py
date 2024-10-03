@@ -32,7 +32,7 @@ def is_blank(value: Optional[str]) -> bool:
     return value is None or value.strip() == ""
 
 
-def verify(name: str, value: Optional[str], mandatory=True):
+def verify(name: str, value: Optional[str], mandatory: bool = True) -> None:
     if mandatory and is_blank(value):
         error_message = f"{name} was not given"
         LOGGER.error(error_message)
@@ -65,7 +65,9 @@ def run_kubeseal(
     ]
 
 
-def valid_k8s_name(value: str) -> str:
+def valid_k8s_name(value: str | None) -> str:
+    if not value:
+        raise ValueError("Invalid k8s name: Must not be empty or None")
     if re.match(r"^[a-z0-9]([a-z0-9_.-]{,251}[a-z0-9])?$", value):
         return value
     raise ValueError(f"Invalid k8s name: {value}")
@@ -112,54 +114,50 @@ def run_kubeseal_command(
 
 @overload
 def encrypt_value_or_file(
-    cleartext_secret_tuple,
-    secret_namespace,
-    secret_name,
+    cleartext_secret_tuple: Secret,
+    secret_namespace: str | None,
+    secret_name: str | None,
     cleartext_secret: str,
-    binary,
-    cert,
-    scope,
+    binary: str,
+    cert: str,
+    scope: Scope,
     encoding: str = "utf-8",
-) -> KeyValuePair:
-    ...
+) -> KeyValuePair: ...
 
 
 @overload
 def encrypt_value_or_file(
-    cleartext_secret_tuple,
-    secret_namespace,
-    secret_name,
+    cleartext_secret_tuple: Secret,
+    secret_namespace: str | None,
+    secret_name: str | None,
     cleartext_secret: bytearray,
-    binary,
-    cert,
-    scope,
+    binary: str,
+    cert: str,
+    scope: Scope,
     encoding: None = None,
-) -> KeyValuePair:
-    ...
+) -> KeyValuePair: ...
 
 
 def encrypt_value_or_file(
-    cleartext_secret_tuple,
-    secret_namespace,
-    secret_name,
+    cleartext_secret_tuple: Secret,
+    secret_namespace: str | None,
+    secret_name: str | None,
     cleartext_secret: Union[str, bytearray],
-    binary,
-    cert,
-    scope,
+    binary: str,
+    cert: str,
+    scope: Scope,
     encoding: Optional[str] = "utf-8",
 ) -> KeyValuePair:
     kubeseal_command_cmd = construct_kubeseal_cmd(
         secret_namespace, secret_name, binary, cert, scope
     )
     try:
-        kubeseal_subprocess = (
-            subprocess.Popen(  # noqa: S603 input has been checked above
-                kubeseal_command_cmd,
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                encoding=encoding,
-            )
+        kubeseal_subprocess = subprocess.Popen(  # noqa: S603 input has been checked above
+            kubeseal_command_cmd,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            encoding=encoding,
         )
     except FileNotFoundError as file_error:
         raise RuntimeError("Could not find kubeseal binary") from file_error
@@ -181,7 +179,13 @@ def encrypt_value_or_file(
     return KeyValuePair(key=cleartext_secret_tuple.key, value=sealed_secret)
 
 
-def construct_kubeseal_cmd(secret_namespace, secret_name, binary, cert, scope):
+def construct_kubeseal_cmd(
+    secret_namespace: str | None,
+    secret_name: str | None,
+    binary: str,
+    cert: str,
+    scope: Scope,
+) -> list[str]:
     exec_kubeseal_command = [
         binary,
         "--raw",

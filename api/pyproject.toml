@@ -8,7 +8,7 @@ readme = "README.md"
 packages = [{ include = "kubeseal_webgui_api" }]
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "^3.12"
 Jinja2 = "^3.1.2"
 PyYAML = "^6.0"
 kubernetes = "^26.1.0"
@@ -22,13 +22,12 @@ pydantic-settings = "^2.0.3"
 black = "^22.8.0"
 pytest = "^7.1.3"
 isort = "^5.10.1"
-flake8 = "^5.0.4"
 pydocstyle = "^6.1.1"
 pytest-cov = "^4.0.0"
-flake8-awesome = "^1.3.0"
 mypy = "^0.991"
 pyupgrade = "^3.0.0"
 httpx = "^0.25.0"
+ruff = "^0.6.8"
 
 [build-system]
 requires = ["poetry-core"]
@@ -36,6 +35,37 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.isort]
 profile = "black"
+
+[tool.ruff]
+line-length = 88
+src = [".", "test"]
+target-version = "py312"
+
+[tool.ruff.lint]
+ignore = ["SIM108"]
+extend-select = [
+  "F",
+  "C90",
+  "N",
+  "ANN",
+  "S",
+  "B",
+  "A",
+  "C4",
+  "DTZ",
+  "G",
+  "PIE",
+  "RET",
+  "SIM",
+  "PTH",
+  "ERA",
+  "FLY",
+  "PERF",
+  "FURB",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**.py" = ["ANN201", "S101", "ANN001"]
 
 [tool.pytest.ini_options]
 markers = [

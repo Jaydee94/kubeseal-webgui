@@ -36,15 +36,15 @@ repos:
         entry: bash -c 'cd api && poetry run pyupgrade'
         language: system
         files: ^api/
-      - id: black
-        name: black
+      - id: format
+        name: format
         language: system
-        entry: bash -c 'cd api && poetry run black .'
+        entry: bash -c 'cd api && poetry run ruff format'
         types: [python]
         files: ^api/
-      - id: flake8
-        name: flake8
-        entry: bash -c 'cd api && poetry run flake8 --max-line-length=88 kubeseal_webgui_api'
+      - id: ruff
+        name: ruff
+        entry: bash -c 'cd api && poetry run ruff check'
         language: system
         types: [python]
         files: ^api/
