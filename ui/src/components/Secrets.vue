@@ -132,6 +132,7 @@
               prepend-icon="mdi-file-upload-outline"
               :rules="rules.fileSize"
               :disabled="hasValue[counter]"
+              :multiple="false"
             />
           </v-col>
         </v-row>
@@ -436,7 +437,7 @@ async function fetchEncodedSecrets() {
               value: Base64.encode(element.value),
             };
           } else {
-            let fileContent = await readFileAsync(element.file[0]);
+            let fileContent = await readFileAsync(element.file);
             // we get a dataurl, so split the header from the data and use data, only
             fileContent = fileContent.split(",")[1];
             return {
