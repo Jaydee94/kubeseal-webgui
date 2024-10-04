@@ -449,7 +449,7 @@ const missingSecretData = computed(() =>
     e.key !== "" &&
     (
       e.value !== "" ||
-      (e.file.length == 1 && e.file[0] instanceof Blob || e.file[0] instanceof File)
+      (e.file.length == 1 && e.file instanceof Blob || e.file instanceof File)
     )
   )
 )

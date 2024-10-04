@@ -1,8 +1,8 @@
 {
   "api_url": "",
   "display_name": "Test",
-  "kubeseal_webgui_ui_version": "2.1.0",
-  "kubeseal_webgui_api_version": "2.1.0",
+  "kubeseal_webgui_ui_version": "5.0.0",
+  "kubeseal_webgui_api_version": "5.0.0",
   "environments": {
     "cluster-a": "http://localhost:5000"
   }
