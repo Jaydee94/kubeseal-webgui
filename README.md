@@ -74,7 +74,7 @@ The api container will fetch the certificate from the sealed-secrets controller 
 
 ### Requirements
 
-* Make sure you have Python 3.10 installed.
+* Make sure you have Python 3.12 installed.
 
 #### Setup API
 
