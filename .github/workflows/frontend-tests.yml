@@ -1,0 +1,47 @@
+name: Run Python Playwright Tests
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.12'
+
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: |
+          cd api
+          poetry install  # Install dependencies specified in pyproject.toml
+          playwright install  # Install the necessary browsers for Playwright
+          cd ..
+      
+      - name: Start Vue.js Development Server
+        run: |
+          cd ui
+          npm install
+          nohup npm run dev & 
+          sleep 5
+
+      - name: Run Playwright Tests
+        run: |
+          poetry run pytest tests/
