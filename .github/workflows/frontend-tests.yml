@@ -31,9 +31,12 @@ jobs:
       - name: Install dependencies
         run: |
           cd api
-          poetry install  # Install dependencies specified in pyproject.toml
-          playwright install  # Install the necessary browsers for Playwright
-          cd ..
+          poetry install
+
+      - name: Install Playwright Browsers
+        run: |
+          cd api
+          poetry run playwright install
       
       - name: Start Vue.js Development Server
         run: |
