@@ -1,33 +1,5 @@
-import subprocess
-import time
-import pytest
 import os
 from playwright.sync_api import sync_playwright, Page
-import requests
-
-
-def wait_for_server(url, timeout=60):
-    start_time = time.time()
-    while time.time() - start_time < timeout:
-        try:
-            response = requests.get(url)
-            if response.status_code == 200:
-                return True
-        except requests.ConnectionError:
-            time.sleep(1)
-    raise Exception(f"Server at {url} did not start in {timeout} seconds.")
-
-
-@pytest.fixture(scope="session", autouse=True)
-def start_dev_server():
-    # Start the Vue.js dev server
-    process = subprocess.Popen(
-        ["npm", "run", "dev"], stdout=subprocess.PIPE, stderr=subprocess.PIPE
-    )
-    wait_for_server("http://localhost:8080")
-
-    yield
-    process.terminate()
 
 
 def test_ui_start():
