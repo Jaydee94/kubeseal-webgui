@@ -23,20 +23,15 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install Poetry
-        run: |
-          curl -sSL https://install.python-poetry.org | python3 -
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-
       - name: Install dependencies
         run: |
           cd api
-          poetry install
+          pip install .
 
       - name: Install Playwright Browsers
         run: |
           cd api
-          poetry run playwright install
+          playwright install
       
       - name: Start Vue.js Development Server
         run: |
@@ -47,4 +42,5 @@ jobs:
 
       - name: Run Playwright Tests
         run: |
-          poetry run pytest tests/
+          cd ui
+          pytest tests/
