@@ -14,6 +14,7 @@ class AppSettings(BaseSettings):
     kubeseal_version: str
     kubeseal_binary: str = binary
     kubeseal_cert: str = environ.get("KUBESEAL_CERT", "/dev/null")
+    k8s_namespace_resource: str = environ.get("K8S_NAMESPACE_RESOURCE", "namespace")
     mock_enabled: bool = mock
     mock_namespace_count: int = 120
 
