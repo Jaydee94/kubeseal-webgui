@@ -381,25 +381,26 @@ const rules = {
   ]
 }
 
-const missingSecretData = computed(() =>
-  !secrets.value.every((e) =>
-    e.key !== "" &&
-    (
-      e.value !== "" ||
-      (e.file.length == 1 && e.file[0] instanceof Blob || e.file[0] instanceof File)
-    )
+const incompleteSecretData = computed(() =>
+  secrets.value
+    .some((e) =>
+      e.key === "" ||
+      (
+        e.value === "" &&
+        !(e.file instanceof Blob || e.file instanceof File)
+      )
   )
 )
 
 const notReadyToEncode = computed(() =>
   hasErrorMessage.value ||
-  missingSecretData.value ||
+  incompleteSecretData.value ||
   scope.value === "strict" && (namespaceName.value === "" || secretName.value === "") ||
   scope.value === "namespace-wide" && namespaceName.value === ""
 )
 
 const hasFile = computed(() =>
-  secrets.value.map((e) => e.file.length > 0))
+  secrets.value.map((e) => e.file instanceof Blob || e.file instanceof File))
 const hasValue = computed(() =>
   secrets.value.map((e) => e.value !== "")
 )
