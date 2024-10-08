@@ -4,7 +4,7 @@ import logging
 import fastapi
 from fastapi.middleware.cors import CORSMiddleware
 
-from .app_config import fetch_sealed_secrets_cert
+from .app_config import fetch_sealed_secrets_cert, LOGGER, settings
 from .routers import config, kubernetes, kubeseal
 
 LOGGER = logging.getLogger("kubeseal-webgui")
@@ -20,13 +20,9 @@ async def lifespan(fastapi_app: fastapi.FastAPI):  # noqa: ANN201 skipcq: PYL-W0
 
 app = fastapi.FastAPI(lifespan=lifespan)
 
-origins = [
-    "http://localhost:8080",
-]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=[settings.origin_url],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

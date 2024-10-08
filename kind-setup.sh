@@ -3,8 +3,8 @@
 # The ui will listen on http:$(localhost:7180)
 
 set -eo pipefail
-
-API_URL="https://$(hostname -f):7143"
+LOWERCASE_HOSTNAME=$(hostname -f | tr '[:upper:]' '[:lower:]')
+API_URL="https://${LOWERCASE_HOSTNAME}:7143"
 
 cat <<EOF | kind create cluster --name chart-testing --wait 3m --config=-
 kind: Cluster
@@ -46,11 +46,11 @@ helm template \
     --create-namespace \
     --namespace kubeseal-webgui \
     --set api.image.tag=snapshot \
-    --set api.url="${API_URL}" \
+    --set publicUrl="${API_URL}" \
     --set autoFetchCertResources=null \
     --set image.pullPolicy=Never \
-    --set ingress.enabled=true \
-    --set ingress.hostname="$(hostname -f)" \
+    --set ui.ingress.enabled=true \
+    --set ui.ingress.hostname="${LOWERCASE_HOSTNAME}" \
     --set resources=null \
     --set sealedSecrets.autoFetchCert=true \
     --set ui.image.tag=snapshot \

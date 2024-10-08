@@ -2,20 +2,72 @@ replicaCount: 1
 
 annotations: {}
 
+
+# The value of publicUrl should be set to the public-accessible http(s) endpoint of the ui (ingress url or OpenShift route).
+# publicUrl will be set as a allowed origin url for requesting the api.   
+publicUrl: http://localhost:8080
+
+
 api:
-  # The value of api.url should be set to the public-accessible http endpoint (ingress url or OpenShift route).
-  # api.url will be generated into config.json ConfigMap of the UI. This statically served JSON file
-  # is used by the UI to locate the API.
-  url: http://localhost:8080
+  enabled: true
   image:
     repository: kubesealwebgui/api
-    tag: 4.2.6
-  environment: {}
+    tag: 5.0.0
+  env: {}
   loglevel: "INFO"
+
+  # Setup an ingress route for the api optionally
+  ingress:
+    enabled: false
+    annotations: {}
+    ingressClassName: ""
+    hostname: "kubeseal-webgui-api.example.com"
+    tls:
+      enabled: false
+      secretName: ""
+
+  # Optionally use a OpenShift-Route
+  # If 'hostname' is an empty string (""), OpenShift will create a hostname for you.
+  route:
+    enabled: false
+    hostname: ""
+    tls:
+      enabled: true
+      termination: edge
+      insecureEdgeTerminationPolicy: None
+
 ui:
+  enabled: true
   image:
     repository: kubesealwebgui/ui
-    tag: 4.2.6
+    tag: 5.0.0
+
+  # Define multiple kubeseal environments. This is useful when you want to encrypt secrets for multiple clusters in one ui.
+  # The key defines the display name of your cluster and the value has to be the desired kubeseal-webgui api http endpoint.
+  environments: 
+    cluster-foo: "kubeseal-webgui-api.foo.example.com"
+    cluster-bar: "kubeseal-webgui-api.bar.example.com"
+
+  # Setup an ingress route for the api optionally
+  ingress:
+    enabled: false
+    annotations: {}
+    ingressClassName: ""
+    hostname: "kubeseal-webgui-ui.example.com"
+    tls:
+      enabled: false
+      secretName: ""
+
+  # Optionally use a OpenShift-Route
+  # If 'hostname' is an empty string (""), OpenShift will create a hostname for you.
+  route:
+    enabled: false
+    hostname: ""
+    tls:
+      enabled: true
+      termination: edge
+      insecureEdgeTerminationPolicy: None
+
 image:
   pullPolicy: Always
 
@@ -45,30 +97,11 @@ resources:
     cpu: 20m
     memory: 256Mi
 
-# Setup an ingress route optionally
-ingress:
-  enabled: false
-  annotations: {}
-  ingressClassName: ""
-  hostname: "kubeseal-webgui.example.com"
-  tls:
-    enabled: false
-    secretName: ""
-
-# Optionally use a OpenShift-Route
-# If 'hostname' is an empty string (""), OpenShift will create a hostname for you.
-route:
-  enabled: false
-  hostname: ""
-  tls:
-    enabled: true
-    termination: edge
-    insecureEdgeTerminationPolicy: None
-
 sealedSecrets:
   autoFetchCert: false
   controllerName: sealed-secrets-controller
   controllerNamespace: kube-system
+
   ## Public Certificate of your Sealed-Secrets Controller.
   ## Login to your cluster with kubectl.
   ## Run kubeseal --fetch-cert --controller-name <your-sealed-secrets-controller> --controller-namespace <sealed-secrets-controller-namespace>

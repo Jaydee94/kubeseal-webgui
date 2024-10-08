@@ -1,5 +1,9 @@
 <template>
   <div class="secrets-component">
+    <div
+      v-if="displayCreateSealedSecretForm"
+      class="secrets-form"
+    >
     <v-container
       v-if="displayName"
       class="text-subtitle-1"
@@ -7,11 +11,23 @@
     >
       {{ displayName }}
     </v-container>
-    <div
-      v-if="displayCreateSealedSecretForm"
-      class="secrets-form"
-    >
-      <br>
+    <v-row justify="end">
+      <v-col
+      cols="3"
+      sm="3"
+      md="3"
+      >
+        <v-select
+        v-model="selectedEnvironment"
+        :items="Object.keys(environments)"
+        :select-size="1"
+        :plain="true"
+        label="Select Environment"
+        variant="outlined"
+        />
+      </v-col>
+    </v-row>
+    <v-divider class="mt-2 mb-6"></v-divider>
       <v-form>
         <v-row>
           <v-col
@@ -24,6 +40,7 @@
               :items="namespaces"
               label="Namespace name"
               :disabled="['strict', 'namespace-wide'].indexOf(scope) === -1"
+              variant="solo-inverted"
             />
             <v-container
               id="password-help-block"
@@ -44,6 +61,7 @@
               label="Secret name"
               trim
               clearable
+              variant="solo-inverted"
               :rules="rules.validDnsSubdomain"
               :disabled="['strict'].indexOf(scope) === -1"
             />
@@ -70,6 +88,7 @@
               :select-size="1"
               :plain="true"
               label="Scope"
+              variant="solo-inverted"
             />
             <v-container
               id="scope-help-block"
@@ -100,6 +119,7 @@
               rows="1"
               clearable
               prepend-icon="mdi-delete"
+              variant="solo-inverted"
               :rules="rules.validSecretKey"
               @click:prepend="removeSecret(counter)"
             />
@@ -115,6 +135,7 @@
               auto-grow
               clearable
               label="Secret value"
+              variant="solo-inverted"
               :disabled="hasFile[counter]"
             />
           </v-col>
@@ -130,6 +151,7 @@
               clearable
               label="Upload File"
               prepend-icon="mdi-file-upload-outline"
+              variant="outlined"
               :rules="rules.fileSize"
               :disabled="hasValue[counter]"
               :multiple="false"
@@ -139,40 +161,40 @@
         <v-row>
           <v-col>
             <v-btn
-              prepend-icon="mdi-plus-box"
-              color="accent"
-              @click="secrets.push({ key: '', value: '', file: [] })"
+            prepend-icon="mdi-plus-box"
+            color="accent"
+            @click="secrets.push({ key: '', value: '', file: [] })"
             >
-              Add key-value pair
-            </v-btn>
-          </v-col>
-        </v-row>
-        <v-row>
-          <v-col>
-            <v-container
-              class="text-caption"
-              block
-            >
-              Specify sensitive value and corresponding key of the secret.
-              <br>
-              <i>The key must be of type:
-                <a
-                  target="_blank"
-                  href="https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names"
-                >DNS Subdomain</a></i>
-            </v-container>
-          </v-col>
-        </v-row>
-        <v-row>
-          <v-col>
-            <v-alert
-              v-model="hasErrorMessage"
-              closable
-              prominent
-              border="start"
-              type="warning"
+            Add key-value pair
+          </v-btn>
+        </v-col>
+      </v-row>
+      <v-row>
+        <v-col>
+          <v-container
+          class="text-caption"
+          block
+          >
+          Specify sensitive value and corresponding key of the secret.
+          <br>
+          <i>The key must be of type:
+            <a
+            target="_blank"
+            href="https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names"
+            >DNS Subdomain</a></i>
+          </v-container>
+        </v-col>
+      </v-row>
+      <v-row>
+        <v-col>
+          <v-alert
+          v-model="hasErrorMessage"
+          closable
+          prominent
+          border="start"
+          type="warning"
               icon="mdi-flash"
-              title="Error while encoding sensitive data"
+              title="An Error occurred:"
             >
               <v-container>
                 <p>Please contact your administrator and try again later.</p>
@@ -186,8 +208,8 @@
         </v-row>
         <v-row justify="center">
           <v-col
-            cols="12"
-            sm="6"
+            cols="6"
+            sm="3"
           >
             <v-btn
               block
@@ -199,6 +221,13 @@
             >
               Encrypt
             </v-btn>
+            <v-container
+              v-if="isEncryptButtonDisabled && !hasErrorMessage"
+              class="text-caption mt-2"
+              align="center"
+            >
+              Please fill out the form before encrypting.
+            </v-container>
           </v-col>
         </v-row>
       </v-form>
@@ -283,15 +312,17 @@ spec:
           </template>
         </v-card>
       </v-row>
-      <v-row>
-        <v-col class="d-flex">
+      <v-row justify="center">
+        <v-col 
+        class="d-flex"
+        cols="7"
+        sm="4">
           <v-btn
             block
             variant="tonal"
             class="flex-fill"
-            @click="
-              displayCreateSealedSecretForm = !displayCreateSealedSecretForm
-              "
+            prepend-icon="mdi-autorenew"
+            @click="resetForm"
           >
             Encrypt more secrets
           </v-btn>
@@ -302,8 +333,20 @@ spec:
 </template>
 
 <script setup>
-import { ref, computed, onBeforeMount, onMounted } from 'vue'
+import { ref, computed, onBeforeMount, onMounted, watch } from 'vue'
 import { Base64 } from "js-base64";
+
+let config;
+
+onBeforeMount(async () => {
+  config = await fetchConfig();
+  await fetchNamespaces();
+  await fetchDisplayName(config);
+  await fetchEnvironments(config);
+
+  // Assuming you have a default environment or set the selectedEnvironment accordingly
+  selectedEnvironment.value = Object.keys(environments?.value)[0];
+})
 
 const namespaces = ref([])
 const scopes = ref(["strict", "cluster-wide", "namespace-wide"])
@@ -318,12 +361,32 @@ const secrets = ref([{ key: "", value: "", file: [] }])
 const sealedSecrets = ref([])
 const sealedSecret = ref()
 const clipboardAvailable = ref(false)
+const selectedEnvironment = ref("")
+const environments = ref({})
 
-onBeforeMount(async () => {
-  const config = await fetchConfig();
-  await fetchNamespaces(config);
-  await fetchDisplayName(config);
-})
+const resetErrorState = () => {
+  setErrorMessage("");
+  hasErrorMessage.value = false;
+};
+
+const resetForm = () => {
+  displayCreateSealedSecretForm.value = true;
+  secretName.value = "";
+  namespaceName.value = "";
+  scope.value = "strict";
+  secrets.value = [{ key: "", value: "", file: [] }];
+  sealedSecrets.value = [];
+  hasErrorMessage.value = false;
+  errorMessage.value = "";
+};
+
+watch(selectedEnvironment, async (newSelectedEnvironment) => {
+  if (newSelectedEnvironment) {
+    resetErrorState();
+    await fetchNamespaces();
+  }
+});
+
 
 onMounted(() => {
   if (navigator && navigator.clipboard) {
@@ -414,31 +477,62 @@ const sealedSecretsAnnotations = computed(() => {
   return `{ sealedsecrets.bitnami.com/${scope.value}: "true" }`;
 })
 
+const selectedApiUrl = computed(() => environments?.value[selectedEnvironment.value] || config?.api_url);
+
+
 function setErrorMessage(newErrorMessage) {
   errorMessage.value = newErrorMessage;
   hasErrorMessage.value = !!newErrorMessage;
 }
 
+const isEncryptButtonEnabled = computed(() => {
+  return (
+    secretName.value &&
+    namespaceName.value &&
+    secrets.value.every(secret => secret.key && (secret.value || secret.file.length))
+  );
+});
 async function fetchConfig() {
   try {
-    const response = await fetch("/config.json")
+    const response = await fetch("/config.json");
+    if (!response.ok) {
+      throw Error(`Failed to fetch config.json: ${response.statusText}`);
+    }
     return await response.json();
   } catch (error) {
-    setErrorMessage(error)
+    setErrorMessage(error.message);
+    return {};
   }
 }
 
-async function fetchNamespaces(config) {
+async function fetchNamespaces() {
   try {
-    const response = await fetch(`${config.api_url}/namespaces`);
+    
+    const response = await fetch(`${selectedApiUrl.value}/namespaces`);
+    
     namespaces.value = await response.json();
   } catch (error) {
-    setErrorMessage(error);
+    namespaces.value = [];
+    setErrorMessage(`Failed to fetch namespaces. Error Message: ${error.message}.`);
   }
 }
 
 async function fetchDisplayName(config) {
   displayName.value = config.display_name;
+}
+
+async function fetchEnvironments(config) {
+  try {
+    if (!config.environments || Object.keys(config.environments).length === 0) {
+      // If environments are not defined or empty, use the default API URL
+      environments.value = { default: config.api_url };
+    } else {
+      // If environments are defined in config.json, use them
+      environments.value = config.environments;
+    }
+  } catch (error) {
+    setErrorMessage(error);
+  }
 }
 
 async function fetchEncodedSecrets() {
@@ -469,9 +563,7 @@ async function fetchEncodedSecrets() {
 
     const requestBody = JSON.stringify(requestObject, null, "\t");
 
-    const config = await fetchConfig()
-
-    const response = await fetch(`${config.api_url}/secrets`, {
+    const response = await fetch(`${selectedApiUrl.value}/secrets`, {
       method: "POST",
       headers: {
         // 'Origin': 'http://localhost:8080',
@@ -488,6 +580,7 @@ async function fetchEncodedSecrets() {
     } else {
       sealedSecrets.value = await response.json();
       displayCreateSealedSecretForm.value = false;
+      setErrorMessage("");
     }
   } catch (error) {
     setErrorMessage(error);
