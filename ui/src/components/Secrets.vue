@@ -113,7 +113,7 @@
                     <v-icon
                       v-bind="props"
                       @click="menuVisible[counter] = !menuVisible[counter]"
-                      v-if="isRandomStringGeneratorEnabled"
+                      v-if="enableRandomStringGenerator"
                     >
                       mdi-dice-multiple
                     </v-icon>
@@ -127,7 +127,7 @@
               :close-on-content-click="false"
               absolute
               offset-y
-              v-if="isRandomStringGeneratorEnabled"
+              v-if="enableRandomStringGenerator"
             >
               <template v-slot:activator="{ props }">
                 <v-btn icon v-bind="props" style="display: none;"></v-btn>
@@ -365,20 +365,20 @@ const sealedSecrets = ref([])
 const sealedSecret = ref()
 const clipboardAvailable = ref(false)
 
-const config = ref({});
 const menuVisible = ref(Array(secrets.value.length).fill(false));
 const includeUppercase = ref(true);
 const includeLowercase = ref(true);
 const includeNumbers = ref(true);
 const includeSpecial = ref(false);
 const passwordLength = ref(10);
+const enableRandomStringGenerator = ref(false);
 
 onBeforeMount(async () => {
-  const fetchedConfig = await fetchConfig();
-  config.value = fetchedConfig;
+  const config = await fetchConfig();
   document.removeEventListener('click', closeMenu);
   await fetchNamespaces(config);
   await fetchDisplayName(config);
+  await isRandomStringGeneratorEnabled(config);
 })
 
 onMounted(() => {
@@ -411,10 +411,6 @@ function readFileAsync(file) {
     reader.readAsDataURL(file);
   });
 }
-
-const isRandomStringGeneratorEnabled = computed(() => {
-  return config.value && config.value.enableRandomStringGenerator;
-});
 
 const rules = {
   validDnsSubdomain: [
@@ -485,11 +481,10 @@ function setErrorMessage(newErrorMessage) {
 
 async function fetchConfig() {
   try {
-    const response = await fetch('/config.json');
+    const response = await fetch("/config.json")
     return await response.json();
   } catch (error) {
-    setErrorMessage(error);
-    return {};
+    setErrorMessage(error)
   }
 }
 
@@ -504,6 +499,10 @@ async function fetchNamespaces(config) {
 
 async function fetchDisplayName(config) {
   displayName.value = config.display_name;
+}
+
+async function isRandomStringGeneratorEnabled (config) {
+  enableRandomStringGenerator.value = config.enableRandomStringGenerator;
 }
 
 async function fetchEncodedSecrets() {
