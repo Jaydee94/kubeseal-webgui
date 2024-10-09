@@ -15,6 +15,7 @@ data:
       "api_url": {{ .Values.api.url | quote }},
       "display_name": {{ .Values.displayName | quote }},
       "kubeseal_webgui_ui_version": {{ .Values.ui.image.tag | quote}},
-      "kubeseal_webgui_api_version": {{ .Values.api.image.tag | quote}}
+      "kubeseal_webgui_api_version": {{ .Values.api.image.tag | quote}},
+      "enableRandomStringGenerator": {{ .Values.ui.enableRandomStringGenerator }}
     }
 

@@ -16,6 +16,7 @@ ui:
   image:
     repository: kubesealwebgui/ui
     tag: 4.2.6
+  enableRandomStringGenerator: false
 image:
   pullPolicy: Always
 
