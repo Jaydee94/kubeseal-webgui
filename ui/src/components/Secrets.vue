@@ -86,17 +86,11 @@
           </v-col>
         </v-row>
 
-        <v-row
-          v-for="(secret, counter) in secrets"
-          :key="counter"
-        >
-          <v-col
-            cols="12"
-            md="4"
-          >
+        <v-row v-for="(secret, counter) in secrets" :key="counter">
+          <v-col cols="12" md="4">
             <v-textarea
               v-model="secret.key"
-              label="Secret key"
+              label="Secret Key"
               rows="1"
               clearable
               prepend-icon="mdi-delete"
@@ -104,25 +98,77 @@
               @click:prepend="removeSecret(counter)"
             />
           </v-col>
-          <v-col
-            cols="12"
-            :sm="hasValue[counter] ? 11 : hasFile[counter] ? 1 : 6"
-            :md="hasValue[counter] ? 7 : hasFile[counter] ? 1 : 4"
-          >
+          <v-col cols="12" md="4">
             <v-textarea
               v-model="secret.value"
               rows="1"
               auto-grow
               clearable
-              label="Secret value"
+              label="Secret Value"
               :disabled="hasFile[counter]"
-            />
+            >
+              <template v-slot:prepend>
+                <v-tooltip bottom>
+                  <template v-slot:activator="{ props }">
+                    <v-icon
+                      v-bind="props"
+                      @click="menuVisible[counter] = !menuVisible[counter]"
+                      v-if="isRandomStringGeneratorEnabled"
+                    >
+                      mdi-dice-multiple
+                    </v-icon>
+                  </template>
+                  <span>Generate Random String</span>
+                </v-tooltip>
+              </template>
+            </v-textarea>
+            <v-menu
+              v-model="menuVisible[counter]" 
+              :close-on-content-click="false"
+              absolute
+              offset-y
+              v-if="isRandomStringGeneratorEnabled"
+            >
+              <template v-slot:activator="{ props }">
+                <v-btn icon v-bind="props" style="display: none;"></v-btn>
+              </template>
+              <v-list>
+                <v-list-item @click.stop>
+                  <v-checkbox v-model="includeUppercase" label="Include Uppercase Letters (A-Z)" />
+                </v-list-item>
+                <v-list-item @click.stop>
+                  <v-checkbox v-model="includeLowercase" label="Include Lowercase Letters (a-z)" />
+                </v-list-item>
+                <v-list-item @click.stop>
+                  <v-checkbox v-model="includeNumbers" label="Include Numbers (0-9)" />
+                </v-list-item>
+                <v-list-item @click.stop>
+                  <v-checkbox v-model="includeSpecial" label="Include Special Characters (@#$%&*)" />
+                </v-list-item>
+                <v-list-item @click.stop>
+                  <v-slider
+                    v-model="passwordLength"
+                    :min="6"
+                    :max="64"
+                    step="1"
+                    label="Password Length"
+                    thumb-label="always"
+                    dense
+                  >
+                    <template v-slot:append>
+                      <span>{{ passwordLength }}</span>
+                    </template>
+                  </v-slider>
+                </v-list-item>
+                <v-list-item>
+                  <v-btn color="primary" @click="generateRandomString(counter); menuVisible[counter] = false;">
+                    Generate Random String
+                  </v-btn>
+                </v-list-item>
+              </v-list>
+            </v-menu>
           </v-col>
-          <v-col
-            cols="12"
-            :sm="hasFile[counter] ? 11 : hasValue[counter] ? 1 : 6"
-            :md="hasFile[counter] ? 7 : hasValue[counter] ? 1 : 4"
-          >
+          <v-col cols="12" md="4">
             <v-file-input
               v-model="secret.file"
               show-size
@@ -319,8 +365,18 @@ const sealedSecrets = ref([])
 const sealedSecret = ref()
 const clipboardAvailable = ref(false)
 
+const config = ref({});
+const menuVisible = ref(Array(secrets.value.length).fill(false));
+const includeUppercase = ref(true);
+const includeLowercase = ref(true);
+const includeNumbers = ref(true);
+const includeSpecial = ref(false);
+const passwordLength = ref(10);
+
 onBeforeMount(async () => {
-  const config = await fetchConfig();
+  const fetchedConfig = await fetchConfig();
+  config.value = fetchedConfig;
+  document.removeEventListener('click', closeMenu);
   await fetchNamespaces(config);
   await fetchDisplayName(config);
 })
@@ -329,8 +385,13 @@ onMounted(() => {
   if (navigator && navigator.clipboard) {
     clipboardAvailable.value = true;
   }
+  document.addEventListener('click', closeMenu);
   setErrorMessage("");
 })
+
+function closeMenu() {
+  menuVisible.value = Array(secrets.value.length).fill(false);
+}
 
 function validDnsSubdomain(name) {
   if (!name) {
@@ -351,6 +412,9 @@ function readFileAsync(file) {
   });
 }
 
+const isRandomStringGeneratorEnabled = computed(() => {
+  return config.value && config.value.enableRandomStringGenerator;
+});
 
 const rules = {
   validDnsSubdomain: [
@@ -421,10 +485,11 @@ function setErrorMessage(newErrorMessage) {
 
 async function fetchConfig() {
   try {
-    const response = await fetch("/config.json")
+    const response = await fetch('/config.json');
     return await response.json();
   } catch (error) {
-    setErrorMessage(error)
+    setErrorMessage(error);
+    return {};
   }
 }
 
@@ -517,6 +582,58 @@ function removeSecret(counter) {
     secrets.value[0] = { key: "", value: "", file: [] }
   }
 }
+
+function generateSecureRandomString(length, includeUppercase, includeLowercase, includeNumbers, includeSpecial) {
+  const chars = [];
+  const result = [];
+  if (includeUppercase) {
+    chars.push(...'ABCDEFGHIJKLMNOPQRSTUVWXYZ');
+    result.push(getRandomCharacter('ABCDEFGHIJKLMNOPQRSTUVWXYZ'));
+  }
+  if (includeLowercase) {
+    chars.push(...'abcdefghijklmnopqrstuvwxyz');
+    result.push(getRandomCharacter('abcdefghijklmnopqrstuvwxyz'));
+  }
+  if (includeNumbers) {
+    chars.push(...'0123456789');
+    result.push(getRandomCharacter('0123456789'));
+  }
+  if (includeSpecial) {
+    chars.push(...'@#$%&*()');
+    result.push(getRandomCharacter('@#$%&*()'));
+  }
+
+  if (chars.length === 0) {
+    setErrorMessage('At least one character type must be selected to create a random string.');
+    return '';
+  }
+  for (let i = result.length; i < length; i++) {
+    result.push(getRandomCharacter(chars.join('')));
+  }
+  shuffleArray(result);
+  return result.join('');
+}
+
+function getRandomCharacter(charSet) {
+  const randomValues = new Uint8Array(1);
+  window.crypto.getRandomValues(randomValues);
+  const randomIndex = randomValues[0] % charSet.length;
+  return charSet[randomIndex];
+}
+
+function shuffleArray(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+}
+
+function generateRandomString(index) {
+  const length = passwordLength.value;
+  secrets.value[index].value = generateSecureRandomString(length, includeUppercase.value, includeLowercase.value, includeNumbers.value, includeSpecial.value);
+}
+
+
 </script>
 
 <style>

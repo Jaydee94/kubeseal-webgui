@@ -2,5 +2,6 @@
   "api_url": "",
   "display_name": "Test",
   "kubeseal_webgui_ui_version": "2.1.0",
-  "kubeseal_webgui_api_version": "2.1.0"
+  "kubeseal_webgui_api_version": "2.1.0",
+  "enableRandomStringGenerator": false
 }
