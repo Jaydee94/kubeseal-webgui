@@ -1,0 +1,19 @@
+name: Check Typos
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+jobs:
+  typos:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Run typos check
+        uses: crate-ci/typos@v1.26.0
