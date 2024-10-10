@@ -98,7 +98,7 @@
               @click:prepend="removeSecret(counter)"
             />
           </v-col>
-          <v-col cols="12" md="4">
+          <v-col cols="12" :sm="hasValue[counter] ? 11 : hasFile[counter] ? 1 : 6" :md="hasValue[counter] ? 7 : hasFile[counter] ? 1 : 4">
             <v-textarea
               v-model="secret.value"
               rows="1"
@@ -112,7 +112,7 @@
                   <template v-slot:activator="{ props }">
                     <v-icon
                       v-bind="props"
-                      @click="menuVisible[counter] = !menuVisible[counter]"
+                      @click="secrets[counter].menuVisible = !secrets[counter].menuVisible"
                       v-if="enableRandomStringGenerator"
                     >
                       mdi-dice-multiple
@@ -123,7 +123,7 @@
               </template>
             </v-textarea>
             <v-menu
-              v-model="menuVisible[counter]" 
+              v-model="secrets[counter].menuVisible" 
               :close-on-content-click="false"
               absolute
               offset-y
@@ -143,7 +143,7 @@
                   <v-checkbox v-model="includeNumbers" label="Include Numbers (0-9)" />
                 </v-list-item>
                 <v-list-item @click.stop>
-                  <v-checkbox v-model="includeSpecial" label="Include Special Characters (@#$%&*)" />
+                  <v-checkbox v-model="includeSpecial" :label="specialCharactersLabel" />
                 </v-list-item>
                 <v-list-item @click.stop>
                   <v-slider
@@ -161,14 +161,14 @@
                   </v-slider>
                 </v-list-item>
                 <v-list-item>
-                  <v-btn color="primary" @click="generateRandomString(counter); menuVisible[counter] = false;">
+                  <v-btn color="primary" @click="generateRandomString(counter); secrets[counter].menuVisible = false;">
                     Generate Random String
                   </v-btn>
                 </v-list-item>
               </v-list>
             </v-menu>
           </v-col>
-          <v-col cols="12" md="4">
+          <v-col cols="12" :sm="hasFile[counter] ? 11 : hasValue[counter] ? 1 : 6" :md="hasFile[counter] ? 7 : hasValue[counter] ? 1 : 4">
             <v-file-input
               v-model="secret.file"
               show-size
@@ -352,6 +352,7 @@ import { ref, computed, onBeforeMount, onMounted } from 'vue'
 import { Base64 } from "js-base64";
 
 const namespaces = ref([])
+const apiUrl = ref("")
 const scopes = ref(["strict", "cluster-wide", "namespace-wide"])
 const errorMessage = ref("")
 const hasErrorMessage = ref(false)
@@ -360,25 +361,26 @@ const displayCreateSealedSecretForm = ref(true)
 const secretName = ref("")
 const namespaceName = ref("")
 const scope = ref("strict")
-const secrets = ref([{ key: "", value: "", file: [] }])
+const secrets = ref([{ key: "", value: "", file: [], menuVisible: false }]);
 const sealedSecrets = ref([])
 const sealedSecret = ref()
 const clipboardAvailable = ref(false)
 
-const menuVisible = ref(Array(secrets.value.length).fill(false));
 const includeUppercase = ref(true);
 const includeLowercase = ref(true);
 const includeNumbers = ref(true);
 const includeSpecial = ref(false);
 const passwordLength = ref(10);
 const enableRandomStringGenerator = ref(false);
+const specialCharacters = ref('');
+
+const specialCharactersLabel = computed(() => {
+      return `Include Special Characters (${specialCharacters.value || 'None'})`;
+});
 
 onBeforeMount(async () => {
-  const config = await fetchConfig();
+  await fetchConfig();
   document.removeEventListener('click', closeMenu);
-  await fetchNamespaces(config);
-  await fetchDisplayName(config);
-  await isRandomStringGeneratorEnabled(config);
 })
 
 onMounted(() => {
@@ -390,7 +392,9 @@ onMounted(() => {
 })
 
 function closeMenu() {
-  menuVisible.value = Array(secrets.value.length).fill(false);
+  secrets.value.forEach(secret => {
+    secret.menuVisible = false;
+  });
 }
 
 function validDnsSubdomain(name) {
@@ -481,29 +485,23 @@ function setErrorMessage(newErrorMessage) {
 
 async function fetchConfig() {
   try {
-    const response = await fetch("/config.json")
-    return await response.json();
-  } catch (error) {
-    setErrorMessage(error)
-  }
-}
-
-async function fetchNamespaces(config) {
-  try {
-    const response = await fetch(`${config.api_url}/namespaces`);
-    namespaces.value = await response.json();
+    const response = await fetch("/config.json");
+    const config = await response.json();
+    try {
+      const namespacesResponse = await fetch(`${apiUrl.value}/namespaces`);
+      namespaces.value = await namespacesResponse.json();
+    } catch (error) {
+      setErrorMessage(error);
+    }
+    displayName.value = config.display_name;
+    enableRandomStringGenerator.value = config.enable_random_string_generator;
+    specialCharacters.value = config.random_string_generator_special_characters;
+    apiUrl.value = config.api_url;
   } catch (error) {
     setErrorMessage(error);
   }
 }
 
-async function fetchDisplayName(config) {
-  displayName.value = config.display_name;
-}
-
-async function isRandomStringGeneratorEnabled (config) {
-  enableRandomStringGenerator.value = config.enableRandomStringGenerator;
-}
 
 async function fetchEncodedSecrets() {
   try {
@@ -533,9 +531,7 @@ async function fetchEncodedSecrets() {
 
     const requestBody = JSON.stringify(requestObject, null, "\t");
 
-    const config = await fetchConfig()
-
-    const response = await fetch(`${config.api_url}/secrets`, {
+    const response = await fetch(`${apiUrl.value}/secrets`, {
       method: "POST",
       headers: {
         // 'Origin': 'http://localhost:8080',
@@ -583,55 +579,72 @@ function removeSecret(counter) {
 }
 
 function generateSecureRandomString(length, includeUppercase, includeLowercase, includeNumbers, includeSpecial) {
-  const chars = [];
-  const result = [];
-  if (includeUppercase) {
-    chars.push(...'ABCDEFGHIJKLMNOPQRSTUVWXYZ');
-    result.push(getRandomCharacter('ABCDEFGHIJKLMNOPQRSTUVWXYZ'));
-  }
-  if (includeLowercase) {
-    chars.push(...'abcdefghijklmnopqrstuvwxyz');
-    result.push(getRandomCharacter('abcdefghijklmnopqrstuvwxyz'));
-  }
-  if (includeNumbers) {
-    chars.push(...'0123456789');
-    result.push(getRandomCharacter('0123456789'));
-  }
-  if (includeSpecial) {
-    chars.push(...'@#$%&*()');
-    result.push(getRandomCharacter('@#$%&*()'));
-  }
+  const classes = {
+    upperCase: { chars: "ABCDEFGHIJKLMNOPQRSTUVWXYZ", enabled: includeUppercase },
+    lowerCase: { chars: "abcdefghijklmnopqrstuvwxyz", enabled: includeLowercase },
+    digits: { chars: "0123456789", enabled: includeNumbers },
+    special: { chars: specialCharacters.value, enabled: includeSpecial }
+  };
+
+  const chars = Object.values(classes)
+    .filter(v => v.enabled)
+    .map(v => v.chars)
+    .join('');
 
   if (chars.length === 0) {
     setErrorMessage('At least one character type must be selected to create a random string.');
     return '';
   }
-  for (let i = result.length; i < length; i++) {
-    result.push(getRandomCharacter(chars.join('')));
+
+  let initialResult = '';
+
+  Object.values(classes).forEach(v => {
+    if (v.enabled) {
+      initialResult += getRandomCharacter(v.chars);
+    }
+  });
+  for (let i = initialResult.length; i < length; i++) {
+    initialResult += getRandomCharacter(chars);
   }
-  shuffleArray(result);
-  return result.join('');
+  const result = shuffleString(initialResult);
+  return result;
 }
 
-function getRandomCharacter(charSet) {
-  const randomValues = new Uint8Array(1);
-  window.crypto.getRandomValues(randomValues);
-  const randomIndex = randomValues[0] % charSet.length;
-  return charSet[randomIndex];
-}
-
-function shuffleArray(array) {
+function shuffleString(str) {
+  const array = str.split('');
   for (let i = array.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [array[i], array[j]] = [array[j], array[i]];
   }
+  return array.join('');
 }
+
+function getRandomCharacter(charSet) {
+    if (charSet.length === 0) {
+        throw new Error("Character set cannot be empty");
+    }
+    const randomValues = new Uint32Array(1);
+    window.crypto.getRandomValues(randomValues);
+    // Generate a random index within the bounds of charSet length
+    // By dividing the random number by 0xFFFFFFFF + 1, you normalize it to a value between 0 and 1.
+    // Multiplying this normalized value by charSet.length gives you a floating-point number that scales to the desired range.
+    const randomIndex = Math.floor(randomValues[0] / (0xFFFFFFFF + 1) * charSet.length);
+  
+    return charSet[randomIndex];
+}
+
+
 
 function generateRandomString(index) {
   const length = passwordLength.value;
-  secrets.value[index].value = generateSecureRandomString(length, includeUppercase.value, includeLowercase.value, includeNumbers.value, includeSpecial.value);
+  const config = {
+    includeUppercase: includeUppercase.value,
+    includeLowercase: includeLowercase.value,
+    includeNumbers: includeNumbers.value,
+    includeSpecial: includeSpecial.value,
+  };
+  secrets.value[index].value = generateSecureRandomString(length, config.includeUppercase, config.includeLowercase, config.includeNumbers, config.includeSpecial);
 }
-
 
 </script>
 

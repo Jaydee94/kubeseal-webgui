@@ -43,7 +43,7 @@ helm install kubesealwebgui/kubeseal-webgui --set example_required_value="foobar
 
 ### Optional: random secret value generator
 
-Since version `>=4.3.0` a random generator for secret values can be activated in the ui via a configuration parameter.
+Since version `4.3.0` a random generator for secret values can be activated in the UI via a configuration parameter.
 To activate the random secret value generator set the helm parameter `ui.enableRandomStringGenerator` to `true`.
 
 ## Usage
