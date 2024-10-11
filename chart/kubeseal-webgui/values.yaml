@@ -16,6 +16,8 @@ ui:
   image:
     repository: kubesealwebgui/ui
     tag: 4.2.6
+  enableRandomStringGenerator: false
+  randomStringGeneratorSpecialCharacters: "@#$%&*-_,.;:(){}[]"
 image:
   pullPolicy: Always
 
