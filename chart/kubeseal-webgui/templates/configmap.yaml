@@ -16,7 +16,7 @@ data:
       "display_name": {{ .Values.displayName | quote }},
       "kubeseal_webgui_ui_version": {{ .Values.ui.image.tag | quote}},
       "kubeseal_webgui_api_version": {{ .Values.api.image.tag | quote}},
-      "random_string_generator_special_characters": {{ .Values.ui.randomStringGeneratorSpecialCharacters }}
+      "random_string_generator_special_characters": {{ .Values.ui.randomStringGeneratorSpecialCharacters | quote }},
       "enable_random_string_generator": {{ .Values.ui.enableRandomStringGenerator }}
     }
 
