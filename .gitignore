@@ -2,6 +2,7 @@ __pycache__/
 .mypy_cache/
 .pytest_cache/
 .ruff_cache/
+.vscode/
 venv/
 app/static/.webassets-cache/
 app/static/screen.css
