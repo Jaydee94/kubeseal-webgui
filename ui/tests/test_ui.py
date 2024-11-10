@@ -144,7 +144,7 @@ def add_secret_key_file(page: Page):
 def disabled_encrypt_button(page: Page):
     encrypt_button = page.locator('button:has-text("Encrypt")')
     encrypt_button.wait_for()
-    assert encrypt_button.is_disabled() == True
+    assert encrypt_button.is_disabled()
 
 
 def click_encrypt_button(page: Page):
