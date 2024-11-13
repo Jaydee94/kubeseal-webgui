@@ -1,15 +1,19 @@
 <template>
-  <v-footer class="d-flex flex-column">
+  <v-footer class="flex-column">
     <div class="px-1 py-1">
       <small
         v-if="fetchConfigsSuccessful"
         class="text-muted"
       >
         <template
-          v-for="(value, key, index) in configs"
+          v-for="(value, key) in configs"
           :key="key"
         >
-          <span v-if="index != 0"> ∙ </span><span>{{ key }}: {{ value }}</span>
+          <v-chip variant="plain" size="small">
+            <span>{{ key }}:   
+              {{ value }}
+            </span>
+          </v-chip>
         </template>
       </small>
       <small
@@ -24,10 +28,6 @@
       >
         ⏳ Loading application properties.
       </small>
-    </div>
-
-    <div class="px-1 py-1">
-      <small>{{ new Date().getFullYear() }} — Kubeseal-Webgui</small>
     </div>
   </v-footer>
 </template>
@@ -54,8 +54,8 @@ async function fetchConfigs() {
     let response = await fetch(`${apiUrl}/config`);
     fetchConfigsSuccessful.value = (response.ok && response_config.ok)
     configs.value = await response.json();
-    configs.value.kubeseal_webgui_ui_version = kubeseal_webgui_ui_version;
-    configs.value.kubeseal_webgui_api_version = kubeseal_webgui_api_version;
+    configs.value.uiVersion = kubeseal_webgui_ui_version;
+    configs.value.apiVersion = kubeseal_webgui_api_version;
   } catch (error) {
     errorMessage.value = error;
   }
