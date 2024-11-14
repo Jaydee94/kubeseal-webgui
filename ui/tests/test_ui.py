@@ -14,7 +14,7 @@ def test_ui_start():
 
 def test_secret_form_with_value():
     with sync_playwright() as ctx:
-        browser = ctx.chromium.launch(headless=True)
+        browser = ctx.chromium.launch(headless=False)
         page = browser.new_page()
         page.goto("http://localhost:8080")
         page.wait_for_load_state("load")
@@ -75,17 +75,19 @@ def test_secret_form_with_invalid_file():
 
 
 def namespace_select(page: Page):
-    input_selector = "input#input-4"
+    input_selector = "input#namespaceSelection"
     page.wait_for_selector(input_selector, timeout=10000)
     page.click(input_selector)
     suggestions = page.query_selector_all(".v-list-item-title")
     assert len(suggestions) > 0, "No suggestions found."
     first_suggestion_text = suggestions[0].inner_text()
     suggestions[0].click()
-    selected_value = page.input_value(input_selector)
+    selected_text_selector = ".v-autocomplete__selection-text"
+    page.wait_for_selector(selected_text_selector, timeout=10000)
+    displayed_text = page.inner_text(selected_text_selector)
     assert (
-        selected_value == first_suggestion_text
-    ), f"Expected '{first_suggestion_text}', but got '{selected_value}'"
+        displayed_text == first_suggestion_text
+    ), f"Expected '{first_suggestion_text}', but got '{displayed_text}'"
 
 
 def secret_name(page: Page):

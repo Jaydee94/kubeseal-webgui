@@ -20,6 +20,7 @@
             md="4"
           >
           <v-autocomplete
+            id="namespaceSelection"
             v-model="namespaceName"
             :items="sortedNamespaces"
             ref="namespaceSelector"
@@ -40,7 +41,7 @@
                 >
                   {{ favoriteNamespaces.has(item.value) ? 'mdi-heart' : 'mdi-heart-outline' }}
                 </v-icon>
-                <span>{{ item.value }}</span>
+                <span class="v-list-item-title">{{ item.value }}</span>
               </div>
               <v-divider v-if="item.value === lastFavoriteNamespace" :thickness="2"></v-divider>
             </template>
