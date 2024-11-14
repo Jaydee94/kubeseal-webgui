@@ -14,7 +14,7 @@ def test_ui_start():
 
 def test_secret_form_with_value():
     with sync_playwright() as ctx:
-        browser = ctx.chromium.launch(headless=False)
+        browser = ctx.chromium.launch(headless=True)
         page = browser.new_page()
         page.goto("http://localhost:8080")
         page.wait_for_load_state("load")
