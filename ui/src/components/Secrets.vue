@@ -60,7 +60,7 @@
             md="4"
           >
             <v-text-field
-              id="input-secret-name"
+              id="secretName"
               v-model="secretName"
               label="Secret name"
               trim
@@ -116,6 +116,7 @@
             md="4"
           >
             <v-textarea
+              id="secretKey"
               v-model="secret.key"
               label="Secret key"
               rows="1"
@@ -131,6 +132,7 @@
             :md="hasValue[counter] ? 7 : hasFile[counter] ? 1 : 4"
           >
             <v-textarea
+              id="secretValue"
               v-model="secret.value"
               rows="1"
               auto-grow
@@ -145,6 +147,7 @@
             :md="hasFile[counter] ? 7 : hasValue[counter] ? 1 : 4"
           >
             <v-file-input
+              id="fileInput"
               v-model="secret.file"
               show-size
               dense
