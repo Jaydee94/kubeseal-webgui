@@ -19,12 +19,32 @@
             sm="6"
             md="4"
           >
-            <v-autocomplete
-              v-model="namespaceName"
-              :items="namespaces"
-              label="Namespace name"
-              :disabled="['strict', 'namespace-wide'].indexOf(scope) === -1"
-            />
+          <v-autocomplete
+            v-model="namespaceName"
+            :items="sortedNamespaces"
+            ref="namespaceSelector"
+            label="Namespace name"
+            :disabled="['strict', 'namespace-wide'].indexOf(scope) === -1"
+          >
+            <template v-slot:item="{ item, attrs }">
+              <div
+                v-bind="attrs"
+                class="d-flex align-center"
+                @click="selectNamespace(item.value)" 
+              >
+                <v-icon
+                  small
+                  color="#FFA500"
+                  @click.stop="toggleFavorite(item.value)"
+                  class="mr-2"
+                >
+                  {{ favoriteNamespaces.has(item.value) ? 'mdi-heart' : 'mdi-heart-outline' }}
+                </v-icon>
+                <span>{{ item.value }}</span>
+              </div>
+              <v-divider v-if="item.value === lastFavoriteNamespace" :thickness="2"></v-divider>
+            </template>
+          </v-autocomplete>
             <v-container
               id="password-help-block"
               class="text-caption"
@@ -302,7 +322,7 @@ spec:
 </template>
 
 <script setup>
-import { ref, computed, onBeforeMount, onMounted } from 'vue'
+import { ref, computed, onBeforeMount, onMounted, useTemplateRef } from 'vue'
 import { Base64 } from "js-base64";
 
 const namespaces = ref([])
@@ -318,6 +338,9 @@ const secrets = ref([{ key: "", value: "", file: [] }])
 const sealedSecrets = ref([])
 const sealedSecret = ref()
 const clipboardAvailable = ref(false)
+const favoriteNamespaces = ref(readFavoriteNamespaces());
+const lastFavoriteNamespace = ref();
+const namespaceSelector = useTemplateRef("namespaceSelector");
 
 onBeforeMount(async () => {
   const config = await fetchConfig();
@@ -331,6 +354,14 @@ onMounted(() => {
   }
   setErrorMessage("");
 })
+
+function readFavoriteNamespaces() {
+  try {
+    return new Set(JSON.parse(localStorage.favoriteNamespaces));
+  } catch (error) {
+    return new Set([]);
+  }
+}
 
 function validDnsSubdomain(name) {
   if (!name) {
@@ -457,12 +488,37 @@ async function fetchNamespaces(config) {
     namespaces.value = mockNamespacesResolver(10);
   } else {
     try {
-      const response = await fetch(`${config.api_url}/namespaces`);
+      const response = await fetch(`${config.api_url}/namespaces`);da
       namespaces.value = await response.json();
     } catch (error) {
       setErrorMessage(error);
     }
   }
+}
+
+const sortedNamespaces = computed(() => {
+  const favorites = Array.from(favoriteNamespaces.value).filter((namespace) => namespaces.value.includes(namespace));
+  if (favorites.length > 0) {
+    lastFavoriteNamespace.value = favorites[favorites.length -1]
+  }
+  return [
+    ...favorites,
+    ...namespaces.value.filter((namespace) => !favoriteNamespaces.value.has(namespace))
+  ];
+});
+
+function toggleFavorite(namespace) {
+  if (favoriteNamespaces.value.has(namespace)) {
+    favoriteNamespaces.value.delete(namespace);
+  } else {
+    favoriteNamespaces.value.add(namespace);
+  }
+  localStorage.favoriteNamespaces = JSON.stringify([...favoriteNamespaces.value]);
+}
+
+function selectNamespace(value) {
+  namespaceName.value = value;
+  namespaceSelector.value.blur()
 }
 
 
