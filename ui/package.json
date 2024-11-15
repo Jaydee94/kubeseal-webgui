@@ -1,6 +1,6 @@
 {
   "name": "kubeseal-webgui",
-  "version": "0.1.0",
+  "version": "4.4.0",
   "private": true,
   "scripts": {
     "dev": "vite",
@@ -11,10 +11,10 @@
   },
   "dependencies": {
     "@fontsource/roboto": "*",
-    "core-js": "^3.38.1",
+    "core-js": "^3.39.0",
     "js-base64": "^3.7.7",
-    "vue": "^3.5.8",
-    "vuetify": "^3.7.2"
+    "vue": "^3.5.13",
+    "vuetify": "^3.7.4"
   },
   "devDependencies": {
     "@mdi/font": "^7.4.47",
@@ -22,7 +22,7 @@
     "@vitejs/plugin-vue": "^4.6.2",
     "@vue/eslint-config-prettier": "^8.0.0",
     "eslint": "^8.57.1",
-    "eslint-plugin-vue": "^9.28.0",
+    "eslint-plugin-vue": "^9.31.0",
     "prettier": "^3.3.3",
     "vite": "^4.5.5",
     "vite-plugin-vuetify": "^1.0.2"
