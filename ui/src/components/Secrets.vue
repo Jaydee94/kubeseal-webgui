@@ -343,7 +343,6 @@ const sealedSecrets = ref([])
 const sealedSecret = ref()
 const clipboardAvailable = ref(false)
 const favoriteNamespaces = ref(readFavoriteNamespaces());
-const lastFavoriteNamespace = ref();
 const namespaceSelector = useTemplateRef("namespaceSelector");
 
 onBeforeMount(async () => {
@@ -492,7 +491,7 @@ async function fetchNamespaces(config) {
     namespaces.value = mockNamespacesResolver(10);
   } else {
     try {
-      const response = await fetch(`${config.api_url}/namespaces`);da
+      const response = await fetch(`${config.api_url}/namespaces`);
       namespaces.value = await response.json();
     } catch (error) {
       setErrorMessage(error);
@@ -501,15 +500,21 @@ async function fetchNamespaces(config) {
 }
 
 const sortedNamespaces = computed(() => {
-  const favorites = Array.from(favoriteNamespaces.value).filter((namespace) => namespaces.value.includes(namespace));
-  if (favorites.length > 0) {
-    lastFavoriteNamespace.value = favorites[favorites.length -1]
-  }
   return [
-    ...favorites,
+    ...liveFavoriteNamespaces.value,
     ...namespaces.value.filter((namespace) => !favoriteNamespaces.value.has(namespace))
   ];
 });
+
+const liveFavoriteNamespaces = computed(
+  () => Array.from(favoriteNamespaces.value).filter(
+    (namespace) => namespaces.value.includes(namespace)
+  )
+)
+
+const lastFavoriteNamespace = computed(
+  () => liveFavoriteNamespaces.value.length > 0 ? liveFavoriteNamespaces.value[liveFavoriteNamespaces.value.length - 1] : ""
+)
 
 function toggleFavorite(namespace) {
   if (favoriteNamespaces.value.has(namespace)) {
