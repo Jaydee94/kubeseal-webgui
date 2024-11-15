@@ -78,7 +78,7 @@ def namespace_select(page: Page):
     input_selector = "input#namespaceSelection"
     page.wait_for_selector(input_selector, timeout=10000)
     page.click(input_selector)
-    suggestions = page.query_selector_all(".v-list-item-title")
+    suggestions = page.query_selector_all(".v-list-item__content")
     assert len(suggestions) > 0, "No suggestions found."
     first_suggestion_text = suggestions[0].inner_text()
     suggestions[0].click()

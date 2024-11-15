@@ -27,22 +27,21 @@
             label="Namespace name"
             :disabled="['strict', 'namespace-wide'].indexOf(scope) === -1"
           >
-            <template v-slot:item="{ item, attrs }">
-              <div
-                v-bind="attrs"
-                class="d-flex align-center"
-                @click="selectNamespace(item.value)" 
-              >
-                <v-icon
+            <template v-slot:item="{ props, item }">
+              <v-list-item
+                v-bind="props"
+                :value="item"
+               >
+                <template v-slot:prepend>
+                  <v-icon
                   small
                   color="#FFA500"
                   @click.stop="toggleFavorite(item.value)"
-                  class="mr-2"
-                >
-                  {{ favoriteNamespaces.has(item.value) ? 'mdi-heart' : 'mdi-heart-outline' }}
-                </v-icon>
-                <span class="v-list-item-title">{{ item.value }}</span>
-              </div>
+                  >
+                    {{ favoriteNamespaces.has(item.value) ? 'mdi-heart' : 'mdi-heart-outline' }}
+                  </v-icon>
+                </template>
+              </v-list-item>
               <v-divider v-if="item.value === lastFavoriteNamespace" :thickness="2"></v-divider>
             </template>
           </v-autocomplete>
@@ -524,12 +523,6 @@ function toggleFavorite(namespace) {
   }
   localStorage.favoriteNamespaces = JSON.stringify([...favoriteNamespaces.value]);
 }
-
-function selectNamespace(value) {
-  namespaceName.value = value;
-  namespaceSelector.value.blur()
-}
-
 
 async function fetchDisplayName(config) {
   displayName.value = config.display_name;
