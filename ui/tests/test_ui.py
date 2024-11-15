@@ -53,7 +53,7 @@ def test_secret_form_with_invalid_file():
         page.goto("http://localhost:8080")
         page.wait_for_load_state("load")
 
-        file_input = page.locator('input[type="file"]#input-16')
+        file_input = page.locator('input[type="file"]#fileInput')
         # Try to upload a non-valid file
         invalid_file_path = os.path.join(os.getcwd(), "large_test_file.txt")
         with open(invalid_file_path, "w") as f:
@@ -75,21 +75,23 @@ def test_secret_form_with_invalid_file():
 
 
 def namespace_select(page: Page):
-    input_selector = "input#input-4"
+    input_selector = "input#namespaceSelection"
     page.wait_for_selector(input_selector, timeout=10000)
     page.click(input_selector)
-    suggestions = page.query_selector_all(".v-list-item-title")
+    suggestions = page.query_selector_all(".v-list-item__content")
     assert len(suggestions) > 0, "No suggestions found."
     first_suggestion_text = suggestions[0].inner_text()
     suggestions[0].click()
-    selected_value = page.input_value(input_selector)
+    selected_text_selector = ".v-autocomplete__selection-text"
+    page.wait_for_selector(selected_text_selector, timeout=10000)
+    displayed_text = page.inner_text(selected_text_selector)
     assert (
-        selected_value == first_suggestion_text
-    ), f"Expected '{first_suggestion_text}', but got '{selected_value}'"
+        displayed_text == first_suggestion_text
+    ), f"Expected '{first_suggestion_text}', but got '{displayed_text}'"
 
 
 def secret_name(page: Page):
-    input_selector = "#input-secret-name"
+    input_selector = "#secretName"
     page.wait_for_selector(input_selector)
     input_text = "valid-secret-name"
     page.fill(input_selector, input_text)
@@ -114,24 +116,24 @@ def scope_strict(page: Page):
 
 
 def add_secret_key_value(page: Page):
-    page.wait_for_selector("textarea#input-12")
-    page.fill("textarea#input-12", "my-secret-key")
-    assert page.locator("textarea#input-12").input_value() == "my-secret-key"
-    page.wait_for_selector("textarea#input-14")
-    page.fill("textarea#input-14", "my-secret-value")
-    assert page.locator("textarea#input-14").input_value() == "my-secret-value"
-    file_input = page.locator('input[type="file"]#input-16')
+    page.wait_for_selector("textarea#secretKey")
+    page.fill("textarea#secretKey", "my-secret-key")
+    assert page.locator("textarea#secretKey").input_value() == "my-secret-key"
+    page.wait_for_selector("textarea#secretValue")
+    page.fill("textarea#secretValue", "my-secret-value")
+    assert page.locator("textarea#secretValue").input_value() == "my-secret-value"
+    file_input = page.locator('input[type="file"]#fileInput')
     assert (
         not file_input.is_enabled()
     ), "File input should be disabled when value is filled"
 
 
 def add_secret_key_file(page: Page):
-    page.wait_for_selector("textarea#input-12")
-    page.fill("textarea#input-12", "my-secret-key")
-    assert page.locator("textarea#input-12").input_value() == "my-secret-key"
+    page.wait_for_selector("textarea#secretKey")
+    page.fill("textarea#secretKey", "my-secret-key")
+    assert page.locator("textarea#secretKey").input_value() == "my-secret-key"
 
-    file_input = page.locator('input[type="file"]#input-16')
+    file_input = page.locator('input[type="file"]#fileInput')
     assert file_input.is_visible()
     test_file_path = os.path.join(os.getcwd(), "test_file.txt")
     with open(test_file_path, "w") as f:

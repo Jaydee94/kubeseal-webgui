@@ -19,12 +19,32 @@
             sm="6"
             md="4"
           >
-            <v-autocomplete
-              v-model="namespaceName"
-              :items="namespaces"
-              label="Namespace name"
-              :disabled="['strict', 'namespace-wide'].indexOf(scope) === -1"
-            />
+          <v-autocomplete
+            id="namespaceSelection"
+            v-model="namespaceName"
+            :items="sortedNamespaces"
+            ref="namespaceSelector"
+            label="Namespace name"
+            :disabled="['strict', 'namespace-wide'].indexOf(scope) === -1"
+          >
+            <template v-slot:item="{ props, item }">
+              <v-list-item
+                v-bind="props"
+                :value="item"
+               >
+                <template v-slot:prepend>
+                  <v-icon
+                  small
+                  color="#FFA500"
+                  @click.stop="toggleFavorite(item.value)"
+                  >
+                    {{ favoriteNamespaces.has(item.value) ? 'mdi-heart' : 'mdi-heart-outline' }}
+                  </v-icon>
+                </template>
+              </v-list-item>
+              <v-divider v-if="item.value === lastFavoriteNamespace" :thickness="2"></v-divider>
+            </template>
+          </v-autocomplete>
             <v-container
               id="password-help-block"
               class="text-caption"
@@ -39,7 +59,7 @@
             md="4"
           >
             <v-text-field
-              id="input-secret-name"
+              id="secretName"
               v-model="secretName"
               label="Secret name"
               trim
@@ -95,6 +115,7 @@
             md="4"
           >
             <v-textarea
+              id="secretKey"
               v-model="secret.key"
               label="Secret key"
               rows="1"
@@ -110,6 +131,7 @@
             :md="hasValue[counter] ? 7 : hasFile[counter] ? 1 : 4"
           >
             <v-textarea
+              id="secretValue"
               v-model="secret.value"
               rows="1"
               auto-grow
@@ -124,6 +146,7 @@
             :md="hasFile[counter] ? 7 : hasValue[counter] ? 1 : 4"
           >
             <v-file-input
+              id="fileInput"
               v-model="secret.file"
               show-size
               dense
@@ -302,7 +325,7 @@ spec:
 </template>
 
 <script setup>
-import { ref, computed, onBeforeMount, onMounted } from 'vue'
+import { ref, computed, onBeforeMount, onMounted, useTemplateRef } from 'vue'
 import { Base64 } from "js-base64";
 
 const namespaces = ref([])
@@ -318,6 +341,8 @@ const secrets = ref([{ key: "", value: "", file: [] }])
 const sealedSecrets = ref([])
 const sealedSecret = ref()
 const clipboardAvailable = ref(false)
+const favoriteNamespaces = ref(readFavoriteNamespaces());
+const namespaceSelector = useTemplateRef("namespaceSelector");
 
 onBeforeMount(async () => {
   const config = await fetchConfig();
@@ -331,6 +356,14 @@ onMounted(() => {
   }
   setErrorMessage("");
 })
+
+function readFavoriteNamespaces() {
+  try {
+    return new Set(JSON.parse(localStorage.favoriteNamespaces));
+  } catch (error) {
+    return new Set([]);
+  }
+}
 
 function validDnsSubdomain(name) {
   if (!name) {
@@ -465,6 +498,31 @@ async function fetchNamespaces(config) {
   }
 }
 
+const sortedNamespaces = computed(() => {
+  return [
+    ...liveFavoriteNamespaces.value,
+    ...namespaces.value.filter((namespace) => !favoriteNamespaces.value.has(namespace))
+  ];
+});
+
+const liveFavoriteNamespaces = computed(
+  () => Array.from(favoriteNamespaces.value).filter(
+    (namespace) => namespaces.value.includes(namespace)
+  )
+)
+
+const lastFavoriteNamespace = computed(
+  () => liveFavoriteNamespaces.value.length > 0 ? liveFavoriteNamespaces.value[liveFavoriteNamespaces.value.length - 1] : ""
+)
+
+function toggleFavorite(namespace) {
+  if (favoriteNamespaces.value.has(namespace)) {
+    favoriteNamespaces.value.delete(namespace);
+  } else {
+    favoriteNamespaces.value.add(namespace);
+  }
+  localStorage.favoriteNamespaces = JSON.stringify([...favoriteNamespaces.value]);
+}
 
 async function fetchDisplayName(config) {
   displayName.value = config.display_name;
