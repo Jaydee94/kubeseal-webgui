@@ -25,6 +25,7 @@
             :items="sortedNamespaces"
             ref="namespaceSelector"
             label="Namespace name"
+            variant="solo-inverted"
             :disabled="['strict', 'namespace-wide'].indexOf(scope) === -1"
           >
             <template v-slot:item="{ props, item }">
@@ -64,6 +65,7 @@
               label="Secret name"
               trim
               clearable
+              variant="solo-inverted"
               :rules="rules.validDnsSubdomain"
               :disabled="['strict'].indexOf(scope) === -1"
             />
@@ -90,6 +92,7 @@
               :select-size="1"
               :plain="true"
               label="Scope"
+              variant="solo-inverted"
             />
             <v-container
               id="scope-help-block"
@@ -121,6 +124,7 @@
               rows="1"
               clearable
               prepend-icon="mdi-delete"
+              variant="solo-inverted"
               :rules="rules.validSecretKey"
               @click:prepend="removeSecret(counter)"
             />
@@ -137,6 +141,7 @@
               auto-grow
               clearable
               label="Secret value"
+              variant="solo-inverted"
               :disabled="hasFile[counter]"
             />
           </v-col>
@@ -153,6 +158,7 @@
               clearable
               label="Upload File"
               prepend-icon="mdi-file-upload-outline"
+              variant="solo-inverted"
               :rules="rules.fileSize"
               :disabled="hasValue[counter]"
               :multiple="false"
@@ -195,7 +201,7 @@
               border="start"
               type="warning"
               icon="mdi-flash"
-              title="Error while encoding sensitive data"
+              title="An Error occurred:"
             >
               <v-container>
                 <p>Please contact your administrator and try again later.</p>
@@ -214,7 +220,8 @@
           >
             <v-btn
               block
-              variant="tonal"
+              variant="plain"
+              size="x-large"
               prepend-icon="mdi-lock"
               color="blue lighten-1"
               :disabled="notReadyToEncode"
@@ -222,6 +229,15 @@
             >
               Encrypt
             </v-btn>
+            <v-card
+              v-if="!isEncryptButtonEnabled && !hasErrorMessage"
+              variant="text"
+              class="text-subtitle-2 mt-5"
+              color="light-blue-accent-4"
+              align="center"
+            >
+              Fill out the form before encrypting.
+            </v-card>
           </v-col>
         </v-row>
       </v-form>
@@ -230,8 +246,8 @@
       <v-row>
         <v-col>
           <v-card
-            title="Complete sealed secret"
-            class="ma-2"
+            title="Generated sealed secret"
+            class="ma-1"
           >
             <template #text>
               <v-code
@@ -256,16 +272,11 @@ spec:
               <v-btn
                 v-if="clipboardAvailable"
                 variant="text"
+                prepend-icon="mdi-content-copy"
                 @click="copyRenderedSecrets()"
               >
                 Copy to clipboard
               </v-btn>
-              <v-spacer />
-              <v-btn
-                v-if="clipboardAvailable"
-                icon="mdi-content-copy"
-                @click="copyRenderedSecrets()"
-              />
             </template>
           </v-card>
         </v-col>
@@ -292,17 +303,11 @@ spec:
             <v-btn
               v-if="clipboardAvailable"
               variant="text"
+              prepend-icon="mdi-content-copy"
               @click="copySealedSecret(counter)"
             >
               Copy to clipboard
             </v-btn>
-            <v-spacer />
-            <v-btn
-              v-if="clipboardAvailable"
-              icon="mdi-content-copy"
-              variant="text"
-              @click="copySealedSecret(counter)"
-            />
           </template>
         </v-card>
       </v-row>
@@ -310,11 +315,10 @@ spec:
         <v-col class="d-flex">
           <v-btn
             block
-            variant="tonal"
+            variant="plain"
             class="flex-fill"
-            @click="
-              displayCreateSealedSecretForm = !displayCreateSealedSecretForm
-              "
+            prepend-icon="mdi-autorenew"
+            @click="resetForm"
           >
             Encrypt more secrets
           </v-btn>
@@ -343,6 +347,17 @@ const sealedSecret = ref()
 const clipboardAvailable = ref(false)
 const favoriteNamespaces = ref(readFavoriteNamespaces());
 const namespaceSelector = useTemplateRef("namespaceSelector");
+
+const resetForm = () => {
+  displayCreateSealedSecretForm.value = true;
+  secretName.value = "";
+  namespaceName.value = "";
+  scope.value = "strict";
+  secrets.value = [{ key: "", value: "", file: [] }];
+  sealedSecrets.value = [];
+  hasErrorMessage.value = false;
+  errorMessage.value = "";
+};
 
 onBeforeMount(async () => {
   const config = await fetchConfig();
@@ -476,12 +491,24 @@ function setErrorMessage(newErrorMessage) {
   hasErrorMessage.value = !!newErrorMessage;
 }
 
+const isEncryptButtonEnabled = computed(() => {
+  return (
+    secretName.value &&
+    namespaceName.value &&
+    secrets.value.every(secret => secret.key && (secret.value || secret.file.length))
+  );
+});
+
 async function fetchConfig() {
   try {
-    const response = await fetch("/config.json")
+    const response = await fetch("/config.json");
+    if (!response.ok) {
+      throw Error(`Failed to fetch config.json: ${response.statusText}`);
+    }
     return await response.json();
   } catch (error) {
-    setErrorMessage(error)
+    setErrorMessage(error.message);
+    return {};
   }
 }
 
@@ -493,7 +520,7 @@ async function fetchNamespaces(config) {
       const response = await fetch(`${config.api_url}/namespaces`);
       namespaces.value = await response.json();
     } catch (error) {
-      setErrorMessage(error);
+      setErrorMessage(`Failed to fetch namespaces. Error Message: ${error.message}.`);
     }
   }
 }
@@ -575,6 +602,7 @@ async function fetchEncodedSecrets() {
     } else {
       sealedSecrets.value = await response.json();
       displayCreateSealedSecretForm.value = false;
+      setErrorMessage("");
     }
   } catch (error) {
     setErrorMessage(error);
