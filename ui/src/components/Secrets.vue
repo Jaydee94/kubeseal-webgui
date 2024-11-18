@@ -495,7 +495,9 @@ const isEncryptButtonEnabled = computed(() => {
   return (
     secretName.value &&
     namespaceName.value &&
-    secrets.value.every(secret => secret.key && (secret.value || secret.file.length))
+    secrets.value.every(secret => secret.key && (
+      secret.value || secret.file instanceof Blob || secret.file instanceof File
+    ))
   );
 });
 
