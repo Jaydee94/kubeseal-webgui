@@ -250,23 +250,18 @@
             class="ma-1"
           >
             <template #text>
-              <v-code
+              <pre class="overflow-auto"><v-code
                 id="sealed-secret-result"
                 class="overflow-auto"
-              >
-                <pre
-                  ref="sealedSecret"
-                  class="output"
-                >
-apiVersion: bitnami.com/v1alpha1
+                ref="sealedSecret"
+              >apiVersion: bitnami.com/v1alpha1
 kind: SealedSecret
 metadata:
   name: {{ secretName ? secretName : "# no secret name given" }}
   namespace: {{ namespaceName ? namespaceName : "# no namespace name given" }}
   annotations: {{ sealedSecretsAnnotations }}
 spec:
-  encryptedData: {{ renderedSecrets }}</pre>
-              </v-code>
+  encryptedData: {{ renderedSecrets }}</v-code></pre>
             </template>
             <template #actions>
               <v-btn
@@ -295,9 +290,7 @@ spec:
             Key <code>{{ secret["key"] }}</code>
           </template>
           <template #text>
-            <v-code class="overflow-auto">
-              <pre class="output">{{ secret["value"] }}</pre>
-            </v-code>
+            <pre class="overflow-auto"><v-code class="overflow-auto">{{ secret["value"] }}</v-code></pre>
           </template>
           <template #actions>
             <v-btn
@@ -637,5 +630,15 @@ function removeSecret(counter) {
 <style>
 .helper-info {
   margin-bottom: 10px;
+}
+
+pre:has(code) {
+  background-color: rgb(var(--v-theme-code));
+  color: rgb(var(--v-theme-on-code));
+  padding: 0.2em 0.4em;
+}
+
+pre > code.v-code {
+  padding: 0 !important;
 }
 </style>
