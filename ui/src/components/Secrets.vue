@@ -310,10 +310,21 @@ spec:
             block
             variant="plain"
             class="flex-fill"
-            prepend-icon="mdi-autorenew"
+            prepend-icon="mdi-delete"
             @click="resetForm"
           >
-            Encrypt more secrets
+            Clear secrets
+          </v-btn>
+        </v-col>
+        <v-col class="d-flex">
+          <v-btn
+            block
+            variant="plain"
+            class="flex-fill"
+            prepend-icon="mdi-pencil"
+            @click="displayCreateSealedSecretForm=true"
+          >
+            Edit secrets
           </v-btn>
         </v-col>
       </v-row>
