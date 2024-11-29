@@ -1,7 +1,7 @@
-FROM debian:latest as deps
+FROM debian:latest AS deps
 
 ARG KUBESEAL_VERSION=0.27.2
-ARG KUBESEAL_ARCH=amd64
+ARG TARGETARCH
 ENV KUBESEAL_BINARY=/deps/kubeseal \
     PRIVATE_KEY=/dev/null \
     PUBLIC_KEY=/deps/cert.pem
@@ -13,7 +13,7 @@ RUN apt-get update && \
     apt-get install -y openssl curl && \
     apt-get clean
 RUN openssl req -x509 -days 365 -nodes -newkey rsa:4096 -keyout "$PRIVATE_KEY" -out "$PUBLIC_KEY" -subj "/CN=sealed-secret/O=sealed-secret"
-RUN curl -Lsf -o - "https://github.com/bitnami-labs/sealed-secrets/releases/download/v${KUBESEAL_VERSION}/kubeseal-${KUBESEAL_VERSION}-linux-${KUBESEAL_ARCH}.tar.gz" | \
+RUN curl -Lsf -o - "https://github.com/bitnami-labs/sealed-secrets/releases/download/v${KUBESEAL_VERSION}/kubeseal-${KUBESEAL_VERSION}-linux-${TARGETARCH}.tar.gz" | \
     tar -xzf - && \
     chmod 0755 "${KUBESEAL_BINARY}"
 
