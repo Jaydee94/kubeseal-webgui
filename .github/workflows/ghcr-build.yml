@@ -64,7 +64,7 @@ jobs:
             type=semver,pattern={{version}}
 
       - name: Extract metadata (tags, labels) for Docker with latest tag
-        id: meta
+        id: meta-release
         uses: docker/metadata-action@v5
         if: startsWith(github.ref, 'refs/tags/')
         with:
