@@ -6,6 +6,10 @@ on:
     tags: ['*']
   pull_request:
     branches: ['master']
+    types:
+      - opened
+      - reopened
+      - synchronize
   schedule:
     - cron: '42 6 * * SUN'
 
