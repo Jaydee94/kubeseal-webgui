@@ -58,7 +58,6 @@ jobs:
           images: ${{ matrix.image }}
           tags: |
             type=semver,pattern={{version}}
-            type=raw,value=latest
 
       - name: Extract metadata (tags, labels) for Docker with latest tag
         id: meta
