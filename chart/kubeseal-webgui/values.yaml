@@ -8,13 +8,13 @@ api:
   # is used by the UI to locate the API.
   url: http://localhost:8080
   image:
-    repository: kubesealwebgui/api
+    repository: ghcr.io/jaydee94/kubeseal-webgui/api
     tag: 4.5.0
   environment: {}
   loglevel: "INFO"
 ui:
   image:
-    repository: kubesealwebgui/ui
+    repository: ghcr.io/jaydee94/kubeseal-webgui/ui
     tag: 4.5.0
 image:
   pullPolicy: Always
@@ -39,7 +39,6 @@ nodeSelector: {}
 # Setup resources for the pod
 resources:
   limits:
-    cpu: 100m
     memory: 256Mi
   requests:
     cpu: 20m
