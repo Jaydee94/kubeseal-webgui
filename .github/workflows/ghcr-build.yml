@@ -3,7 +3,7 @@ name: Create and publish Docker images on ghcr.io
 on:
   push:
     branches: ['master']
-    tags: ['*'] # Triggers on release tags
+    tags: ['*']
   pull_request:
     branches: ['master']
   schedule:
@@ -53,11 +53,22 @@ jobs:
       - name: Extract metadata (tags, labels) for Docker
         id: meta
         uses: docker/metadata-action@v5
+        if: !startsWith(github.ref, 'refs/tags/')
         with:
           images: ${{ matrix.image }}
           tags: |
             type=semver,pattern={{version}}
-            ${{ github.event_name == 'push' && github.ref_type == 'tag' && 'type=raw,value=latest' }}
+            type=raw,value=latest
+
+      - name: Extract metadata (tags, labels) for Docker with latest tag
+        id: meta
+        uses: docker/metadata-action@v5
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          images: ${{ matrix.image }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=raw,value=latest
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5

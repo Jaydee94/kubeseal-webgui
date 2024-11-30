@@ -24,6 +24,7 @@ Container Images are now uploaded to the GitHub Registry instead of DockerHub.
 
 ## Uninstalling the Chart
 
+```console
 To uninstall/delete the my-release deployment:
 
 helm uninstall kubeseal-webgui kubesealwebgui/kubeseal-webgui --namespace <namespacename>
