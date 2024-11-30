@@ -5,6 +5,7 @@ on:
       - opened
       - reopened
       - synchronize
+      - edited
   push:
     branches:
       - main
