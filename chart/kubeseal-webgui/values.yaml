@@ -39,7 +39,7 @@ nodeSelector: {}
 # Setup resources for the pod
 resources:
   limits:
-    cpu: 100m
+    # cpu: 100m
     memory: 256Mi
   requests:
     cpu: 20m

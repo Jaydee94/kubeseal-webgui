@@ -42,7 +42,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `affinity`                                | Add affinity rules to the deployment.             | `{}`                          |
 | `nodeSelector`                            | Add a nodeSelector to the deployment.             | `{}`                          |
 | `displayName`                             | Optional display name for the kubeseal instance   | `""`                          |
-| `resources.limits.cpu`                    | Limits CPU                                        | `100m`                        |
+| `resources.limits.cpu`                    | Limits CPU                                        | `""`                          |
 | `resources.limits.memory`                 | Limits memory                                     | `256Mi`                       |
 | `resources.requests.cpu`                  | Requests CPU                                      | `20m`                         |
 | `resources.requests.memory`               | Requests memory                                   | `20m`                         |
