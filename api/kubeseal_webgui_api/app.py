@@ -4,7 +4,10 @@ import time
 
 import fastapi
 from fastapi.middleware.cors import CORSMiddleware
-from prometheus_client import Counter, Histogram, generate_latest, REGISTRY, CONTENT_TYPE_LATEST
+from opentelemetry import metrics
+from opentelemetry.sdk.metrics import MeterProvider
+from opentelemetry.exporter.prometheus import PrometheusMetricReader
+from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 from starlette.responses import Response
 
 from .app_config import fetch_sealed_secrets_cert
@@ -12,11 +15,19 @@ from .routers import config, kubernetes, kubeseal
 
 LOGGER = logging.getLogger("kubeseal-webgui")
 
-HTTP_REQUESTS = Counter(
-    "kubeseal_webgui_http_requests_total", "Total HTTP requests", ["method", "endpoint", "http_status"]
+exporter = PrometheusMetricReader()
+metrics.set_meter_provider(MeterProvider(metric_readers=[exporter]))
+meter = metrics.get_meter("kubeseal-webgui")
+
+http_requests = meter.create_counter(
+    name="kubeseal_webgui_http_requests_total",
+    description="Total HTTP requests",
+    unit="1",
 )
-HTTP_LATENCY = Histogram(
-    "kubeseal_webgui_http_request_latency_seconds", "HTTP request latency in seconds", ["method", "endpoint"]
+http_latency = meter.create_histogram(
+    name="kubeseal_webgui_http_request_latency_seconds",
+    description="HTTP request latency in seconds",
+    unit="seconds",
 )
 
 @asynccontextmanager
@@ -25,7 +36,6 @@ async def lifespan(fastapi_app: fastapi.FastAPI):  # noqa: ANN201 skipcq: PYL-W0
     fetch_sealed_secrets_cert()
     LOGGER.info("Startup tasks complete.")
     yield
-
 
 app = fastapi.FastAPI(lifespan=lifespan)
 
@@ -47,16 +57,15 @@ async def prometheus_middleware(request: fastapi.Request, call_next):  # noqa: A
     response = await call_next(request)
     process_time = time.time() - start_time
 
-    HTTP_REQUESTS.labels(
-        method=request.method, endpoint=request.url.path, http_status=response.status_code
-    ).inc()
-    HTTP_LATENCY.labels(method=request.method, endpoint=request.url.path).observe(process_time)
+    # Record metrics
+    http_requests.add(1, {"method": request.method, "endpoint": request.url.path, "http_status": response.status_code})
+    http_latency.record(process_time, {"method": request.method, "endpoint": request.url.path})
 
     return response
 
 @app.get("/metrics")
-def metrics() -> Response:
-    return Response(generate_latest(REGISTRY), media_type=CONTENT_TYPE_LATEST)
+def metrics_endpoint() -> Response:
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 app.include_router(
     kubernetes.router,
@@ -67,7 +76,6 @@ app.include_router(
 app.include_router(
     kubeseal.router,
 )
-
 
 @app.get("/")
 def root() -> dict[str, str]:

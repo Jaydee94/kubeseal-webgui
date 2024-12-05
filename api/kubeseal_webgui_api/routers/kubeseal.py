@@ -3,40 +3,47 @@ import logging
 import re
 import subprocess  # noqa: S404 the binary has to be configured by an admin
 from typing import List, Optional, Union, overload
+from opentelemetry import metrics
 
 from fastapi import APIRouter, HTTPException
-from prometheus_client import Counter, Histogram
 
 from kubeseal_webgui_api.app_config import settings
 from kubeseal_webgui_api.routers.models import Data, KeyValuePair, Scope, Secret
 
 router = APIRouter()
 LOGGER = logging.getLogger("kubeseal-webgui")
+meter = metrics.get_meter("kubeseal-webgui")
 
-SECRETS_ENCRYPTED = Counter("kubeseal_webgui_secrets_encrypted_total", "Total encrypted secrets")
-ENCRYPTION_FAILURES = Counter("kubeseal_webgui_encryption_failures_total", "Total failed encryption attempts")
-ENCRYPTION_LATENCY = Histogram("kubeseal_webgui_encryption_latency_seconds", "Latency for encryption operations")
+SECRETS_ENCRYPTED = meter.create_counter(
+    name="kubeseal_webgui_secrets_encrypted_total",
+    description="Total encrypted secrets",
+    unit="1",
+)
+ENCRYPTION_FAILURES = meter.create_counter(
+    name="kubeseal_webgui_encryption_failures_total",
+    description="Total failed encryption attempts",
+    unit="1",
+)
 
 @router.post("/secrets", response_model=List[KeyValuePair])
 def encrypt(data: Data) -> list[KeyValuePair]:
-    with ENCRYPTION_LATENCY.time():
-        try:
-            result = run_kubeseal(
-                data.secrets,
-                data.namespace,
-                data.secret,
-                data.scope or Scope.STRICT,
-            )
-            SECRETS_ENCRYPTED.inc()
-            return result
-        except (KeyError, ValueError) as e:
-            ENCRYPTION_FAILURES.inc()  # Increment failure counter
-            LOGGER.error("Encryption failed due to invalid input: %s", e)
-            raise HTTPException(400, f"Invalid data for sealing secrets: {e}") from e
-        except RuntimeError as e:
-            ENCRYPTION_FAILURES.inc()  # Increment failure counter
-            LOGGER.error("Encryption failed due to runtime error: %s", e)
-            raise HTTPException(500, "Server is dreaming...") from e
+    try:
+        result = run_kubeseal(
+            data.secrets,
+            data.namespace,
+            data.secret,
+            data.scope or Scope.STRICT,
+        )
+        SECRETS_ENCRYPTED.add(1, {"scope": data.scope or Scope.STRICT, "namespace": data.namespace})
+        return result
+    except (KeyError, ValueError) as e:
+        ENCRYPTION_FAILURES.add(1, {"error": "invalid_input", "namespace": data.namespace})
+        LOGGER.error("Encryption failed due to invalid input: %s", e)
+        raise HTTPException(400, f"Invalid data for sealing secrets: {e}") from e
+    except RuntimeError as e:
+        ENCRYPTION_FAILURES.add(1, {"error": "runtime_error", "namespace": data.namespace})
+        LOGGER.error("Encryption failed due to runtime error: %s", e)
+        raise HTTPException(500, "Server is dreaming...") from e
 
 
 def is_blank(value: Optional[str]) -> bool:
