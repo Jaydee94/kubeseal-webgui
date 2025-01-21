@@ -623,7 +623,7 @@ const renderSecrets = (sealedSecrets) => {
 }
 
 function copyRenderedSecrets() {
-  const sealedSecretContent = sealedSecret.value.innerText.trim();
+  const sealedSecretContent = sealedSecret.value.$el.innerText.trim()
   navigator.clipboard.writeText(sealedSecretContent);
 }
 
