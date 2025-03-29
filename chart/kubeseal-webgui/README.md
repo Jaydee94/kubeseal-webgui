@@ -39,7 +39,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `replicaCount`                            | Number of nodes                                   | `1`                                    |
 | `annotations`                             | Optional annotations for the pods                 | `{}`                                   |
 | `api.image.repository`                    | Image-Repository and name of the api image.       | `ghcr.io/jaydee94/kubeseal-webgui/api` |
-| `api.image.tag`                           | Image Tag of the api image.                       | `4.5.0`                                |
+| `api.image.tag`                           | Image Tag of the api image.                       | `4.5.1`                                |
 | `api.environment`                         | Additional env variables for the api image.       | `{}`                                   |
 | `api.loglevel`                            | Loglevel for the api image.                       | `INFO`                                 |
 | `ui.image.repository`                     | Image-Repository and name of the ui image.        | `ghcr.io/jaydee94/kubeseal-webgui/ui`  |
