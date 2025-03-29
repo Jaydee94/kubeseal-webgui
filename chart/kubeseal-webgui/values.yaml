@@ -9,13 +9,13 @@ api:
   url: http://localhost:8080
   image:
     repository: ghcr.io/jaydee94/kubeseal-webgui/api
-    tag: 4.5.0
+    tag: 4.5.1
   environment: {}
   loglevel: "INFO"
 ui:
   image:
     repository: ghcr.io/jaydee94/kubeseal-webgui/ui
-    tag: 4.5.0
+    tag: 4.5.1
 image:
   pullPolicy: Always
 
