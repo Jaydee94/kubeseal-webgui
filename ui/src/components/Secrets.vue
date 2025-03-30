@@ -648,9 +648,9 @@ function validateFile(file, counter) {
 
   if (!isValid) {
     setErrorMessage("File size should be less than 1 MB!");
-    secrets.value[counter].file = []; // Datei zurücksetzen
+    secrets.value[counter].file = [];
   } else {
-    setErrorMessage(""); // Fehler zurücksetzen
+    setErrorMessage("");
   }
 }
 </script>
