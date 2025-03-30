@@ -34,10 +34,10 @@ kubectl wait --namespace ingress-nginx \
   --timeout=90s
 
 # Build, load and start image
-docker build -t kubesealwebgui/api:snapshot -f Dockerfile.api .
-docker build -t kubesealwebgui/ui:snapshot -f Dockerfile.ui .
-kind load docker-image --name chart-testing kubesealwebgui/api:snapshot
-kind load docker-image --name chart-testing kubesealwebgui/ui:snapshot
+docker build -t ghcr.io/jaydee94/kubeseal-webgui/api:snapshot -f Dockerfile.api .
+docker build -t ghcr.io/jaydee94/kubeseal-webgui/ui:snapshot -f Dockerfile.ui .
+kind load docker-image --name chart-testing ghcr.io/jaydee94/kubeseal-webgui/api:snapshot
+kind load docker-image --name chart-testing ghcr.io/jaydee94/kubeseal-webgui/ui:snapshot
 
 kubectl create namespace kubeseal-webgui
 
