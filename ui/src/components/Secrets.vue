@@ -162,6 +162,7 @@
               :rules="rules.fileSize"
               :disabled="hasValue[counter]"
               :multiple="false"
+              @change="validateFile(secret.file, counter)"
             />
           </v-col>
         </v-row>
@@ -204,10 +205,12 @@
               title="An Error occurred:"
             >
               <v-container>
-                <p>Please contact your administrator and try again later.</p>
-                <b>Error message:</b>
-                <p>
-                  <code class="ma-4">{{ errorMessage }}</code>
+                <p v-if="errorMessage">
+                <b>Error Details:</b>
+                                  <code class="ma-4">{{ errorMessage }}</code>
+                </p>
+<p v-else>
+                  Please contact your administrator and try again later.
                 </p>
               </v-container>
             </v-alert>
@@ -636,6 +639,18 @@ function removeSecret(counter) {
     secrets.value.splice(counter, 1);
   } else {
     secrets.value[0] = { key: "", value: "", file: [] }
+  }
+}
+
+function validateFile(file, counter) {
+  const fileSizeRule = rules.fileSize[0];
+  const isValid = fileSizeRule([file]) === true;
+
+  if (!isValid) {
+    setErrorMessage("File size should be less than 1 MB!");
+    secrets.value[counter].file = []; // Datei zurücksetzen
+  } else {
+    setErrorMessage(""); // Fehler zurücksetzen
   }
 }
 </script>

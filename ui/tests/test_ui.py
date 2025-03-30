@@ -61,7 +61,8 @@ def test_secret_form_with_invalid_file():
                 "X" * (10 * 1024 * 1024)
             )  # Create a 10MB file (assuming it's too large)
         file_input.set_input_files(invalid_file_path)
-
+        
+        page.pause()
         # Check for an error message (adjust the selector as needed)
         error_message = page.locator(
             "text='File size should be less than 1 MB!'"
