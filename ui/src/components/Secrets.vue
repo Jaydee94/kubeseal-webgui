@@ -67,6 +67,7 @@
               clearable
               variant="solo-inverted"
               :rules="rules.validDnsSubdomain"
+              :error-messages="secretNameError"
               :disabled="['strict'].indexOf(scope) === -1"
             />
             <v-container
@@ -160,21 +161,11 @@
               prepend-icon="mdi-file-upload-outline"
               variant="solo-inverted"
               :rules="rules.fileSize"
+              :error-messages="fileErrors[counter]"
               :disabled="hasValue[counter]"
               :multiple="false"
               @change="validateFile(secret.file, counter)"
             />
-          </v-col>
-        </v-row>
-        <v-row>
-          <v-col>
-            <v-btn
-              prepend-icon="mdi-plus-box"
-              color="accent"
-              @click="secrets.push({ key: '', value: '', file: [] })"
-            >
-              Add key-value pair
-            </v-btn>
           </v-col>
         </v-row>
         <v-row>
@@ -195,25 +186,26 @@
         </v-row>
         <v-row>
           <v-col>
-            <v-alert
-              v-model="hasErrorMessage"
-              closable
-              prominent
-              border="start"
-              type="warning"
-              icon="mdi-flash"
-              title="An Error occurred:"
+            <v-btn
+              prepend-icon="mdi-plus-box"
+              color="accent"
+              @click="secrets.push({ key: '', value: '', file: [] })"
             >
-              <v-container>
-                <p v-if="errorMessage">
-                <b>Error Details:</b>
-                                  <code class="ma-4">{{ errorMessage }}</code>
-                </p>
-<p v-else>
-                  Please contact your administrator and try again later.
-                </p>
-              </v-container>
-            </v-alert>
+              Add key-value pair
+            </v-btn>
+          </v-col>
+        </v-row>
+        <v-row>
+          <v-col>
+            <v-btn
+              prepend-icon="mdi-delete"
+              color="grey lighten-2"
+              class="text-caption"
+              style="text-transform: none;"
+              @click="removeAllSecrets"
+            >
+              Remove all KEY-VALUE pairs
+            </v-btn>
           </v-col>
         </v-row>
         <v-row justify="center">
@@ -332,6 +324,24 @@ spec:
         </v-col>
       </v-row>
     </div>
+    <v-snackbar
+      v-model="showErrorSnackbar"
+      color="red"
+      timeout="5000"
+      top
+    >
+      <v-icon left>mdi-alert-circle</v-icon>
+      {{ errorMessage }}
+    </v-snackbar>
+    <v-snackbar
+      v-model="clipboardSnackbar"
+      color="green"
+      timeout="3000"
+      top
+    >
+      <v-icon left>mdi-check-circle</v-icon>
+      {{ clipboardMessage }}
+    </v-snackbar>
   </div>
 </template>
 
@@ -353,7 +363,14 @@ const sealedSecrets = ref([])
 const sealedSecret = ref()
 const clipboardAvailable = ref(false)
 const favoriteNamespaces = ref(readFavoriteNamespaces());
-const namespaceSelector = useTemplateRef("namespaceSelector");
+const showErrorSnackbar = ref(false);
+const clipboardSnackbar = ref(false);
+const clipboardMessage = ref("");
+const fileErrors = ref([]);
+const secretNameError = computed(() => {
+  if (!secretName.value) return "Secret name is required.";
+  return "";
+});
 
 const resetForm = () => {
   displayCreateSealedSecretForm.value = true;
@@ -450,9 +467,9 @@ const incompleteSecretData = computed(() =>
 const notReadyToEncode = computed(() =>
   hasErrorMessage.value ||
   incompleteSecretData.value ||
-  scope.value === "strict" && (namespaceName.value === "" || secretName.value === "") ||
-  scope.value === "namespace-wide" && namespaceName.value === ""
-)
+  (scope.value === "strict" && (namespaceName.value === "" || secretName.value === "")) ||
+  (scope.value === "namespace-wide" && namespaceName.value === "")
+);
 
 const hasFile = computed(() =>
   secrets.value.map((e) => e.file instanceof Blob || e.file instanceof File))
@@ -496,6 +513,7 @@ function mockNamespacesResolver(count) {
 function setErrorMessage(newErrorMessage) {
   errorMessage.value = newErrorMessage;
   hasErrorMessage.value = !!newErrorMessage;
+  showErrorSnackbar.value = !!newErrorMessage;
 }
 
 const isEncryptButtonEnabled = computed(() => {
@@ -626,12 +644,18 @@ const renderSecrets = (sealedSecrets) => {
 }
 
 function copyRenderedSecrets() {
-  const sealedSecretContent = sealedSecret.value.$el.innerText.trim()
-  navigator.clipboard.writeText(sealedSecretContent);
+  const sealedSecretContent = sealedSecret.value.$el.innerText.trim();
+  navigator.clipboard.writeText(sealedSecretContent).then(() => {
+    clipboardMessage.value = "Sealed secret copied to clipboard!";
+    clipboardSnackbar.value = true;
+  });
 }
 
 function copySealedSecret(counter) {
-  navigator.clipboard.writeText(sealedSecrets.value[counter].value);
+  navigator.clipboard.writeText(sealedSecrets.value[counter].value).then(() => {
+    clipboardMessage.value = `Secret key "${sealedSecrets.value[counter].key}" copied to clipboard!`;
+    clipboardSnackbar.value = true;
+  });
 }
 
 function removeSecret(counter) {
@@ -642,16 +666,25 @@ function removeSecret(counter) {
   }
 }
 
+function removeAllSecrets() {
+  secrets.value = [{ key: "", value: "", file: [] }];
+}
+
 function validateFile(file, counter) {
   const fileSizeRule = rules.fileSize[0];
   const isValid = fileSizeRule([file]) === true;
 
   if (!isValid) {
     setErrorMessage("File size should be less than 1 MB!");
-    secrets.value[counter].file = [];
+    secrets.value[counter].file = []; // Clear the invalid file
+    fileErrors.value[counter] = "File size should be less than 1 MB!";
   } else {
     setErrorMessage("");
+    fileErrors.value[counter] = "";
   }
+
+  // Ensure the `secrets` array is updated to reflect the cleared state
+  secrets.value = [...secrets.value];
 }
 </script>
 
