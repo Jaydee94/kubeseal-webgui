@@ -61,15 +61,13 @@ def test_secret_form_with_invalid_file():
                 "X" * (10 * 1024 * 1024)
             )  # Create a 10MB file (assuming it's too large)
         file_input.set_input_files(invalid_file_path)
-        
-        page.pause()
-        # Check for an error message (adjust the selector as needed)
-        error_message = page.locator(
-            "text='File size should be less than 1 MB!'"
-        )  # Replace with actual error message
+
+        # Check for the snackbar error message
+        snackbar_message = page.locator("div[role='status']").get_by_text("File size should be less than 1 MB!")
         assert (
-            error_message.is_visible()
-        ), "Error message should be visible for invalid file"
+            snackbar_message.is_visible()
+        ), "Snackbar error message should be visible for invalid file"
+
         if os.path.exists(invalid_file_path):
             os.remove(invalid_file_path)
         browser.close()
