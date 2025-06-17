@@ -13,7 +13,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Run typos check
-        uses: crate-ci/typos@v1.26.0
+        uses: crate-ci/typos@v1.33.1
