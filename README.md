@@ -36,7 +36,7 @@ helm repo add kubesealwebgui https://jaydee94.github.io/kubeseal-webgui/
 helm repo update
 
 # Make sure to configure all required values (with helm's --set argument) documented in our helm Chart before installing.
-helm install kubesealwebgui/kubeseal-webgui --set example_required_value="foobar"
+helm install kubeseal-webgui kubesealwebgui/kubeseal-webgui --set example_required_value="foobar"
 ```
 
 ## Usage
