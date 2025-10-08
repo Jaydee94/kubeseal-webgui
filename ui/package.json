@@ -1,6 +1,6 @@
 {
   "name": "kubeseal-webgui",
-  "version": "4.5.2",
+  "version": "4.5.4",
   "private": true,
   "scripts": {
     "dev": "vite",
