@@ -1,4 +1,4 @@
-FROM debian:latest AS deps
+FROM debian:bookworm-slim AS deps
 
 ARG KUBESEAL_VERSION=0.33.1
 ARG TARGETARCH
@@ -10,12 +10,15 @@ WORKDIR /deps
 
 RUN apt-get update && \
     apt-get upgrade -y && \
-    apt-get install -y openssl curl && \
-    apt-get clean
-RUN openssl req -x509 -days 365 -nodes -newkey rsa:4096 -keyout "$PRIVATE_KEY" -out "$PUBLIC_KEY" -subj "/CN=sealed-secret/O=sealed-secret"
-RUN curl -Lsf -o - "https://github.com/bitnami-labs/sealed-secrets/releases/download/v${KUBESEAL_VERSION}/kubeseal-${KUBESEAL_VERSION}-linux-${TARGETARCH}.tar.gz" | \
-    tar -xzf - && \
-    chmod 0755 "${KUBESEAL_BINARY}"
+    apt-get install -y --no-install-recommends ca-certificates openssl curl && \
+    openssl req -x509 -days 365 -nodes -newkey rsa:4096 -keyout "$PRIVATE_KEY" -out "$PUBLIC_KEY" -subj "/CN=sealed-secret/O=sealed-secret" && \
+    curl -Lsf -o /tmp/kubeseal.tar.gz "https://github.com/bitnami-labs/sealed-secrets/releases/download/v${KUBESEAL_VERSION}/kubeseal-${KUBESEAL_VERSION}-linux-${TARGETARCH}.tar.gz" && \
+    tar -xzf /tmp/kubeseal.tar.gz && \
+    chmod 0755 "${KUBESEAL_BINARY}" && \
+    rm /tmp/kubeseal.tar.gz && \
+    apt-get autoremove -y && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 FROM python:3.12-slim
 
@@ -30,7 +33,8 @@ RUN adduser --gid 0 --home "${APP_PATH}" --disabled-password app \
 
 RUN apt-get update && \
     apt-get upgrade -y && \
-    apt-get clean
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 
 USER app
@@ -49,8 +53,8 @@ COPY api src/
 
 RUN python3 -m venv "${APP_PATH}" && \
     . "${APP_PATH}/bin/activate" && \
-    pip install --no-cache-dir 'uvicorn' 'wheel' 'setuptools' && \
-    pip install --no-cache-dir --upgrade 'pip' 'uvicorn' 'wheel' 'setuptools' && \
+    pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir uvicorn wheel setuptools && \
     pip install --no-cache-dir src/ && \
     install --mode=755 --group=0 ./src/bin/* "${APP_PATH}/bin/"
 

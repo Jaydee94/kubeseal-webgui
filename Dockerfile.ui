@@ -1,11 +1,16 @@
 FROM node:lts-slim AS ui-build-stage
-COPY ui/ /ui
 WORKDIR /ui
-RUN npm install --legacy-peer-deps && npm run build
+COPY ui/package*.json ./
+RUN npm install --legacy-peer-deps
+COPY ui/ ./
+RUN npm run build && \
+    npm cache clean --force
 
 FROM quay.io/nginx/nginx-unprivileged:stable-alpine AS ui-production-stage
 USER root
-RUN apk update && apk upgrade
+RUN apk update && \
+    apk upgrade && \
+    rm -rf /var/cache/apk/*
 USER nginx
 COPY --chown=101:101 --from=ui-build-stage /ui/dist /usr/share/nginx/html/
 COPY --chown=101:101 ui/nginx-default.conf /etc/nginx/conf.d/default.conf
