@@ -2,328 +2,111 @@
   <div class="secrets-component">
     <v-container
       v-if="displayName"
-      class="text-subtitle-1"
+      class="text-h5 text-gradient-primary text-center mb-2 py-0"
       align="center"
     >
       {{ displayName }}
     </v-container>
-    <div
-      v-if="displayCreateSealedSecretForm"
-      class="secrets-form"
-    >
-      <br>
-      <v-form>
-        <v-row>
-          <v-col
-            cols="12"
-            sm="6"
-            md="4"
-          >
-          <v-autocomplete
-            id="namespaceSelection"
-            v-model="namespaceName"
-            :items="sortedNamespaces"
-            ref="namespaceSelector"
-            label="Namespace name"
-            variant="solo-inverted"
-            :disabled="['strict', 'namespace-wide'].indexOf(scope) === -1"
-          >
-            <template v-slot:item="{ props, item }">
-              <v-list-item
-                v-bind="props"
-                :value="item"
-               >
-                <template v-slot:prepend>
-                  <v-icon
-                  small
-                  color="#FFA500"
-                  @click.stop="toggleFavorite(item.value)"
-                  >
-                    {{ favoriteNamespaces.has(item.value) ? 'mdi-heart' : 'mdi-heart-outline' }}
-                  </v-icon>
-                </template>
-              </v-list-item>
-              <v-divider v-if="item.value === lastFavoriteNamespace" :thickness="2"></v-divider>
-            </template>
-          </v-autocomplete>
-            <v-container
-              id="password-help-block"
-              class="text-caption"
-            >
-              Select the target namespace where the sealed secret will be
-              deployed.
-            </v-container>
-          </v-col>
-          <v-col
-            cols="12"
-            sm="6"
-            md="4"
-          >
-            <v-text-field
-              id="secretName"
-              v-model="secretName"
-              label="Secret name"
-              trim
-              clearable
-              variant="solo-inverted"
-              :rules="rules.validDnsSubdomain"
-              :error-messages="secretNameError"
-              :disabled="['strict'].indexOf(scope) === -1"
-            />
-            <v-container
-              id="password-help-block"
-              class="text-caption"
-            >
-              Specify name of the secret.
-              <br>
-              <i>The secret name must be of type:
-                <a
-                  target="_blank"
-                  href="https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names"
-                >DNS Subdomain</a></i>
-            </v-container>
-          </v-col>
-          <v-col
-            cols="12"
-            md="4"
-          >
-            <v-select
-              v-model="scope"
-              :items="scopes"
-              :select-size="1"
-              :plain="true"
-              label="Scope"
-              variant="solo-inverted"
-            />
-            <v-container
-              id="scope-help-block"
-              class="text-caption"
-            >
-              Specify scope of the secret.
-              <br>
-              <i>
-                <a
-                  target="_blank"
-                  href="https://github.com/bitnami-labs/sealed-secrets#scopes"
-                >Scopes for sealed secrets</a></i>
-            </v-container>
-          </v-col>
-        </v-row>
 
-        <v-row
-          v-for="(secret, counter) in secrets"
-          :key="counter"
-        >
-          <v-col
-            cols="12"
-            md="4"
-          >
-            <v-textarea
-              id="secretKey"
-              v-model="secret.key"
-              label="Secret key"
-              rows="1"
-              clearable
-              prepend-icon="mdi-delete"
-              variant="solo-inverted"
-              :rules="rules.validSecretKey"
-              @click:prepend="removeSecret(counter)"
-            />
-          </v-col>
-          <v-col
-            cols="12"
-            :sm="hasValue[counter] ? 11 : hasFile[counter] ? 1 : 6"
-            :md="hasValue[counter] ? 7 : hasFile[counter] ? 1 : 4"
-          >
-            <v-textarea
-              id="secretValue"
-              v-model="secret.value"
-              rows="1"
-              auto-grow
-              clearable
-              label="Secret value"
-              variant="solo-inverted"
-              :disabled="hasFile[counter]"
-            />
-          </v-col>
-          <v-col
-            cols="12"
-            :sm="hasFile[counter] ? 11 : hasValue[counter] ? 1 : 6"
-            :md="hasFile[counter] ? 7 : hasValue[counter] ? 1 : 4"
-          >
-            <v-file-input
-              id="fileInput"
-              v-model="secret.file"
-              show-size
-              dense
-              clearable
-              label="Upload File"
-              prepend-icon="mdi-file-upload-outline"
-              variant="solo-inverted"
-              :rules="rules.fileSize"
-              :error-messages="fileErrors[counter]"
-              :disabled="hasValue[counter]"
-              :multiple="false"
-              @change="validateFile(secret.file, counter)"
-            />
-          </v-col>
-        </v-row>
-        <v-row>
-          <v-col>
-            <v-container
-              class="text-caption"
-              block
-            >
-              Specify sensitive value and corresponding key of the secret.
-              <br>
-              <i>The key must be of type:
-                <a
-                  target="_blank"
-                  href="https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names"
-                >DNS Subdomain</a></i>
-            </v-container>
-          </v-col>
-        </v-row>
-        <v-row>
-          <v-col>
-            <v-btn
-              prepend-icon="mdi-plus-box"
-              color="accent"
-              @click="secrets.push({ key: '', value: '', file: [] })"
-            >
-              Add key-value pair
-            </v-btn>
-          </v-col>
-        </v-row>
-        <v-row>
-          <v-col>
-            <v-btn
-              prepend-icon="mdi-delete"
-              color="grey lighten-2"
-              class="text-caption"
-              style="text-transform: none;"
-              @click="removeAllSecrets"
-            >
-              Remove all KEY-VALUE pairs
-            </v-btn>
-          </v-col>
-        </v-row>
-        <v-row justify="center">
-          <v-col
-            cols="12"
-            sm="6"
-          >
-            <v-btn
-              block
-              variant="plain"
-              size="x-large"
-              prepend-icon="mdi-lock"
-              color="blue lighten-1"
-              :disabled="notReadyToEncode"
-              @click="fetchEncodedSecrets()"
-            >
-              Encrypt
-            </v-btn>
-            <v-card
-              v-if="!isEncryptButtonEnabled && !hasErrorMessage"
-              variant="text"
-              class="text-subtitle-2 mt-5"
-              color="light-blue-accent-4"
-              align="center"
-            >
-              Fill out the form before encrypting.
-            </v-card>
-          </v-col>
-        </v-row>
-      </v-form>
-    </div>
-    <div v-else>
-      <v-row>
-        <v-col>
-          <v-card
-            title="Generated sealed secret"
-            class="ma-1"
-          >
-            <template #text>
-              <pre class="overflow-auto"><v-code
-                id="sealed-secret-result"
-                class="overflow-auto"
-                ref="sealedSecret"
-              >apiVersion: bitnami.com/v1alpha1
-kind: SealedSecret
-metadata:
-  name: {{ secretName ? secretName : "# no secret name given" }}
-  namespace: {{ namespaceName ? namespaceName : "# no namespace name given" }}
-  annotations: {{ sealedSecretsAnnotations }}
-spec:
-  encryptedData: {{ renderedSecrets }}</v-code></pre>
-            </template>
-            <template #actions>
-              <v-btn
-                v-if="clipboardAvailable"
-                variant="text"
-                prepend-icon="mdi-content-copy"
-                @click="copyRenderedSecrets()"
-              >
-                Copy to clipboard
-              </v-btn>
-            </template>
-          </v-card>
-        </v-col>
-      </v-row>
-      <v-row
-        dense
-        align-content="center"
+    <!-- Form and Results Section -->
+    <transition name="fade" mode="out-in">
+      <div
+        v-if="loading"
+        class="d-flex justify-center align-center"
+        style="min-height: 400px;"
       >
-        <v-card
-          v-for="(secret, counter) in sealedSecrets"
-          :key="counter"
-          class="s4 ma-2"
-          max-width="400"
-        >
-          <template #title>
-            Key <code>{{ secret["key"] }}</code>
-          </template>
-          <template #text>
-            <pre class="overflow-auto"><v-code class="overflow-auto">{{ secret["value"] }}</v-code></pre>
-          </template>
-          <template #actions>
-            <v-btn
-              v-if="clipboardAvailable"
-              variant="text"
-              prepend-icon="mdi-content-copy"
-              @click="copySealedSecret(counter)"
+        <v-progress-circular
+          indeterminate
+          color="primary"
+          size="64"
+        ></v-progress-circular>
+      </div>
+      <v-card
+        v-else-if="displayCreateSealedSecretForm"
+        class="secrets-form modern-card pa-6 mb-6"
+        elevation="1"
+        variant="outlined"
+      >
+        <v-form>
+          <SecretFormInputs
+            v-model:namespace-name="namespaceName"
+            v-model:secret-name="secretName"
+            v-model:scope="scope"
+            :namespaces="namespaces"
+            :scopes="scopes"
+            :rules="rules"
+            :secret-name-error="secretNameError"
+            :favorite-namespaces="favoriteNamespaces"
+            @toggle-favorite="toggleFavorite"
+          />
+
+          <SecretsList
+            :secrets="secrets"
+            :has-value="hasValue"
+            :has-file="hasFile"
+            :rules="rules"
+            :file-errors="fileErrors"
+            @update:secrets="updateSecret"
+            @add-secret="secrets.push({ key: '', value: '', file: [] })"
+            @remove-secret="removeSecret"
+            @remove-all="removeAllSecrets"
+            @file-change="validateFile"
+          />
+
+          <v-row justify="center">
+            <v-col
+              cols="12"
+              sm="8"
+              md="6"
+              class="d-flex flex-column align-center"
             >
-              Copy to clipboard
-            </v-btn>
-          </template>
-        </v-card>
-      </v-row>
-      <v-row>
-        <v-col class="d-flex">
-          <v-btn
-            block
-            variant="plain"
-            class="flex-fill"
-            prepend-icon="mdi-delete"
-            @click="resetForm"
-          >
-            Clear secrets
-          </v-btn>
-        </v-col>
-        <v-col class="d-flex">
-          <v-btn
-            block
-            variant="plain"
-            class="flex-fill"
-            prepend-icon="mdi-pencil"
-            @click="displayCreateSealedSecretForm=true"
-          >
-            Edit secrets
-          </v-btn>
-        </v-col>
-      </v-row>
-    </div>
+              <v-btn
+                size="large"
+                prepend-icon="mdi-lock"
+                class="encrypt-btn px-10"
+                color="primary"
+                variant="elevated"
+                :disabled="notReadyToEncode"
+                min-width="200"
+                @click="fetchEncodedSecrets()"
+              >
+                Encrypt
+              </v-btn>
+              <transition name="fade">
+                <div
+                  v-if="!isEncryptButtonEnabled && !hasErrorMessage"
+                  class="text-caption text-medium-emphasis text-center mt-3 d-flex align-center justify-center"
+                >
+                  <v-icon size="small" class="mr-1">mdi-information-outline</v-icon>
+                  Please complete all fields to encrypt
+                </div>
+              </transition>
+            </v-col>
+          </v-row>
+        </v-form>
+      </v-card>
+
+
+
+      <SecretsResults
+        v-else
+        ref="secretsResultsRef"
+        :sealed-secrets="sealedSecrets"
+        :secret-name="secretName"
+        :namespace-name="namespaceName"
+        :sealed-secrets-annotations="sealedSecretsAnnotations"
+        :rendered-secrets="renderedSecrets"
+        :clipboard-available="clipboardAvailable"
+        :copied-individual="copiedIndividual"
+        :is-copied-main="isCopiedMain"
+        @copy-main="copyRenderedSecrets"
+        @copy-individual="copySealedSecret"
+        @clear="resetForm"
+        @edit="displayCreateSealedSecretForm=true"
+      />
+    </transition>
+
+    <!-- Snackbars -->
     <v-snackbar
       v-model="showErrorSnackbar"
       color="red"
@@ -346,8 +129,20 @@ spec:
 </template>
 
 <script setup>
-import { ref, computed, onBeforeMount, onMounted, useTemplateRef } from 'vue'
-import { Base64 } from "js-base64";
+import { ref, computed, onBeforeMount, onMounted } from 'vue'
+import SecretFormInputs from './SecretFormInputs.vue'
+import SecretsList from './SecretsList.vue'
+import SecretsResults from './SecretsResults.vue'
+import { useConfig } from '@/composables/useConfig'
+import { useSecrets } from '@/composables/useSecrets'
+
+defineOptions({
+  name: 'SecretsManager'
+})
+
+const { fetchConfig } = useConfig()
+const { fetchNamespaces, fetchEncodedSecrets: fetchEncodedSecretsApi } = useSecrets()
+
 
 const namespaces = ref([])
 const scopes = ref(["strict", "cluster-wide", "namespace-wide"])
@@ -355,17 +150,20 @@ const errorMessage = ref("")
 const hasErrorMessage = ref(false)
 const displayName = ref("")
 const displayCreateSealedSecretForm = ref(true)
+const loading = ref(false)
 const secretName = ref("")
 const namespaceName = ref("")
 const scope = ref("strict")
 const secrets = ref([{ key: "", value: "", file: [] }])
 const sealedSecrets = ref([])
-const sealedSecret = ref()
+const secretsResultsRef = ref()
 const clipboardAvailable = ref(false)
 const favoriteNamespaces = ref(readFavoriteNamespaces());
 const showErrorSnackbar = ref(false);
 const clipboardSnackbar = ref(false);
 const clipboardMessage = ref("");
+const isCopiedMain = ref(false);
+const copiedIndividual = ref({});
 const fileErrors = ref([]);
 const secretNameError = computed(() => {
   if (!secretName.value) return "Secret name is required.";
@@ -385,7 +183,7 @@ const resetForm = () => {
 
 onBeforeMount(async () => {
   const config = await fetchConfig();
-  await fetchNamespaces(config);
+  await fetchNamespacesData(config);
   await fetchDisplayName(config);
 })
 
@@ -399,7 +197,7 @@ onMounted(() => {
 function readFavoriteNamespaces() {
   try {
     return new Set(JSON.parse(localStorage.favoriteNamespaces));
-  } catch (error) {
+  } catch {
     return new Set([]);
   }
 }
@@ -410,17 +208,6 @@ function validDnsSubdomain(name) {
   }
   var re = /^[a-z0-9]([a-z0-9._-]{0,251}[a-z0-9])?$/;
   return re.test(name);
-}
-
-function readFileAsync(file) {
-  return new Promise((resolve, reject) => {
-    let reader = new FileReader();
-    reader.onload = () => {
-      resolve(reader.result);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
 }
 
 
@@ -486,28 +273,11 @@ const sealedSecretsAnnotations = computed(() => {
   return `{ sealedsecrets.bitnami.com/${scope.value}: "true" }`;
 })
 
-const adjectives = [
-    "altered", "angry", "big", "blinking", "boring", "broken", "bubbling", "calculating",
-    "cute", "diffing", "expensive", "fresh", "fierce", "floating", "generous", "golden",
-    "green", "growing", "hidden", "hideous", "interesting", "kubed", "mumbling", "rusty",
-    "singing", "small", "sniffing", "squared", "talking", "trusty", "wise", "walking", "zooming"
-];
 
-const nouns = [
-    "ant", "bike", "bird", "captain", "cheese", "clock", "digit", "gorilla", "kraken", "number",
-    "maven", "monitor", "moose", "moon", "mouse", "news", "newt", "octopus", "opossum", "otter",
-    "paper", "passenger", "potato", "ship", "spaceship", "spaghetti", "spoon", "store", "tomcat",
-    "trombone", "unicorn", "vine", "whale"
-];
 
-function mockNamespacesResolver(count) {
-    const randomPairs = new Set();
-    while (randomPairs.size < count) {
-        const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
-        const noun = nouns[Math.floor(Math.random() * nouns.length)];
-        randomPairs.add(`${adjective}-${noun}`);
-    }
-    return Array.from(randomPairs).sort();
+// Helper method to update individual secret fields from child components
+function updateSecret({ index, field, value }) {
+  secrets.value[index][field] = value;
 }
 
 function setErrorMessage(newErrorMessage) {
@@ -526,48 +296,15 @@ const isEncryptButtonEnabled = computed(() => {
   );
 });
 
-async function fetchConfig() {
+async function fetchNamespacesData(config) {
   try {
-    const response = await fetch("/config.json");
-    if (!response.ok) {
-      throw Error(`Failed to fetch config.json: ${response.statusText}`);
-    }
-    return await response.json();
+    namespaces.value = await fetchNamespaces(config);
   } catch (error) {
-    setErrorMessage(error.message);
-    return {};
+    setErrorMessage(`Failed to fetch namespaces. Error Message: ${error.message}.`);
   }
 }
 
-async function fetchNamespaces(config) {
-  if (import.meta.env.VITE_MOCK_NAMESPACES) {
-    namespaces.value = mockNamespacesResolver(10);
-  } else {
-    try {
-      const response = await fetch(`${config.api_url}/namespaces`);
-      namespaces.value = await response.json();
-    } catch (error) {
-      setErrorMessage(`Failed to fetch namespaces. Error Message: ${error.message}.`);
-    }
-  }
-}
 
-const sortedNamespaces = computed(() => {
-  return [
-    ...liveFavoriteNamespaces.value,
-    ...namespaces.value.filter((namespace) => !favoriteNamespaces.value.has(namespace))
-  ];
-});
-
-const liveFavoriteNamespaces = computed(
-  () => Array.from(favoriteNamespaces.value).filter(
-    (namespace) => namespaces.value.includes(namespace)
-  )
-)
-
-const lastFavoriteNamespace = computed(
-  () => liveFavoriteNamespaces.value.length > 0 ? liveFavoriteNamespaces.value[liveFavoriteNamespaces.value.length - 1] : ""
-)
 
 function toggleFavorite(namespace) {
   if (favoriteNamespaces.value.has(namespace)) {
@@ -584,55 +321,22 @@ async function fetchDisplayName(config) {
 
 async function fetchEncodedSecrets() {
   try {
-    const requestObject = {
-      secret: secretName.value,
-      namespace: namespaceName.value,
+    loading.value = true;
+    const config = await fetchConfig();
+    sealedSecrets.value = await fetchEncodedSecretsApi(config, {
+      secretName: secretName.value,
+      namespaceName: namespaceName.value,
       scope: scope.value,
-      secrets: await Promise.all(
-        secrets.value.map(async (element) => {
-          if (element.value) {
-            return {
-              key: element.key,
-              value: Base64.encode(element.value),
-            };
-          } else {
-            let fileContent = await readFileAsync(element.file);
-            // we get a dataurl, so split the header from the data and use data, only
-            fileContent = fileContent.split(",")[1];
-            return {
-              key: element.key,
-              file: fileContent,
-            };
-          }
-        })
-      ),
-    };
-
-    const requestBody = JSON.stringify(requestObject, null, "\t");
-
-    const config = await fetchConfig()
-
-    const response = await fetch(`${config.api_url}/secrets`, {
-      method: "POST",
-      headers: {
-        // 'Origin': 'http://localhost:8080',
-        "Content-Type": "application/json",
-      },
-      body: requestBody,
+      secrets: secrets.value
     });
-
-    if (!response.ok) {
-      throw Error(
-        "No sealed secrets in response from backend: " +
-        (await response.text())
-      );
-    } else {
-      sealedSecrets.value = await response.json();
-      displayCreateSealedSecretForm.value = false;
-      setErrorMessage("");
-    }
+    // Add a small delay to make the transition noticeable and smooth
+    await new Promise(resolve => setTimeout(resolve, 600));
+    displayCreateSealedSecretForm.value = false;
+    setErrorMessage("");
   } catch (error) {
-    setErrorMessage(error);
+    setErrorMessage(error.message || error);
+  } finally {
+    loading.value = false;
   }
 }
 
@@ -644,10 +348,20 @@ const renderSecrets = (sealedSecrets) => {
 }
 
 function copyRenderedSecrets() {
-  const sealedSecretContent = sealedSecret.value.$el.innerText.trim();
+  // Access the nested ref through the SecretsResults component
+  const sealedSecretElement = secretsResultsRef.value?.sealedSecretCardRef?.$refs?.sealedSecretRef;
+  if (!sealedSecretElement) {
+    console.error('Could not access sealed secret element');
+    return;
+  }
+  const sealedSecretContent = sealedSecretElement.innerText.trim();
   navigator.clipboard.writeText(sealedSecretContent).then(() => {
     clipboardMessage.value = "Sealed secret copied to clipboard!";
     clipboardSnackbar.value = true;
+    isCopiedMain.value = true;
+    setTimeout(() => {
+      isCopiedMain.value = false;
+    }, 2000);
   });
 }
 
@@ -655,6 +369,10 @@ function copySealedSecret(counter) {
   navigator.clipboard.writeText(sealedSecrets.value[counter].value).then(() => {
     clipboardMessage.value = `Secret key "${sealedSecrets.value[counter].key}" copied to clipboard!`;
     clipboardSnackbar.value = true;
+    copiedIndividual.value[counter] = true;
+    setTimeout(() => {
+      copiedIndividual.value[counter] = false;
+    }, 2000);
   });
 }
 
@@ -694,12 +412,89 @@ function validateFile(file, counter) {
 }
 
 pre:has(code) {
-  background-color: rgb(var(--v-theme-code));
-  color: rgb(var(--v-theme-on-code));
-  padding: 0.2em 0.4em;
+  background-color: rgba(var(--v-theme-on-surface), 0.05);
+  color: rgb(var(--v-theme-on-surface));
+  padding: 12px;
+  border-radius: var(--radius-md, 12px);
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
 }
 
-pre > code.v-code {
+pre > code {
   padding: 0 !important;
+  background: transparent !important;
+  color: inherit !important;
+}
+
+.secrets-component {
+  max-width: 1600px;
+  margin: 0 auto;
+  min-height: 400px;
+}
+
+.copy-btn {
+  transition: all var(--transition-fast, 0.15s ease) !important;
+}
+
+.copy-btn:hover {
+  transform: scale(1.1);
+}
+
+.secrets-form {
+  animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modern-input {
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.encrypt-btn {
+  font-size: 1rem !important;
+  font-weight: 500 !important;
+  transition: all var(--transition-fast, 0.15s ease) !important;
+}
+
+.result-code {
+  border-radius: var(--radius-md, 12px);
+  padding: 1rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.key-code {
+  background: linear-gradient(135deg, rgba(0, 123, 255, 0.1), rgba(253, 126, 20, 0.1));
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-sm, 8px);
+  font-weight: 600;
+}
+
+/* Transition Classes */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity var(--transition-base, 0.3s ease);
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.slide-up-enter-active {
+  transition: all var(--transition-base, 0.3s ease);
+}
+
+.slide-up-enter-from {
+  opacity: 0;
+  transform: translateY(30px);
 }
 </style>

@@ -86,6 +86,13 @@ def run_kubeseal_command(
         secret_namespace,
         scope,
     )
+
+    if settings.mock_enabled:
+        return KeyValuePair(
+            key=cleartext_secret_tuple.key,
+            value="AgBy3... (Mock Sealed Secret)"
+        )
+
     if cleartext_secret_tuple.value is not None:
         cleartext_secret = decode_base64_string(cleartext_secret_tuple.value)
         return encrypt_value_or_file(
