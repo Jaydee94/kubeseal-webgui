@@ -5,28 +5,32 @@
         v-if="fetchConfigsSuccessful"
         class="text-muted"
       >
-        <template
+        <v-chip 
           v-for="(value, key) in configs"
           :key="key"
+          variant="flat" 
+          size="small" 
+          class="modern-chip ma-1"
+          color="primary"
         >
-          <v-chip variant="plain" size="small">
-            <span>{{ key }}:   
-              {{ value }}
-            </span>
-          </v-chip>
-        </template>
+          <span class="chip-content">
+            <strong>{{ key }}:</strong> {{ value }}
+          </span>
+        </v-chip>
       </small>
       <small
         v-else-if="fetchConfigsSuccessful === false"
-        class="text-muted"
+        class="text-muted error-message"
       >
-        ⚠️ Could not retrieve application properties.
+        <v-icon small class="mr-1">mdi-alert-circle</v-icon>
+        Could not retrieve application properties.
       </small>
       <small
         v-else
-        class="text-muted"
+        class="text-muted loading-message"
       >
-        ⏳ Loading application properties.
+        <v-icon small class="mr-1 rotating">mdi-loading</v-icon>
+        Loading application properties.
       </small>
     </div>
   </v-footer>
@@ -34,30 +38,23 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useConfig } from '@/composables/useConfig'
+
 const configs = ref({})
 const errorMessage = ref("")
 const fetchConfigsSuccessful = ref(null)
+const { fetchAppConfig } = useConfig()
 
 onMounted(async () => fetchConfigs())
 
 async function fetchConfigs() {
   try {
-    let response_config = await fetch("/config.json");
-    let data_config = await response_config.clone().json();
-    let kubeseal_webgui_ui_version =
-      data_config["kubeseal_webgui_ui_version"];
-    let kubeseal_webgui_api_version =
-      data_config["kubeseal_webgui_api_version"];
-    let data = await response_config.clone().json();
-    let apiUrl = data["api_url"];
-
-    let response = await fetch(`${apiUrl}/config`);
-    fetchConfigsSuccessful.value = (response.ok && response_config.ok)
-    configs.value = await response.json();
-    configs.value.uiVersion = kubeseal_webgui_ui_version;
-    configs.value.apiVersion = kubeseal_webgui_api_version;
+    const result = await fetchAppConfig();
+    configs.value = result.configs;
+    fetchConfigsSuccessful.value = result.success;
   } catch (error) {
     errorMessage.value = error;
+    fetchConfigsSuccessful.value = false;
   }
 };
 </script>
@@ -66,5 +63,41 @@ async function fetchConfigs() {
 .app-config {
   margin: 8px 0;
   text-align: center;
+}
+
+.modern-chip {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: all var(--transition-base, 0.3s ease);
+  opacity: 0.9;
+}
+
+.modern-chip:hover {
+  opacity: 1;
+  transform: translateY(-2px);
+}
+
+.chip-content {
+  font-size: 0.75rem;
+}
+
+.error-message,
+.loading-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.rotating {
+  animation: rotate 1s linear infinite;
 }
 </style>
