@@ -19,7 +19,7 @@ The docker images can be found here:
 
 ## Demo
 
-![KubeSeal WebGui Demo](demo/kubseal-demo-4.4.0.gif)
+![KubeSeal WebGui Demo](demo/kubeseal-webgui-demo-4.6.0.gif)
 
 ## Prerequisites
 
