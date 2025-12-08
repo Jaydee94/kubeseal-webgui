@@ -9,7 +9,7 @@ export default defineConfig({
   server: {
     port: 8080,
     proxy: {
-      "^/(secrets$|namespaces$|config$|docs|openapi\.json)": {
+      "^/(secrets$|namespaces$|config$|docs|openapi\\.json)": {
         target: "http://localhost:5000",
         changeOrigin: false
       }

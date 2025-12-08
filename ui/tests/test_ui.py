@@ -8,7 +8,7 @@ def test_ui_start():
         page = browser.new_page()
         page.goto("http://localhost:8080")
         page.wait_for_load_state("load")
-        assert page.title() == "Kubeseal Webgui"
+        assert page.title() == "Kubeseal WebGui - Sealed Secrets Management"
         browser.close()
 
 
@@ -77,7 +77,8 @@ def namespace_select(page: Page):
     input_selector = "input#namespaceSelection"
     page.wait_for_selector(input_selector, timeout=10000)
     page.click(input_selector)
-    suggestions = page.query_selector_all(".v-list-item__content")
+    page.wait_for_selector(".v-list-item-title")
+    suggestions = page.query_selector_all(".v-list-item-title")
     assert len(suggestions) > 0, "No suggestions found."
     first_suggestion_text = suggestions[0].inner_text()
     suggestions[0].click()
