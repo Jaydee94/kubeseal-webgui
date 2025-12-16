@@ -2,20 +2,21 @@ name: Release Helm-Chart
 
 on:
   push:
-    branches:
-      - main
+    tags:
+      - '*'
+
+permissions:
+  contents: write
+  packages: write
 
 jobs:
   release:
-    # depending on default permission settings for your org (contents being read-only or read-write for workloads), you will have to add permissions
-    # see: https://docs.github.com/en/actions/security-guides/automatic-token-authentication#modifying-the-permissions-for-the-github_token
-    permissions:
-      contents: write
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          ref: main
           fetch-depth: 0
 
       - name: Configure Git
@@ -28,12 +29,54 @@ jobs:
         env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
 
-      - name: Run chart-releaser
-        uses: helm/chart-releaser-action@v1.7.0
-        with:
-          charts_dir: chart
-          skip_existing: true
-          mark_as_latest`: false
-          packages_with_index: true
+      - name: Install yq
+        run: |
+          wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/local/bin/yq
+          chmod +x /usr/local/bin/yq
+
+      - name: Update Version
         env:
-          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+          VERSION: ${{ github.ref_name }}
+        run: |
+          echo "Processing version $VERSION"
+          
+          # Update values.yaml
+          yq -i ".ui.image.tag = \"$VERSION\"" chart/kubeseal-webgui/values.yaml
+          yq -i ".api.image.tag = \"$VERSION\"" chart/kubeseal-webgui/values.yaml
+          
+          # Update Chart.yaml appVersion
+          yq -i ".appVersion = \"$VERSION\"" chart/kubeseal-webgui/Chart.yaml
+          
+          # Bump Chart.yaml version (patch)
+          CURRENT_CHART_VERSION=$(yq '.version' chart/kubeseal-webgui/Chart.yaml)
+          NEW_CHART_VERSION=$(echo $CURRENT_CHART_VERSION | awk -F. '{$NF = $NF + 1;} 1' | sed 's/ /./g')
+          echo "Bumping Chart version from $CURRENT_CHART_VERSION to $NEW_CHART_VERSION"
+          yq -i ".version = \"$NEW_CHART_VERSION\"" chart/kubeseal-webgui/Chart.yaml
+          
+          # Update README.md
+          sed -i -E "s/(\`api.image.tag\`[[:space:]]+\|[[:space:]]+.*[[:space:]]+\|[[:space:]]+\`)[^`]+(\`)/\1$VERSION\2/" chart/kubeseal-webgui/README.md
+          sed -i -E "s/(\`ui.image.tag\`[[:space:]]+\|[[:space:]]+.*[[:space:]]+\|[[:space:]]+\`)[^`]+(\`)/\1$VERSION\2/" chart/kubeseal-webgui/README.md
+
+      - name: Commit and Push Changes
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          git add chart/kubeseal-webgui/values.yaml chart/kubeseal-webgui/Chart.yaml chart/kubeseal-webgui/README.md
+          git commit -m "Bump version to $VERSION"
+          git push origin main
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Package and Push Helm Chart
+        run: |
+          helm package chart/kubeseal-webgui
+          
+          # Lowercase the repository name for OCI registry compatibility
+          REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          
+          helm push kubeseal-webgui-*.tgz oci://ghcr.io/$REPO_NAME/charts
