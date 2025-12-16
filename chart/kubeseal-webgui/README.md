@@ -4,12 +4,10 @@
 
 ## TL;DR
 ```console
-helm repo add kubesealwebgui https://jaydee94.github.io/kubeseal-webgui/
-helm repo update
-helm install kubeseal-webgui kubesealwebgui/kubeseal-webgui --namespace <namespacename>
+helm install kubeseal-webgui oci://ghcr.io/jaydee94/kubeseal-webgui/charts/kubeseal-webgui --namespace <namespacename>
 
 # with ingress and autofetch certificate
-helm install kubeseal-webgui kubesealwebgui/kubeseal-webgui --namespace <namespacename> --set ingress.enabled=true --set api.url="http://kubeseal-webgui.example.com" --set sealedSecrets.autoFetchCert=true
+helm install kubeseal-webgui oci://ghcr.io/jaydee94/kubeseal-webgui/charts/kubeseal-webgui --namespace <namespacename> --set ingress.enabled=true --set api.url="http://kubeseal-webgui.example.com" --set sealedSecrets.autoFetchCert=true
 ```
 
 ## Upgrade from 5.X.X to 6.X.X

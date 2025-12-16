@@ -29,12 +29,11 @@ To use this Web-Gui you have to install [Bitnami-Sealed-Secrets](https://github.
 
 You can use the helm chart which is included inside this repository to install kubseal-webgui.
 
-```bash
-helm repo add kubesealwebgui https://jaydee94.github.io/kubeseal-webgui/
-helm repo update
+You can install the chart directly from the GitHub Container Registry as an OCI artifact:
 
+```bash
 # Make sure to configure all required values (with helm's --set argument) documented in our helm Chart before installing.
-helm install kubeseal-webgui kubesealwebgui/kubeseal-webgui --set example_required_value="foobar"
+helm install kubeseal-webgui oci://ghcr.io/jaydee94/kubeseal-webgui/charts/kubeseal-webgui --namespace <namespacename>
 ```
 
 ## Usage
