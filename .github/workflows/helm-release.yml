@@ -37,8 +37,9 @@ jobs:
 
       - name: Package and Push Helm Chart
         run: |
-          # Get the version from the tag (remove v prefix)
-          VERSION=${GITHUB_REF#refs/tags/v}
+          # Get the version from the tag (remove refs/tags/ and optional v prefix)
+          VERSION=${GITHUB_REF#refs/tags/}
+          VERSION=${VERSION#v}
           echo "Processing version $VERSION"
           
           # Update values.yaml inside the runner so the packaged chart has the right defaults
