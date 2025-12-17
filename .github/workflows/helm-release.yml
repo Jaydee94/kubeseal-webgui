@@ -1,32 +1,22 @@
 name: Release Helm-Chart
 
 on:
-  workflow_run:
-    workflows: ["Semantic Release"]
-    types:
-      - completed
-    branches:
-      - master
+  push:
+    tags:
+      - '*'
 
 permissions:
-  contents: write
+  contents: read
   packages: write
 
 jobs:
   release:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: master
           fetch-depth: 0
-
-      - name: Configure Git
-        run: |
-          git config user.name "$GITHUB_ACTOR"
-          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
 
       - name: Install Helm
         uses: azure/setup-helm@v4
@@ -38,37 +28,6 @@ jobs:
           wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/local/bin/yq
           chmod +x /usr/local/bin/yq
 
-      - name: Update Version
-        run: |
-          # Fetch tags to ensure we have the latest one from Semantic Release
-          git fetch --tags
-          
-          # Get the latest tag (assuming Semantic Release just created it)
-          VERSION=$(git describe --tags --abbrev=0)
-          echo "Processing version $VERSION"
-          
-          # Update values.yaml
-          yq -i ".ui.image.tag = \"$VERSION\"" chart/kubeseal-webgui/values.yaml
-          yq -i ".api.image.tag = \"$VERSION\"" chart/kubeseal-webgui/values.yaml
-          
-          # Update Chart.yaml appVersion
-          yq -i ".appVersion = \"$VERSION\"" chart/kubeseal-webgui/Chart.yaml
-          
-          # Bump Chart.yaml version (patch)
-          CURRENT_CHART_VERSION=$(yq '.version' chart/kubeseal-webgui/Chart.yaml)
-          NEW_CHART_VERSION=$(echo $CURRENT_CHART_VERSION | awk -F. '{$NF = $NF + 1;} 1' | sed 's/ /./g')
-          echo "Bumping Chart version from $CURRENT_CHART_VERSION to $NEW_CHART_VERSION"
-          yq -i ".version = \"$NEW_CHART_VERSION\"" chart/kubeseal-webgui/Chart.yaml
-          
-          # Update README.md
-          sed -i -E "s/(\`api.image.tag\`[[:space:]]+\|[[:space:]]+.*[[:space:]]+\|[[:space:]]+\`)[^`]+(\`)/\1$VERSION\2/" chart/kubeseal-webgui/README.md
-          sed -i -E "s/(\`ui.image.tag\`[[:space:]]+\|[[:space:]]+.*[[:space:]]+\|[[:space:]]+\`)[^`]+(\`)/\1$VERSION\2/" chart/kubeseal-webgui/README.md
-
-          # Commit and Push Changes
-          git add chart/kubeseal-webgui/values.yaml chart/kubeseal-webgui/Chart.yaml chart/kubeseal-webgui/README.md
-          git commit -m "Bump version to $VERSION"
-          git push origin master
-
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -78,9 +37,20 @@ jobs:
 
       - name: Package and Push Helm Chart
         run: |
-          helm package chart/kubeseal-webgui
+          # Get the version from the tag (remove v prefix)
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "Processing version $VERSION"
+          
+          # Update values.yaml inside the runner so the packaged chart has the right defaults
+          yq -i ".ui.image.tag = \"$VERSION\"" chart/kubeseal-webgui/values.yaml
+          yq -i ".api.image.tag = \"$VERSION\"" chart/kubeseal-webgui/values.yaml
+
+          # Package the chart with the explicit version
+          # This automatically updates version and appVersion in the packaged Chart.yaml
+          helm package chart/kubeseal-webgui --version "$VERSION" --app-version "$VERSION"
           
           # Lowercase the repository name for OCI registry compatibility
           REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
           
-          helm push kubeseal-webgui-*.tgz oci://ghcr.io/$REPO_NAME/charts
+          # Push the packaged chart
+          helm push kubeseal-webgui-$VERSION.tgz oci://ghcr.io/$REPO_NAME/charts
