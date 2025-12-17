@@ -6,7 +6,7 @@ on:
       - '*'
 
 permissions:
-  contents: read
+  contents: write
   packages: write
 
 jobs:
@@ -17,6 +17,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ secrets.SEMANTIC_RELEASE_TOKEN }}
 
       - name: Install Helm
         uses: azure/setup-helm@v4
@@ -37,21 +38,47 @@ jobs:
 
       - name: Package and Push Helm Chart
         run: |
-          # Get the version from the tag (remove refs/tags/ and optional v prefix)
-          VERSION=${GITHUB_REF#refs/tags/}
-          VERSION=${VERSION#v}
-          echo "Processing version $VERSION"
+          # Get the application version from the tag (remove refs/tags/ and optional v prefix)
+          APP_VERSION=${GITHUB_REF#refs/tags/}
+          APP_VERSION=${APP_VERSION#v}
+          echo "Application version: $APP_VERSION"
           
-          # Update values.yaml inside the runner so the packaged chart has the right defaults
-          yq -i ".ui.image.tag = \"$VERSION\"" chart/kubeseal-webgui/values.yaml
-          yq -i ".api.image.tag = \"$VERSION\"" chart/kubeseal-webgui/values.yaml
+          # Read current chart version from Chart.yaml
+          CURRENT_CHART_VERSION=$(yq '.version' chart/kubeseal-webgui/Chart.yaml)
+          echo "Current chart version: $CURRENT_CHART_VERSION"
+          
+          # Bump patch version of chart
+          CHART_VERSION=$(echo "$CURRENT_CHART_VERSION" | awk -F. '{$NF = $NF + 1;} 1' | sed 's/ /./g')
+          echo "New chart version: $CHART_VERSION"
+          
+          # Update Chart.yaml with new chart version and appVersion
+          yq -i ".version = \"$CHART_VERSION\"" chart/kubeseal-webgui/Chart.yaml
+          yq -i ".appVersion = \"$APP_VERSION\"" chart/kubeseal-webgui/Chart.yaml
+          
+          # Update values.yaml with application version for image tags
+          yq -i ".ui.image.tag = \"$APP_VERSION\"" chart/kubeseal-webgui/values.yaml
+          yq -i ".api.image.tag = \"$APP_VERSION\"" chart/kubeseal-webgui/values.yaml
 
-          # Package the chart with the explicit version
-          # This automatically updates version and appVersion in the packaged Chart.yaml
-          helm package chart/kubeseal-webgui --version "$VERSION" --app-version "$VERSION"
+          # Package the chart with the bumped chart version
+          helm package chart/kubeseal-webgui --version "$CHART_VERSION" --app-version "$APP_VERSION"
           
           # Lowercase the repository name for OCI registry compatibility
           REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
           
           # Push the packaged chart
-          helm push kubeseal-webgui-$VERSION.tgz oci://ghcr.io/$REPO_NAME/charts
+          helm push kubeseal-webgui-$CHART_VERSION.tgz oci://ghcr.io/$REPO_NAME/charts
+
+      - name: Commit Version Updates
+        run: |
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Add the updated files
+          git add chart/kubeseal-webgui/Chart.yaml chart/kubeseal-webgui/values.yaml
+          
+          # Commit with a clear message
+          git commit -m "chore: bump chart version to $(yq '.version' chart/kubeseal-webgui/Chart.yaml) for app version $(yq '.appVersion' chart/kubeseal-webgui/Chart.yaml) [skip ci]" || echo "No changes to commit"
+          
+          # Push to master
+          git push origin HEAD:master
