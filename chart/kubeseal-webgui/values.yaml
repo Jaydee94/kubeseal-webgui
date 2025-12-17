@@ -1,7 +1,5 @@
 replicaCount: 1
-
 annotations: {}
-
 api:
   # The value of api.url should be set to the public-accessible http endpoint (ingress url or OpenShift route).
   # api.url will be generated into config.json ConfigMap of the UI. This statically served JSON file
@@ -9,33 +7,26 @@ api:
   url: http://localhost:8080
   image:
     repository: ghcr.io/jaydee94/kubeseal-webgui/api
-    tag: 4.5.3
+    tag: 4.6.1
   environment: {}
   loglevel: "INFO"
 ui:
   image:
     repository: ghcr.io/jaydee94/kubeseal-webgui/ui
-    tag: 4.5.3
+    tag: 4.6.1
 image:
   pullPolicy: Always
-
 nameOverride: ""
 fullnameOverride: ""
-
 # Optionally setup a display name for your kubeseal-webgui instance.
 displayName: ""
-
 # Set this value to specify a ServiceAccount that is allowed to list namespaces.
 # Leave empty to use the ServiceAccount shipped with this chart.
 # If you use a custom ServiceAccount, it must be able to list namespaces in your cluster.
 customServiceAccountName: ""
-
 affinity: {}
-
 tolerations: []
-
 nodeSelector: {}
-
 # Setup resources for the pod
 resources:
   limits:
@@ -44,7 +35,6 @@ resources:
   requests:
     cpu: 20m
     memory: 256Mi
-
 # Setup an ingress route optionally
 ingress:
   enabled: false
@@ -54,7 +44,6 @@ ingress:
   tls:
     enabled: false
     secretName: ""
-
 # Optionally use a OpenShift-Route
 # If 'hostname' is an empty string (""), OpenShift will create a hostname for you.
 route:
@@ -64,7 +53,6 @@ route:
     enabled: true
     termination: edge
     insecureEdgeTerminationPolicy: None
-
 sealedSecrets:
   autoFetchCert: false
   controllerName: sealed-secrets-controller
