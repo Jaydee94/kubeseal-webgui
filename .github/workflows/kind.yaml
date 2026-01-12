@@ -138,3 +138,12 @@ jobs:
            { echo ERR; exit 1; } &&
            echo OK
           done
+      - name: Verify Dual Stack (IPv6)
+        run: |
+          kubectl run curl-test --image=curlimages/curl --restart=Never --command -- sleep 3600
+          kubectl wait --for=condition=ready pod/curl-test --timeout=60s
+          # Get Pod IPv6 Address
+          POD_NAME=$(kubectl get pod -n kubeseal-webgui -l app=kubeseal-webgui -o jsonpath='{.items[0].metadata.name}')
+          POD_IPV6=$(kubectl get pod "$POD_NAME" -n kubeseal-webgui -o jsonpath='{.status.podIPs[*].ip}' | tr ' ' '\n' | grep ':')
+          kubectl exec curl-test -- curl -v -f -g -6 "http://[$POD_IPV6]:8080/namespaces"
+          kubectl delete pod curl-test
