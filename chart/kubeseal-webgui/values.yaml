@@ -10,12 +10,10 @@ api:
     tag: 4.6.1
   environment: {}
   loglevel: "INFO"
-  host: "::"
 ui:
   image:
     repository: ghcr.io/jaydee94/kubeseal-webgui/ui
     tag: 4.6.1
-  ipv6Enabled: true
 image:
   pullPolicy: Always
 nameOverride: ""

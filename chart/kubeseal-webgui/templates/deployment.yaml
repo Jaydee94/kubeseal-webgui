@@ -37,19 +37,11 @@ spec:
         - name: "api"
           image: "{{ .Values.api.image.repository }}:{{ .Values.api.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          {{- if .Values.api.host }}
-          command: 
-            - "sh"
-            - "-c"
-            - "uvicorn --host {{ .Values.api.host }} --port 5000 --log-config src/config/logging_config.yaml kubeseal_webgui_api.app:app"
-          {{- end }}
           env:
           {{- range $key, $value := .Values.api.environment }}
             - name: {{ $key }}
               value: {{ $value | quote }}
           {{- end }}
-            - name: UVICORN_HOST
-              value: "{{ .Values.api.host | default "::" | quote }}"
             - name: ORIGIN_URL
               value: "{{ .Values.api.url }}"
             - name: KUBESEAL_CERT
@@ -95,14 +87,6 @@ spec:
         - name: "ui"
           image: "{{ .Values.ui.image.repository }}:{{ .Values.ui.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          {{- if .Values.ui.ipv6Enabled }}
-          command: 
-            - "/bin/sh"
-            - "-c"
-            - |
-              sed -i 's/listen 8080;/listen [::]:8080;\\n    listen 8080;/g' /etc/nginx/conf.d/default.conf
-              exec nginx -g 'daemon off;'
-          {{- end }}
           ports:
             - name: ui
               containerPort: 8080
