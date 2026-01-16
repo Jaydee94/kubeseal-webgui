@@ -40,7 +40,6 @@ RUN apt-get update && \
 USER app
 
 ENV UVICORN_PORT=${APP_PORT} \
-    UVICORN_HOST=0.0.0.0 \
     UVICORN_NO_DATE_HEADER=1 \
     UVICORN_NO_SERVER_HEADER=1 \
     KUBESEAL_BINARY=/tmp/kubeseal
@@ -62,4 +61,4 @@ ENV PATH="${PATH}:${APP_PATH}/bin:${APP_PATH}/.local/bin"
 
 COPY --from=deps /deps/* /tmp/
 
-CMD [ "uvicorn", "--log-config", "src/config/logging_config.yaml", "kubeseal_webgui_api.app:app"]
+CMD [ "uvicorn", "--host", "", "--log-config", "src/config/logging_config.yaml", "kubeseal_webgui_api.app:app"]

@@ -93,6 +93,8 @@ else
     cat <<EOF | kind create cluster --name "$CLUSTER_NAME" --wait 3m --config=-
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
+networking:
+  ipFamily: dual
 nodes:
 - role: control-plane
   kubeadmConfigPatches:
@@ -204,5 +206,29 @@ for secret_name in strict-secret namespace-secret cluster-secret; do
         exit 1
     fi
 done
+
+log_info "Verifying Dual Stack (IPv6) connectivity"
+kubectl run curl-test --image=curlimages/curl --restart=Never --command -- sleep 3600
+kubectl wait --for=condition=ready pod/curl-test --timeout="$TIMEOUT"
+
+# Get Pod IPv6 Address
+POD_NAME=$(kubectl get pod -n "$NAMESPACE" -l app=kubeseal-webgui -o jsonpath='{.items[0].metadata.name}')
+POD_IPV6=$(kubectl get pod "$POD_NAME" -n "$NAMESPACE" -o jsonpath='{.status.podIPs[*].ip}' | tr ' ' '\n' | grep ':')
+
+if [ -z "$POD_IPV6" ]; then
+    log_error "Could not find IPv6 address for pod $POD_NAME"
+    kubectl delete pod curl-test
+    exit 1
+fi
+
+log_info "Testing IPv6 connectivity to Pod IP: [$POD_IPV6]:8080"
+if kubectl exec curl-test -- curl -v -f -g -6 "http://[$POD_IPV6]:8080/namespaces"; then
+    log_info "IPv6 Connectivity: OK"
+else
+    log_error "IPv6 Connectivity Failed"
+    kubectl delete pod curl-test
+    exit 1
+fi
+kubectl delete pod curl-test
 
 log_info "Setup complete! Access the UI at: http://$(hostname -f):7180"
