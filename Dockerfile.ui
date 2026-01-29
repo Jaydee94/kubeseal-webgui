@@ -1,4 +1,4 @@
-FROM node:lts-slim AS ui-build-stage
+FROM node:22-bookworm-slim AS ui-build-stage
 WORKDIR /ui
 COPY ui/package*.json ./
 RUN npm install --legacy-peer-deps
@@ -6,7 +6,7 @@ COPY ui/ ./
 RUN npm run build && \
     npm cache clean --force
 
-FROM quay.io/nginx/nginx-unprivileged:stable-alpine AS ui-production-stage
+FROM quay.io/nginx/nginx-unprivileged:1.27-alpine AS ui-production-stage
 USER root
 RUN apk update && \
     apk upgrade && \

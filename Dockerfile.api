@@ -1,6 +1,6 @@
 FROM debian:bookworm-slim AS deps
 
-ARG KUBESEAL_VERSION=0.33.1
+ARG KUBESEAL_VERSION=0.34.0
 ARG TARGETARCH
 ENV KUBESEAL_BINARY=/deps/kubeseal \
     PRIVATE_KEY=/dev/null \
@@ -20,7 +20,7 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-FROM python:3.12-slim
+FROM python:3.12-slim-bookworm
 
 USER root
 
