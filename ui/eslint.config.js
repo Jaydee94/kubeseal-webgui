@@ -1,6 +1,7 @@
 import js from '@eslint/js';
 import pluginVue from 'eslint-plugin-vue';
 import skipFormatting from '@vue/eslint-config-prettier/skip-formatting';
+import globals from 'globals';
 
 export default [
   {
@@ -17,6 +18,11 @@ export default [
 
   {
     name: 'app/custom-rules',
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+      },
+    },
     rules: {
       // Disable for Vue 3 - v-model with arguments is the correct syntax in Vue 3
       // This allows using v-model:propName="value" patterns
