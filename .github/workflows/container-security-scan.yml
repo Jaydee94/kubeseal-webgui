@@ -1,0 +1,126 @@
+name: Container Security Scan
+
+on:
+  push:
+    branches: ['master']
+    tags: ['*']
+  pull_request:
+    branches: ['master']
+    types:
+      - opened
+      - reopened
+      - synchronize
+  schedule:
+    # Every Monday at 08:00 UTC – catches newly published CVEs between releases
+    - cron: '0 8 * * MON'
+
+jobs:
+  security-scan:
+    name: Trivy Security Scan (${{ matrix.name }})
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - dockerfile: Dockerfile.api
+            image: kubeseal-webgui-api
+            name: api
+          - dockerfile: Dockerfile.ui
+            image: kubeseal-webgui-ui
+            name: ui
+    permissions:
+      contents: read
+      security-events: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image for scanning
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: false
+          load: true
+          tags: ${{ matrix.image }}:${{ github.sha }}
+
+      - name: Run Trivy vulnerability scanner (SARIF)
+        uses: aquasecurity/trivy-action@0.34.2
+        with:
+          image-ref: ${{ matrix.image }}:${{ github.sha }}
+          format: sarif
+          output: trivy-results-${{ matrix.name }}.sarif
+          severity: CRITICAL,HIGH,MEDIUM
+
+      - name: Upload Trivy SARIF results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: trivy-results-${{ matrix.name }}.sarif
+          category: trivy-${{ matrix.name }}
+
+      - name: Run Trivy vulnerability scanner (table report)
+        uses: aquasecurity/trivy-action@0.34.2
+        if: always()
+        with:
+          image-ref: ${{ matrix.image }}:${{ github.sha }}
+          format: table
+          output: trivy-report-${{ matrix.name }}.txt
+          severity: CRITICAL,HIGH,MEDIUM
+          exit-code: '0'
+
+      - name: Upload Trivy scan report as artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: trivy-security-report-${{ matrix.name }}
+          path: trivy-report-${{ matrix.name }}.txt
+          retention-days: 30
+
+      - name: Post Trivy results as PR comment
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const reportFile = 'trivy-report-${{ matrix.name }}.txt';
+            if (!fs.existsSync(reportFile)) {
+              console.log('Report file not found, skipping comment.');
+              return;
+            }
+            let report = fs.readFileSync(reportFile, 'utf8').trim();
+            const maxLength = 60000; // GitHub comment body limit is 65536 chars; leave headroom for the surrounding markup
+            if (report.length > maxLength) {
+              report = report.substring(0, maxLength) + '\n...(truncated, see full report in workflow artifacts)';
+            }
+            const marker = '<!-- trivy-scan-${{ matrix.name }} -->';
+            const body = `${marker}\n## 🔒 Container Security Scan – \`${{ matrix.name }}\`\n\n<details>\n<summary>Vulnerability Report (CRITICAL / HIGH / MEDIUM)</summary>\n\n\`\`\`\n${report}\n\`\`\`\n</details>\n\n> Full report available as a workflow artifact.`;
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find(c => c.body.includes(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
