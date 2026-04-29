@@ -1,4 +1,7 @@
-{{- $route := .Values.ui.route | default .Values.route -}}
+{{- $route := .Values.route -}}
+{{- if .Values.ui.route.enabled -}}
+{{- $route = .Values.ui.route -}}
+{{- end -}}
 {{- if $route.enabled -}}
 apiVersion: route.openshift.io/v1
 kind: Route
