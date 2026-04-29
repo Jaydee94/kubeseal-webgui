@@ -4,10 +4,8 @@ import logging
 import fastapi
 from fastapi.middleware.cors import CORSMiddleware
 
-from .app_config import fetch_sealed_secrets_cert
+from .app_config import fetch_sealed_secrets_cert, settings, LOGGER
 from .routers import config, kubernetes, kubeseal
-
-LOGGER = logging.getLogger("kubeseal-webgui")
 
 
 @asynccontextmanager
@@ -23,6 +21,10 @@ app = fastapi.FastAPI(lifespan=lifespan)
 origins = [
     "http://localhost:8080",
 ]
+
+if settings.origin_url:
+    origins.append(settings.origin_url)
+LOGGER.info(origins)
 
 app.add_middleware(
     CORSMiddleware,
