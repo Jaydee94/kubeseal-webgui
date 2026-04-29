@@ -1,18 +1,18 @@
-
-{{- if .Values.route.enabled -}}
+{{- $route := .Values.ui.route | default .Values.route -}}
+{{- if $route.enabled -}}
 apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
   name: {{ include "kubeseal-webgui.fullname" . }}
   labels:
     {{- include "kubeseal-webgui.labels" . | nindent 4 }}
-{{- with .Values.route.annotations }}
+{{- with $route.annotations }}
   annotations:
 {{ toYaml . | indent 4 }}
 {{- end }}
 spec:
-{{- if .Values.route.hostname }}
-  host: {{ .Values.route.hostname | quote }}
+{{- if $route.hostname }}
+  host: {{ $route.hostname | quote }}
 {{- end }}
   to:
     kind: Service
@@ -20,10 +20,10 @@ spec:
     weight: 100
   port:
     targetPort: ui
-  {{- if .Values.route.tls.enabled }}
+  {{- if $route.tls.enabled }}
   tls:
-    termination: {{ .Values.route.tls.termination }}
-    insecureEdgeTerminationPolicy: {{ .Values.route.tls.insecureEdgeTerminationPolicy }}
+    termination: {{ $route.tls.termination }}
+    insecureEdgeTerminationPolicy: {{ $route.tls.insecureEdgeTerminationPolicy }}
   {{- end }}
   wildcardPolicy: None
 {{- end }}

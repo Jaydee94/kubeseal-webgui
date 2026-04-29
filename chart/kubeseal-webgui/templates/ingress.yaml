@@ -1,4 +1,5 @@
-{{- if .Values.ingress.enabled -}}
+{{- $ingress := .Values.ui.ingress | default .Values.ingress -}}
+{{- if $ingress.enabled -}}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -6,24 +7,24 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "kubeseal-webgui.labels" . | nindent 4 }}
-  {{- if .Values.ingress.annotations }}
+  {{- if $ingress.annotations }}
   annotations:
-    {{- range $key, $value := .Values.ingress.annotations }}
+    {{- range $key, $value := $ingress.annotations }}
     {{ $key }}: {{ tpl $value $ | quote }}
     {{- end }}
   {{- end }}
 spec:
-{{- if .Values.ingress.ingressClassName }}
-  ingressClassName: {{ .Values.ingress.ingressClassName }}
+{{- if $ingress.ingressClassName }}
+  ingressClassName: {{ $ingress.ingressClassName }}
 {{- end }}
-{{- if .Values.ingress.tls.enabled }}
+{{- if $ingress.tls.enabled }}
   tls:
   - hosts:
-    - {{ .Values.ingress.hostname }}
-    secretName: {{ .Values.ingress.tls.secretName }}
+    - {{ $ingress.hostname }}
+    secretName: {{ $ingress.tls.secretName }}
 {{- end }}
   rules:
-  - host: {{ .Values.ingress.hostname }}
+  - host: {{ $ingress.hostname }}
     http:
       paths:
       - backend:
