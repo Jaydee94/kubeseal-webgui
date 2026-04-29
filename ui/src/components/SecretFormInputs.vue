@@ -41,6 +41,9 @@
           variant="outlined"
           class="modern-input"
           color="primary"
+          multiple
+          chips
+          closable-chips
           :disabled="['strict', 'namespace-wide'].indexOf(scope) === -1"
           @update:model-value="$emit('update:namespaceName', $event)"
         >
@@ -111,8 +114,8 @@ import { computed } from 'vue'
 
 const props = defineProps({
   namespaceName: {
-    type: String,
-    default: ''
+    type: Array,
+    default: () => []
   },
   secretName: {
     type: String,
