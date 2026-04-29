@@ -2,6 +2,31 @@
   <div>
     <v-row justify="end">
       <v-col
+        v-if="Object.keys(environments).length > 1"
+        cols="12"
+        md="3"
+      >
+        <v-select
+          :model-value="selectedEnvironment"
+          :items="Object.keys(environments)"
+          label="Environment"
+          variant="outlined"
+          class="modern-input"
+          color="primary"
+          prepend-inner-icon="mdi-server"
+          @update:model-value="$emit('update:selectedEnvironment', $event)"
+        >
+          <template #append-inner>
+            <v-tooltip location="bottom" max-width="300" open-on-click>
+              <template #activator="{ props: activatorProps }">
+                <v-icon v-bind="activatorProps" icon="mdi-information-outline" size="small" color="medium-emphasis" class="ml-2" />
+              </template>
+              <span>Select the target cluster environment.</span>
+            </v-tooltip>
+          </template>
+        </v-select>
+      </v-col>
+      <v-col
         cols="12"
         md="2"
       >
@@ -41,6 +66,9 @@
           variant="outlined"
           class="modern-input"
           color="primary"
+          multiple
+          chips
+          closable-chips
           :disabled="['strict', 'namespace-wide'].indexOf(scope) === -1"
           @update:model-value="$emit('update:namespaceName', $event)"
         >
@@ -111,8 +139,8 @@ import { computed } from 'vue'
 
 const props = defineProps({
   namespaceName: {
-    type: String,
-    default: ''
+    type: Array,
+    default: () => []
   },
   secretName: {
     type: String,
@@ -134,6 +162,14 @@ const props = defineProps({
     type: Object,
     required: true
   },
+  environments: {
+    type: Object,
+    default: () => ({})
+  },
+  selectedEnvironment: {
+    type: String,
+    default: ''
+  },
   secretNameError: {
     type: String,
     default: ''
@@ -144,7 +180,7 @@ const props = defineProps({
   }
 })
 
-defineEmits(['update:namespaceName', 'update:secretName', 'update:scope', 'toggle-favorite'])
+defineEmits(['update:namespaceName', 'update:secretName', 'update:scope', 'update:selectedEnvironment', 'toggle-favorite'])
 
 // Sort namespaces with favorites first
 const sortedNamespaces = computed(() => {

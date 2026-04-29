@@ -82,9 +82,9 @@ def namespace_select(page: Page):
     assert len(suggestions) > 0, "No suggestions found."
     first_suggestion_text = suggestions[0].inner_text()
     suggestions[0].click()
-    selected_text_selector = ".v-autocomplete__selection-text"
-    page.wait_for_selector(selected_text_selector, timeout=10000)
-    displayed_text = page.inner_text(selected_text_selector)
+    selected_chip_selector = ".v-autocomplete .v-chip__content"
+    page.wait_for_selector(selected_chip_selector, timeout=10000)
+    displayed_text = page.inner_text(selected_chip_selector)
     assert (
         displayed_text == first_suggestion_text
     ), f"Expected '{first_suggestion_text}', but got '{displayed_text}'"

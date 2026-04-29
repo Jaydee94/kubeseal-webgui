@@ -23,7 +23,7 @@
       </div>
       <v-card
         v-else-if="displayCreateSealedSecretForm"
-        class="secrets-form modern-card pa-6 mb-6"
+        class="secrets-form modern-card pa-6 mb-6 mt-4"
         elevation="1"
         variant="outlined"
       >
@@ -32,8 +32,10 @@
             v-model:namespace-name="namespaceName"
             v-model:secret-name="secretName"
             v-model:scope="scope"
+            v-model:selected-environment="selectedEnvironment"
             :namespaces="namespaces"
             :scopes="scopes"
+            :environments="environments"
             :rules="rules"
             :secret-name-error="secretNameError"
             :favorite-namespaces="favoriteNamespaces"
@@ -129,7 +131,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onBeforeMount, onMounted } from 'vue'
+import { ref, computed, onBeforeMount, onMounted, watch } from 'vue'
 import SecretFormInputs from './SecretFormInputs.vue'
 import SecretsList from './SecretsList.vue'
 import SecretsResults from './SecretsResults.vue'
@@ -143,6 +145,7 @@ defineOptions({
 const { fetchConfig } = useConfig()
 const { fetchNamespaces, fetchEncodedSecrets: fetchEncodedSecretsApi } = useSecrets()
 
+let config = null
 
 const namespaces = ref([])
 const scopes = ref(["strict", "cluster-wide", "namespace-wide"])
@@ -152,7 +155,7 @@ const displayName = ref("")
 const displayCreateSealedSecretForm = ref(true)
 const loading = ref(false)
 const secretName = ref("")
-const namespaceName = ref("")
+const namespaceName = ref([])
 const scope = ref("strict")
 const secrets = ref([{ key: "", value: "", file: [] }])
 const sealedSecrets = ref([])
@@ -170,10 +173,30 @@ const secretNameError = computed(() => {
   return "";
 });
 
+// Multi-tenant environment state
+const environments = ref({})
+const selectedEnvironment = ref("")
+
+const selectedApiUrl = computed(() => {
+  return environments.value[selectedEnvironment.value] || ""
+})
+
+function fetchEnvironments(cfg) {
+  const envs = { default: cfg.api_url }
+  if (cfg.environments) {
+    Object.assign(envs, cfg.environments)
+  }
+  environments.value = envs
+}
+
+watch(selectedEnvironment, () => {
+  fetchNamespacesData()
+})
+
 const resetForm = () => {
   displayCreateSealedSecretForm.value = true;
   secretName.value = "";
-  namespaceName.value = "";
+  namespaceName.value = [];
   scope.value = "strict";
   secrets.value = [{ key: "", value: "", file: [] }];
   sealedSecrets.value = [];
@@ -182,8 +205,10 @@ const resetForm = () => {
 };
 
 onBeforeMount(async () => {
-  const config = await fetchConfig();
-  await fetchNamespacesData(config);
+  config = await fetchConfig();
+  fetchEnvironments(config);
+  selectedEnvironment.value = Object.keys(environments.value)[0];
+  await fetchNamespacesData();
   await fetchDisplayName(config);
 })
 
@@ -254,8 +279,8 @@ const incompleteSecretData = computed(() =>
 const notReadyToEncode = computed(() =>
   hasErrorMessage.value ||
   incompleteSecretData.value ||
-  (scope.value === "strict" && (namespaceName.value === "" || secretName.value === "")) ||
-  (scope.value === "namespace-wide" && namespaceName.value === "")
+  (scope.value === "strict" && (namespaceName.value.length === 0 || secretName.value === "")) ||
+  (scope.value === "namespace-wide" && namespaceName.value.length === 0)
 );
 
 const hasFile = computed(() =>
@@ -263,9 +288,18 @@ const hasFile = computed(() =>
 const hasValue = computed(() =>
   secrets.value.map((e) => e.value !== "")
 )
-const renderedSecrets = computed(() =>
-  renderSecrets(sealedSecrets.value)
-)
+
+const renderedSecrets = computed(() => {
+  if (Array.isArray(sealedSecrets.value) && sealedSecrets.value.length > 0 && sealedSecrets.value[0].namespace) {
+    // Multi-namespace results
+    return sealedSecrets.value.map(entry => ({
+      namespace: entry.namespace,
+      rendered: renderSecrets(entry.secrets)
+    }))
+  }
+  return renderSecrets(sealedSecrets.value)
+})
+
 const sealedSecretsAnnotations = computed(() => {
   if (scope.value === "strict") {
     return '{}';
@@ -289,17 +323,20 @@ function setErrorMessage(newErrorMessage) {
 const isEncryptButtonEnabled = computed(() => {
   return (
     secretName.value &&
-    namespaceName.value &&
+    namespaceName.value.length > 0 &&
     secrets.value.every(secret => secret.key && (
       secret.value || secret.file instanceof Blob || secret.file instanceof File
     ))
   );
 });
 
-async function fetchNamespacesData(config) {
+async function fetchNamespacesData() {
   try {
-    namespaces.value = await fetchNamespaces(config);
+    namespaces.value = [];
+    namespaceName.value = [];
+    namespaces.value = await fetchNamespaces(selectedApiUrl.value);
   } catch (error) {
+    namespaces.value = [];
     setErrorMessage(`Failed to fetch namespaces. Error Message: ${error.message}.`);
   }
 }
@@ -315,20 +352,41 @@ function toggleFavorite(namespace) {
   localStorage.favoriteNamespaces = JSON.stringify([...favoriteNamespaces.value]);
 }
 
-async function fetchDisplayName(config) {
-  displayName.value = config.display_name;
+async function fetchDisplayName(cfg) {
+  displayName.value = cfg.display_name;
 }
 
 async function fetchEncodedSecrets() {
   try {
     loading.value = true;
-    const config = await fetchConfig();
-    sealedSecrets.value = await fetchEncodedSecretsApi(config, {
-      secretName: secretName.value,
-      namespaceName: namespaceName.value,
-      scope: scope.value,
-      secrets: secrets.value
-    });
+    const apiUrl = selectedApiUrl.value;
+    const selectedNamespaces = namespaceName.value;
+
+    if (selectedNamespaces.length === 1) {
+      // Single namespace - keep backward-compatible response shape
+      const result = await fetchEncodedSecretsApi(apiUrl, {
+        secretName: secretName.value,
+        namespaceName: selectedNamespaces[0],
+        scope: scope.value,
+        secrets: secrets.value
+      });
+      sealedSecrets.value = result;
+    } else {
+      // Multiple namespaces - parallel API calls
+      const results = await Promise.all(
+        selectedNamespaces.map(async (ns) => {
+          const result = await fetchEncodedSecretsApi(apiUrl, {
+            secretName: secretName.value,
+            namespaceName: ns,
+            scope: scope.value,
+            secrets: secrets.value
+          });
+          return { namespace: ns, secrets: result };
+        })
+      );
+      sealedSecrets.value = results;
+    }
+
     // Add a small delay to make the transition noticeable and smooth
     await new Promise(resolve => setTimeout(resolve, 600));
     displayCreateSealedSecretForm.value = false;
@@ -340,40 +398,42 @@ async function fetchEncodedSecrets() {
   }
 }
 
-const renderSecrets = (sealedSecrets) => {
-  const dataEntries = sealedSecrets.map((element) =>
+const renderSecrets = (secrets) => {
+  const dataEntries = secrets.map((element) =>
     `    ${element["key"]}: ${element["value"]}`
   );
   return "\n" + dataEntries.join("\n");
 }
 
 function copyRenderedSecrets() {
-  // Access the nested ref through the SecretsResults component
-  const sealedSecretElement = secretsResultsRef.value?.sealedSecretCardRef?.$refs?.sealedSecretRef;
-  if (!sealedSecretElement) {
-    console.error('Could not access sealed secret element');
-    return;
-  }
-  const sealedSecretContent = sealedSecretElement.innerText.trim();
-  navigator.clipboard.writeText(sealedSecretContent).then(() => {
-    clipboardMessage.value = "Sealed secret copied to clipboard!";
-    clipboardSnackbar.value = true;
-    isCopiedMain.value = true;
-    setTimeout(() => {
-      isCopiedMain.value = false;
-    }, 2000);
-  });
+  // Called when the single-namespace SealedSecretCard has already copied its content
+  clipboardMessage.value = "Sealed secret copied to clipboard!";
+  clipboardSnackbar.value = true;
+  isCopiedMain.value = true;
+  setTimeout(() => {
+    isCopiedMain.value = false;
+  }, 2000);
 }
 
 function copySealedSecret(counter) {
-  navigator.clipboard.writeText(sealedSecrets.value[counter].value).then(() => {
-    clipboardMessage.value = `Secret key "${sealedSecrets.value[counter].key}" copied to clipboard!`;
+  // For multi-namespace, sealedSecrets is array of {namespace, secrets}
+  // For single namespace, sealedSecrets is flat array
+  const flatSecrets = getFlatSealedSecrets();
+  navigator.clipboard.writeText(flatSecrets[counter].value).then(() => {
+    clipboardMessage.value = `Secret key "${flatSecrets[counter].key}" copied to clipboard!`;
     clipboardSnackbar.value = true;
     copiedIndividual.value[counter] = true;
     setTimeout(() => {
       copiedIndividual.value[counter] = false;
     }, 2000);
   });
+}
+
+function getFlatSealedSecrets() {
+  if (Array.isArray(sealedSecrets.value) && sealedSecrets.value.length > 0 && sealedSecrets.value[0].namespace) {
+    return sealedSecrets.value.flatMap(entry => entry.secrets);
+  }
+  return sealedSecrets.value;
 }
 
 function removeSecret(counter) {

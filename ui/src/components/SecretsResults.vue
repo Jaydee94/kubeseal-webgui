@@ -1,26 +1,48 @@
 <template>
   <div>
-    <v-row>
-      <v-col>
-        <SealedSecretCard
-          ref="sealedSecretCardRef"
-          :secret-name="secretName"
-          :namespace-name="namespaceName"
-          :sealed-secrets-annotations="sealedSecretsAnnotations"
-          :rendered-secrets="renderedSecrets"
-          :is-copied="isCopiedMain"
-          :clipboard-available="clipboardAvailable"
-          @copy="$emit('copy-main')"
-        />
-      </v-col>
-    </v-row>
+    <!-- Multi-namespace results -->
+    <template v-if="isMultiNamespace">
+      <v-row v-for="(entry, idx) in renderedSecrets" :key="entry.namespace">
+        <v-col>
+          <SealedSecretCard
+            :ref="el => { if (el) sealedSecretCardRefs[idx] = el }"
+            :secret-name="secretName"
+            :namespace-name="entry.namespace"
+            :sealed-secrets-annotations="sealedSecretsAnnotations"
+            :rendered-secrets="entry.rendered"
+            :is-copied="copiedCards[idx] || false"
+            :clipboard-available="clipboardAvailable"
+            @copied="onCardCopied(idx)"
+          />
+        </v-col>
+      </v-row>
+    </template>
+
+    <!-- Single namespace result -->
+    <template v-else>
+      <v-row>
+        <v-col>
+          <SealedSecretCard
+            ref="sealedSecretCardRef"
+            :secret-name="secretName"
+            :namespace-name="singleNamespace"
+            :sealed-secrets-annotations="sealedSecretsAnnotations"
+            :rendered-secrets="renderedSecrets"
+            :is-copied="isCopiedMain"
+            :clipboard-available="clipboardAvailable"
+            @copied="$emit('copy-main')"
+          />
+        </v-col>
+      </v-row>
+    </template>
+
     <v-row
       dense
       align-content="center"
       class="mt-4"
     >
       <v-col
-        v-for="(secret, counter) in sealedSecrets"
+        v-for="(secret, counter) in flatSealedSecrets"
         :key="counter"
         cols="12"
         sm="6"
@@ -65,11 +87,11 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import SealedSecretCard from './SealedSecretCard.vue'
 import SecretKeyCard from './SecretKeyCard.vue'
 
-defineProps({
+const props = defineProps({
   sealedSecrets: {
     type: Array,
     required: true
@@ -79,15 +101,15 @@ defineProps({
     default: ''
   },
   namespaceName: {
-    type: String,
-    default: ''
+    type: Array,
+    default: () => []
   },
   sealedSecretsAnnotations: {
     type: String,
     required: true
   },
   renderedSecrets: {
-    type: String,
+    type: [String, Array],
     required: true
   },
   clipboardAvailable: {
@@ -107,7 +129,31 @@ defineProps({
 defineEmits(['copy-main', 'copy-individual', 'clear', 'edit'])
 
 const sealedSecretCardRef = ref(null)
+const sealedSecretCardRefs = ref([])
+const copiedCards = ref({})
 
-// Expose ref for parent component to access
-defineExpose({ sealedSecretCardRef })
+const isMultiNamespace = computed(() => {
+  return Array.isArray(props.renderedSecrets)
+})
+
+const singleNamespace = computed(() => {
+  return props.namespaceName.length > 0 ? props.namespaceName[0] : ''
+})
+
+const flatSealedSecrets = computed(() => {
+  if (Array.isArray(props.sealedSecrets) && props.sealedSecrets.length > 0 && props.sealedSecrets[0].namespace) {
+    return props.sealedSecrets.flatMap(entry => entry.secrets)
+  }
+  return props.sealedSecrets
+})
+
+function onCardCopied(idx) {
+  copiedCards.value[idx] = true
+  setTimeout(() => {
+    copiedCards.value[idx] = false
+  }, 2000)
+}
+
+// Expose refs for parent component to access
+defineExpose({ sealedSecretCardRef, sealedSecretCardRefs })
 </script>

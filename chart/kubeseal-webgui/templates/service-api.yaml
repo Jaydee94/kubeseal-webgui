@@ -1,8 +1,8 @@
-{{- if .Values.ui.enabled }}
+{{- if .Values.api.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "kubeseal-webgui.fullname" . }}
+  name: {{ include "kubeseal-webgui.fullname" . }}-api
   labels:
     {{- include "kubeseal-webgui.labels" . | nindent 4 }}
 spec:
@@ -10,8 +10,8 @@ spec:
     app: {{ template "kubeseal-webgui.name" . }}
   type: ClusterIP
   ports:
-    - port: 8080
-      targetPort: ui
+    - port: 5000
+      targetPort: api
       protocol: TCP
-      name: ui
+      name: api
 {{- end }}

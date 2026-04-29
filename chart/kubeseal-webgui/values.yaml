@@ -1,6 +1,10 @@
 replicaCount: 1
 annotations: {}
+# The public URL of the UI, used as CORS origin for the API.
+publicUrl: "http://localhost:8080"
 api:
+  # Enable or disable the API container (set to false for UI-only deployments)
+  enabled: true
   # The value of api.url should be set to the public-accessible http endpoint (ingress url or OpenShift route).
   # api.url will be generated into config.json ConfigMap of the UI. This statically served JSON file
   # is used by the UI to locate the API.
@@ -10,10 +14,50 @@ api:
     tag: 4.8.1
   environment: {}
   loglevel: "INFO"
+  ingress:
+    enabled: false
+    annotations: {}
+    ingressClassName: ""
+    hostname: "kubeseal-api.example.com"
+    tls:
+      enabled: false
+      secretName: ""
+  route:
+    enabled: false
+    hostname: ""
+    annotations: {}
+    tls:
+      enabled: true
+      termination: edge
+      insecureEdgeTerminationPolicy: None
 ui:
+  # Enable or disable the UI container (set to false for API-only deployments)
+  enabled: true
   image:
     repository: ghcr.io/jaydee94/kubeseal-webgui/ui
     tag: 4.8.1
+  # Map of environment names to API URLs for multi-tenant setups.
+  # Example:
+  #   environments:
+  #     cluster-a: https://kubeseal-api-a.example.com
+  #     cluster-b: https://kubeseal-api-b.example.com
+  environments: {}
+  ingress:
+    enabled: false
+    annotations: {}
+    ingressClassName: ""
+    hostname: "kubeseal-webgui.example.com"
+    tls:
+      enabled: false
+      secretName: ""
+  route:
+    enabled: false
+    hostname: ""
+    annotations: {}
+    tls:
+      enabled: true
+      termination: edge
+      insecureEdgeTerminationPolicy: None
 image:
   pullPolicy: Always
 nameOverride: ""
@@ -35,7 +79,8 @@ resources:
   requests:
     cpu: 20m
     memory: 256Mi
-# Setup an ingress route optionally
+# Legacy ingress configuration (for backward compatibility).
+# Prefer using ui.ingress and api.ingress for new deployments.
 ingress:
   enabled: false
   annotations: {}
@@ -44,8 +89,8 @@ ingress:
   tls:
     enabled: false
     secretName: ""
-# Optionally use a OpenShift-Route
-# If 'hostname' is an empty string (""), OpenShift will create a hostname for you.
+# Legacy route configuration (for backward compatibility).
+# Prefer using ui.route and api.route for new deployments.
 route:
   enabled: false
   hostname: ""

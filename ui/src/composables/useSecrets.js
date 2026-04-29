@@ -2,11 +2,11 @@ import { Base64 } from "js-base64";
 import { mockNamespacesResolver } from "@/utils/mockData";
 
 export function useSecrets() {
-  async function fetchNamespaces(config) {
+  async function fetchNamespaces(apiUrl) {
     if (import.meta.env.VITE_MOCK_NAMESPACES) {
       return mockNamespacesResolver(10);
     } else {
-      const response = await fetch(`${config.api_url}/namespaces`);
+      const response = await fetch(`${apiUrl}/namespaces`);
       if (!response.ok) {
           throw new Error(`Failed to fetch namespaces: ${response.statusText}`);
       }
@@ -25,7 +25,7 @@ export function useSecrets() {
     });
   }
 
-  async function fetchEncodedSecrets(config, { secretName, namespaceName, scope, secrets }) {
+  async function fetchEncodedSecrets(apiUrl, { secretName, namespaceName, scope, secrets }) {
     const requestObject = {
       secret: secretName,
       namespace: namespaceName,
@@ -52,7 +52,7 @@ export function useSecrets() {
 
     const requestBody = JSON.stringify(requestObject, null, "\t");
 
-    const response = await fetch(`${config.api_url}/secrets`, {
+    const response = await fetch(`${apiUrl}/secrets`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

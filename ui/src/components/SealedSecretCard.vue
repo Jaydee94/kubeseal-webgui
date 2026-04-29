@@ -32,7 +32,7 @@ spec:
         :icon="isCopied ? 'mdi-check' : 'mdi-content-copy'"
         size="small"
         class="copy-btn"
-        @click="$emit('copy')"
+        @click="copyToClipboard"
       >
         <v-icon>{{ isCopied ? 'mdi-check' : 'mdi-content-copy' }}</v-icon>
         <v-tooltip activator="parent" location="bottom">{{ isCopied ? 'Copied!' : 'Copy to clipboard' }}</v-tooltip>
@@ -71,9 +71,24 @@ defineProps({
   }
 })
 
-defineEmits(['copy'])
+const emit = defineEmits(['copy', 'copied'])
 
 const sealedSecretRef = ref(null)
+
+async function copyToClipboard() {
+  if (!sealedSecretRef.value) {
+    emit('copy')
+    return
+  }
+
+  const content = sealedSecretRef.value.textContent?.trim() ?? ''
+  try {
+    await navigator.clipboard.writeText(content)
+    emit('copied')
+  } catch {
+    emit('copy')
+  }
+}
 
 // Expose ref for parent component to access
 defineExpose({ sealedSecretRef })
