@@ -75,13 +75,17 @@ const emit = defineEmits(['copy', 'copied'])
 
 const sealedSecretRef = ref(null)
 
-function copyToClipboard() {
-  if (sealedSecretRef.value) {
-    const content = sealedSecretRef.value.innerText.trim()
-    navigator.clipboard.writeText(content).then(() => {
-      emit('copied')
-    })
-  } else {
+async function copyToClipboard() {
+  if (!sealedSecretRef.value) {
+    emit('copy')
+    return
+  }
+
+  const content = sealedSecretRef.value.textContent?.trim() ?? ''
+  try {
+    await navigator.clipboard.writeText(content)
+    emit('copied')
+  } catch {
     emit('copy')
   }
 }
