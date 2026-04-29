@@ -8,26 +8,6 @@
       {{ displayName }}
     </v-container>
 
-    <!-- Environment Selector -->
-    <v-row
-      v-if="Object.keys(environments).length > 1"
-      justify="center"
-      class="mb-4"
-    >
-      <v-col cols="12" sm="6" md="4">
-        <v-select
-          v-model="selectedEnvironment"
-          :items="Object.keys(environments)"
-          label="Environment"
-          variant="outlined"
-          class="modern-input"
-          color="primary"
-          density="comfortable"
-          prepend-inner-icon="mdi-server"
-        />
-      </v-col>
-    </v-row>
-
     <!-- Form and Results Section -->
     <transition name="fade" mode="out-in">
       <div
@@ -52,8 +32,10 @@
             v-model:namespace-name="namespaceName"
             v-model:secret-name="secretName"
             v-model:scope="scope"
+            v-model:selected-environment="selectedEnvironment"
             :namespaces="namespaces"
             :scopes="scopes"
+            :environments="environments"
             :rules="rules"
             :secret-name-error="secretNameError"
             :favorite-namespaces="favoriteNamespaces"
