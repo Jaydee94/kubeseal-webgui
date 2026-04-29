@@ -23,7 +23,7 @@
       </div>
       <v-card
         v-else-if="displayCreateSealedSecretForm"
-        class="secrets-form modern-card pa-6 mb-6"
+        class="secrets-form modern-card pa-6 mb-6 mt-4"
         elevation="1"
         variant="outlined"
       >
