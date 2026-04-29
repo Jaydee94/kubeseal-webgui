@@ -1,3 +1,6 @@
+{{- if and (not .Values.api.enabled) (not .Values.ui.enabled) -}}
+{{- fail "Invalid values: at least one of api.enabled or ui.enabled must be true." -}}
+{{- end -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
