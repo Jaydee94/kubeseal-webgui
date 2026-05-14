@@ -391,10 +391,7 @@ async function fetchDisplayName(config) {
 async function fetchEncodedSecrets() {
   try {
     loading.value = true;
-    if (!config.value.api_url) {
-      config.value = await fetchConfig();
-    }
-    sealedSecrets.value = await fetchEncodedSecretsApi(config.value, {
+    sealedSecrets.value = await fetchEncodedSecretsApi(await getConfig(), {
       secretName: secretName.value,
       namespaceName: namespaceName.value,
       scope: scope.value,
@@ -474,10 +471,7 @@ async function loadSealedSecretsForNamespace() {
 
   try {
     loadingSealedSecrets.value = true;
-    if (!config.value.api_url) {
-      config.value = await fetchConfig();
-    }
-    availableSealedSecrets.value = await fetchSealedSecrets(config.value, namespaceName.value);
+    availableSealedSecrets.value = await fetchSealedSecrets(await getConfig(), namespaceName.value);
   } catch (error) {
     setErrorMessage(`Failed to fetch existing SealedSecrets. Error Message: ${error.message}.`);
     availableSealedSecrets.value = [];
@@ -500,10 +494,35 @@ watch(selectedSealedSecret, (newSealedSecret) => {
   if (!newSealedSecret || !Array.isArray(newSealedSecret.keys)) {
     return;
   }
+  if (hasUserEnteredSecretData()) {
+    const continueOverwrite = window.confirm(
+      "This will replace the current key-value list with keys from the selected SealedSecret. Continue?"
+    );
+    if (!continueOverwrite) {
+      selectedSealedSecret.value = null;
+      return;
+    }
+  }
   const mappedSecrets = newSealedSecret.keys.map((key) => ({ key, value: "", file: [] }));
   secrets.value = mappedSecrets.length > 0 ? mappedSecrets : [{ key: "", value: "", file: [] }];
   fileErrors.value = [];
 });
+
+async function getConfig() {
+  if (!config.value.api_url) {
+    config.value = await fetchConfig();
+  }
+  return config.value;
+}
+
+function hasUserEnteredSecretData() {
+  return secrets.value.some((entry) =>
+    entry.key !== "" ||
+    entry.value !== "" ||
+    entry.file instanceof Blob ||
+    entry.file instanceof File
+  );
+}
 
 function validateFile(file, counter) {
   const fileSizeRule = rules.fileSize[0];

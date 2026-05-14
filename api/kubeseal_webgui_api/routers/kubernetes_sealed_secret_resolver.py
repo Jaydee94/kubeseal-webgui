@@ -23,7 +23,7 @@ def kubernetes_sealed_secret_resolver(namespace: str) -> list[ExistingSealedSecr
     resolved_sealed_secrets: list[ExistingSealedSecret] = []
     items = sealed_secret_list.get("items", [])
     if not isinstance(items, list):
-        LOGGER.warning("Unexpected SealedSecrets response payload: %s", sealed_secret_list)
+        LOGGER.warning("Unexpected SealedSecrets response payload type for namespace '%s'", namespace)
         return resolved_sealed_secrets
 
     for sealed_secret in items:
