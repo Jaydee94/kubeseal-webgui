@@ -40,7 +40,7 @@ def kubernetes_sealed_secret_resolver(namespace: str) -> list[ExistingSealedSecr
         if not isinstance(name, str) or not isinstance(encrypted_data, dict):
             continue
 
-        keys = sorted(encrypted_data)
+        keys = sorted(encrypted_data.keys())
         resolved_sealed_secrets.append(ExistingSealedSecret(name=name, keys=keys))
 
     return sorted(resolved_sealed_secrets, key=lambda sealed_secret: sealed_secret.name)
