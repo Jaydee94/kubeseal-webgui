@@ -40,6 +40,51 @@
             @toggle-favorite="toggleFavorite"
           />
 
+          <v-card
+            v-if="sealedSecretImportFeatureEnabled"
+            class="mb-6"
+            variant="tonal"
+          >
+            <v-card-text>
+              <v-switch
+                v-model="sealedSecretImportEnabled"
+                color="primary"
+                hide-details
+                label="Load keys from existing SealedSecret"
+              />
+              <v-row v-if="sealedSecretImportEnabled" class="mt-1">
+                <v-col cols="12" md="8">
+                  <v-autocomplete
+                    :model-value="selectedSealedSecret"
+                    :items="availableSealedSecrets"
+                    item-title="name"
+                    return-object
+                    label="Existing SealedSecret"
+                    variant="outlined"
+                    class="modern-input"
+                    color="primary"
+                    no-data-text="No SealedSecrets found for this namespace"
+                    :loading="loadingSealedSecrets"
+                    :disabled="!namespaceName || loadingSealedSecrets"
+                    @update:model-value="selectedSealedSecret = $event"
+                  />
+                </v-col>
+                <v-col cols="12" md="4" class="d-flex align-center">
+                  <v-btn
+                    block
+                    prepend-icon="mdi-refresh"
+                    variant="outlined"
+                    color="primary"
+                    :disabled="!namespaceName || loadingSealedSecrets"
+                    @click="loadSealedSecretsForNamespace()"
+                  >
+                    Refresh
+                  </v-btn>
+                </v-col>
+              </v-row>
+            </v-card-text>
+          </v-card>
+
           <SecretsList
             :secrets="secrets"
             :has-value="hasValue"
@@ -129,7 +174,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onBeforeMount, onMounted } from 'vue'
+import { ref, computed, onBeforeMount, onMounted, watch } from 'vue'
 import SecretFormInputs from './SecretFormInputs.vue'
 import SecretsList from './SecretsList.vue'
 import SecretsResults from './SecretsResults.vue'
@@ -141,9 +186,14 @@ defineOptions({
 })
 
 const { fetchConfig } = useConfig()
-const { fetchNamespaces, fetchEncodedSecrets: fetchEncodedSecretsApi } = useSecrets()
+const {
+  fetchNamespaces,
+  fetchSealedSecrets,
+  fetchEncodedSecrets: fetchEncodedSecretsApi
+} = useSecrets()
 
 
+const config = ref({})
 const namespaces = ref([])
 const scopes = ref(["strict", "cluster-wide", "namespace-wide"])
 const errorMessage = ref("")
@@ -165,6 +215,11 @@ const clipboardMessage = ref("");
 const isCopiedMain = ref(false);
 const copiedIndividual = ref({});
 const fileErrors = ref([]);
+const sealedSecretImportFeatureEnabled = ref(false);
+const sealedSecretImportEnabled = ref(false);
+const availableSealedSecrets = ref([]);
+const selectedSealedSecret = ref(null);
+const loadingSealedSecrets = ref(false);
 const secretNameError = computed(() => {
   if (!secretName.value) return "Secret name is required.";
   return "";
@@ -177,14 +232,18 @@ const resetForm = () => {
   scope.value = "strict";
   secrets.value = [{ key: "", value: "", file: [] }];
   sealedSecrets.value = [];
+  resetSealedSecretImport();
   hasErrorMessage.value = false;
   errorMessage.value = "";
 };
 
 onBeforeMount(async () => {
-  const config = await fetchConfig();
-  await fetchNamespacesData(config);
-  await fetchDisplayName(config);
+  config.value = await fetchConfig();
+  sealedSecretImportFeatureEnabled.value = isEnabled(
+    config.value.enable_existing_sealed_secret_loading
+  );
+  await fetchNamespacesData(config.value);
+  await fetchDisplayName(config.value);
 })
 
 onMounted(() => {
@@ -200,6 +259,16 @@ function readFavoriteNamespaces() {
   } catch {
     return new Set([]);
   }
+}
+
+function isEnabled(value) {
+  if (typeof value === "boolean") {
+    return value;
+  }
+  if (typeof value === "string") {
+    return ["true", "1", "yes", "on"].includes(value.toLowerCase());
+  }
+  return false;
 }
 
 function validDnsSubdomain(name) {
@@ -322,8 +391,10 @@ async function fetchDisplayName(config) {
 async function fetchEncodedSecrets() {
   try {
     loading.value = true;
-    const config = await fetchConfig();
-    sealedSecrets.value = await fetchEncodedSecretsApi(config, {
+    if (!config.value.api_url) {
+      config.value = await fetchConfig();
+    }
+    sealedSecrets.value = await fetchEncodedSecretsApi(config.value, {
       secretName: secretName.value,
       namespaceName: namespaceName.value,
       scope: scope.value,
@@ -387,6 +458,52 @@ function removeSecret(counter) {
 function removeAllSecrets() {
   secrets.value = [{ key: "", value: "", file: [] }];
 }
+
+function resetSealedSecretImport() {
+  sealedSecretImportEnabled.value = false;
+  availableSealedSecrets.value = [];
+  selectedSealedSecret.value = null;
+}
+
+async function loadSealedSecretsForNamespace() {
+  if (!namespaceName.value || !sealedSecretImportFeatureEnabled.value || !sealedSecretImportEnabled.value) {
+    availableSealedSecrets.value = [];
+    selectedSealedSecret.value = null;
+    return;
+  }
+
+  try {
+    loadingSealedSecrets.value = true;
+    if (!config.value.api_url) {
+      config.value = await fetchConfig();
+    }
+    availableSealedSecrets.value = await fetchSealedSecrets(config.value, namespaceName.value);
+  } catch (error) {
+    setErrorMessage(`Failed to fetch existing SealedSecrets. Error Message: ${error.message}.`);
+    availableSealedSecrets.value = [];
+    selectedSealedSecret.value = null;
+  } finally {
+    loadingSealedSecrets.value = false;
+  }
+}
+
+watch([namespaceName, sealedSecretImportEnabled], async ([newNamespace, importEnabled]) => {
+  if (!newNamespace || !importEnabled) {
+    availableSealedSecrets.value = [];
+    selectedSealedSecret.value = null;
+    return;
+  }
+  await loadSealedSecretsForNamespace();
+});
+
+watch(selectedSealedSecret, (newSealedSecret) => {
+  if (!newSealedSecret || !Array.isArray(newSealedSecret.keys)) {
+    return;
+  }
+  const mappedSecrets = newSealedSecret.keys.map((key) => ({ key, value: "", file: [] }));
+  secrets.value = mappedSecrets.length > 0 ? mappedSecrets : [{ key: "", value: "", file: [] }];
+  fileErrors.value = [];
+});
 
 function validateFile(file, counter) {
   const fileSizeRule = rules.fileSize[0];

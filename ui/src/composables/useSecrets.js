@@ -14,6 +14,14 @@ export function useSecrets() {
     }
   }
 
+  async function fetchSealedSecrets(config, namespaceName) {
+    const response = await fetch(`${config.api_url}/sealed-secrets/${namespaceName}`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch SealedSecrets: ${response.statusText}`);
+    }
+    return await response.json();
+  }
+
   function readFileAsync(file) {
     return new Promise((resolve, reject) => {
       let reader = new FileReader();
@@ -72,6 +80,7 @@ export function useSecrets() {
 
   return {
     fetchNamespaces,
+    fetchSealedSecrets,
     fetchEncodedSecrets
   };
 }
