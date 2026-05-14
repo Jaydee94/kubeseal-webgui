@@ -503,8 +503,8 @@ watch(selectedSealedSecret, (newSealedSecret) => {
       return;
     }
   }
-  const mappedSecrets = newSealedSecret.keys.map((key) => ({ key, value: "", file: [] }));
-  secrets.value = mappedSecrets.length > 0 ? mappedSecrets : [{ key: "", value: "", file: [] }];
+  const secretEntries = newSealedSecret.keys.map((key) => ({ key, value: "", file: [] }));
+  secrets.value = secretEntries.length > 0 ? secretEntries : [{ key: "", value: "", file: [] }];
   fileErrors.value = [];
 });
 
@@ -519,6 +519,7 @@ function hasUserEnteredSecretData() {
   return secrets.value.some((entry) =>
     entry.key !== "" ||
     entry.value !== "" ||
+    (Array.isArray(entry.file) && entry.file.length > 0) ||
     entry.file instanceof Blob ||
     entry.file instanceof File
   );
