@@ -15,7 +15,7 @@ export function useSecrets() {
   }
 
   async function fetchSealedSecrets(config, namespaceName) {
-    const response = await fetch(`${config.api_url}/sealed-secrets/${namespaceName}`);
+    const response = await fetch(`${config.api_url}/sealed-secrets/${encodeURIComponent(namespaceName)}`);
     if (!response.ok) {
       throw new Error(`Failed to fetch SealedSecrets: ${response.statusText}`);
     }

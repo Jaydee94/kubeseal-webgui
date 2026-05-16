@@ -1,9 +1,7 @@
-from typing import List
-
 from kubeseal_webgui_api.routers.models import ExistingSealedSecret
 
 
-def mock_sealed_secret_resolver(namespace: str) -> List[ExistingSealedSecret]:
+def mock_sealed_secret_resolver(namespace: str) -> list[ExistingSealedSecret]:
     return [
         ExistingSealedSecret(
             name=f"{namespace}-app-secrets",

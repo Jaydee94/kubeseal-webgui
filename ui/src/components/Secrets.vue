@@ -151,6 +151,21 @@
       />
     </transition>
 
+    <!-- Confirmation dialog for overwriting secret keys -->
+    <v-dialog v-model="confirmOverwriteDialog" max-width="440" persistent>
+      <v-card>
+        <v-card-title class="text-h6">Replace key list?</v-card-title>
+        <v-card-text>
+          This will replace the current key-value list with keys from the selected SealedSecret.
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="cancelOverwrite">Cancel</v-btn>
+          <v-btn color="primary" variant="elevated" @click="confirmOverwrite">Continue</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <!-- Snackbars -->
     <v-snackbar
       v-model="showErrorSnackbar"
@@ -220,6 +235,8 @@ const sealedSecretImportEnabled = ref(false);
 const availableSealedSecrets = ref([]);
 const selectedSealedSecret = ref(null);
 const loadingSealedSecrets = ref(false);
+const confirmOverwriteDialog = ref(false);
+const pendingNewSealedSecret = ref(null);
 const secretNameError = computed(() => {
   if (!secretName.value) return "Secret name is required.";
   return "";
@@ -482,6 +499,8 @@ async function loadSealedSecretsForNamespace() {
 }
 
 watch([namespaceName, sealedSecretImportEnabled], async ([newNamespace, importEnabled]) => {
+  confirmOverwriteDialog.value = false;
+  pendingNewSealedSecret.value = null;
   if (!newNamespace || !importEnabled) {
     availableSealedSecrets.value = [];
     selectedSealedSecret.value = null;
@@ -495,21 +514,35 @@ watch(selectedSealedSecret, (newSealedSecret) => {
     return;
   }
   if (hasUserEnteredSecretData()) {
-    const continueOverwrite = window.confirm(
-      "This will replace the current key-value list with keys from the selected SealedSecret. Continue?"
-    );
-    if (!continueOverwrite) {
-      selectedSealedSecret.value = null;
-      return;
-    }
+    pendingNewSealedSecret.value = newSealedSecret;
+    confirmOverwriteDialog.value = true;
+    return;
   }
-  const secretEntries = newSealedSecret.keys.map((key) => ({ key, value: "", file: [] }));
-  secrets.value = secretEntries.length > 0 ? secretEntries : [{ key: "", value: "", file: [] }];
-  fileErrors.value = [];
+  applySelectedSealedSecret(newSealedSecret);
 });
 
+function applySelectedSealedSecret(sealedSecret) {
+  const secretEntries = sealedSecret.keys.map((key) => ({ key, value: "", file: [] }));
+  secrets.value = secretEntries.length > 0 ? secretEntries : [{ key: "", value: "", file: [] }];
+  fileErrors.value = [];
+}
+
+function confirmOverwrite() {
+  confirmOverwriteDialog.value = false;
+  if (pendingNewSealedSecret.value) {
+    applySelectedSealedSecret(pendingNewSealedSecret.value);
+    pendingNewSealedSecret.value = null;
+  }
+}
+
+function cancelOverwrite() {
+  confirmOverwriteDialog.value = false;
+  pendingNewSealedSecret.value = null;
+  selectedSealedSecret.value = null;
+}
+
 async function getConfig() {
-  if (!config.value.api_url) {
+  if (!Object.keys(config.value).length) {
     config.value = await fetchConfig();
   }
   return config.value;
