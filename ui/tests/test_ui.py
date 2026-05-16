@@ -78,13 +78,13 @@ def namespace_select(page: Page):
     page.wait_for_selector(input_selector, timeout=10000)
     page.click(input_selector)
     page.wait_for_selector(".v-list-item-title")
-    suggestions = page.query_selector_all(".v-list-item-title")
+    suggestions = page.locator(".v-list-item-title").all()
     assert len(suggestions) > 0, "No suggestions found."
     first_suggestion_text = suggestions[0].inner_text()
     suggestions[0].click()
     selected_text_selector = ".v-autocomplete__selection-text"
     page.wait_for_selector(selected_text_selector, timeout=10000)
-    displayed_text = page.inner_text(selected_text_selector)
+    displayed_text = page.locator(selected_text_selector).inner_text()
     assert (
         displayed_text == first_suggestion_text
     ), f"Expected '{first_suggestion_text}', but got '{displayed_text}'"
@@ -106,11 +106,11 @@ def scope_strict(page: Page):
     page.click(select_selector)
     item_selector = "div.v-list-item"
     page.wait_for_selector(item_selector)
-    items = page.query_selector_all(item_selector)
+    items = page.locator(item_selector).all()
     assert len(items) > 0, "No items found in the dropdown."
     for item in items:
-        title_element = item.query_selector("div.v-list-item-title")
-        if title_element and title_element.inner_text().strip() == "strict":
+        title_locator = item.locator("div.v-list-item-title")
+        if title_locator.count() > 0 and title_locator.inner_text().strip() == "strict":
             item.click()
             break
 

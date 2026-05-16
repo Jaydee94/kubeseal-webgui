@@ -37,8 +37,12 @@ jobs:
         run: |
           cd ui
           npm install
-          nohup npm run dev & 
-          sleep 5
+          nohup npm run dev &
+          echo "Waiting for dev server on port 8080..."
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:8080 > /dev/null 2>&1 && echo "Server ready after ${i}s" && break
+            sleep 1
+          done
 
       - name: Run Playwright Tests
         run: |
