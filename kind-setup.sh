@@ -57,7 +57,7 @@ create_sealed_secret() {
     local scope="$3"
     local key="$4"
     local annotations="$5"
-    
+
     local payload
     if [[ "$scope" == "strict" ]]; then
         payload="{\"secret\": \"$name\", \"namespace\": \"$namespace\", \"scope\": \"$scope\", \"secrets\": [{\"key\": \"$key\",\"value\": \"YQ==\"}]}"
@@ -66,12 +66,12 @@ create_sealed_secret() {
     else
         payload="{\"scope\": \"$scope\", \"secrets\": [{\"key\": \"$key\",\"value\": \"YQ==\"}]}"
     fi
-    
+
     local encrypted_data
     encrypted_data=$(echo "$payload" | \
         curl -sf -H 'content-type: application/json' -X POST -k --data @- "${API_URL}/secrets" | \
         jq -r -s ".[0][] | select(.key==\"$key\") | \"$key: \" + .value")
-    
+
     cat <<EOF | kubectl apply -n "$namespace" -f -
 apiVersion: bitnami.com/v1alpha1
 kind: SealedSecret
@@ -82,6 +82,42 @@ metadata:
 spec:
   encryptedData:
     $encrypted_data
+EOF
+}
+
+# Creates a SealedSecret with multiple keys for testing the key-import feature.
+# Usage: create_multi_key_sealed_secret <name> <namespace> <key1> [key2 ...]
+create_multi_key_sealed_secret() {
+    local name="$1"
+    local namespace="$2"
+    shift 2
+    local keys=("$@")
+
+    local secrets_json
+    secrets_json=$(printf '%s\n' "${keys[@]}" | \
+        jq -Rc '{"key": ., "value": "YQ=="}' | \
+        jq -sc '.')
+
+    local payload
+    payload="{\"secret\": \"$name\", \"namespace\": \"$namespace\", \"scope\": \"strict\", \"secrets\": $secrets_json}"
+
+    local encrypted_data
+    encrypted_data=$(echo "$payload" | \
+        curl -sf -H 'content-type: application/json' -X POST -k --data @- "${API_URL}/secrets" | \
+        jq -r -s '.[0][] | .key + ": " + .value')
+
+    local encrypted_data_indented
+    encrypted_data_indented=$(echo "$encrypted_data" | sed 's/^/    /')
+
+    cat <<EOF | kubectl apply -n "$namespace" -f -
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: $name
+  namespace: $namespace
+spec:
+  encryptedData:
+$encrypted_data_indented
 EOF
 }
 
@@ -161,6 +197,7 @@ helm template \
     --set api.image.tag=snapshot \
     --set api.url="$API_URL" \
     --set autoFetchCertResources=null \
+    --set enableExistingSealedSecretLoading=true \
     --set image.pullPolicy=Never \
     --set ingress.enabled=true \
     --set ingress.hostname="$(hostname -f)" \
@@ -193,6 +230,10 @@ create_sealed_secret "strict-secret" "$E2E_NAMESPACE" "strict" "a-secret" "{  }"
 create_sealed_secret "namespace-secret" "$E2E_NAMESPACE" "namespace-wide" "a-secret" "{ sealedsecrets.bitnami.com/namespace-wide: \"true\" }"
 create_sealed_secret "cluster-secret" "$E2E_NAMESPACE" "cluster-wide" "a-secret" "{ sealedsecrets.bitnami.com/cluster-wide: \"true\" }"
 
+log_info "Creating multi-key sealed secrets to test key-import feature"
+create_multi_key_sealed_secret "app-secrets" "$E2E_NAMESPACE" "API_KEY" "API_SECRET" "TOKEN"
+create_multi_key_sealed_secret "db-secrets" "$E2E_NAMESPACE" "DATABASE_URL" "DATABASE_USER" "DATABASE_PASSWORD" "DATABASE_PORT"
+
 log_info "Waiting for secrets to be unsealed"
 sleep 5
 
@@ -203,6 +244,29 @@ for secret_name in strict-secret namespace-secret cluster-secret; do
         log_info "Testing ${secret_name}: OK"
     else
         log_error "Secret $secret_name verification failed"
+        exit 1
+    fi
+done
+
+log_info "Verifying /sealed-secrets/{namespace} endpoint (key-import feature)"
+SEALED_SECRETS_JSON=$(curl -sf -k "${API_URL}/sealed-secrets/${E2E_NAMESPACE}")
+for check in \
+    "app-secrets:API_KEY" \
+    "app-secrets:API_SECRET" \
+    "app-secrets:TOKEN" \
+    "db-secrets:DATABASE_URL" \
+    "db-secrets:DATABASE_USER" \
+    "db-secrets:DATABASE_PASSWORD" \
+    "db-secrets:DATABASE_PORT"; do
+    secret_name="${check%%:*}"
+    key_name="${check##*:}"
+    if echo "$SEALED_SECRETS_JSON" | jq -e \
+        --arg s "$secret_name" --arg k "$key_name" \
+        '.[] | select(.name == $s) | .keys[] | select(. == $k)' > /dev/null 2>&1; then
+        log_info "Key '${key_name}' in '${secret_name}': OK"
+    else
+        log_error "Key '${key_name}' not found in '${secret_name}'"
+        log_error "Response: ${SEALED_SECRETS_JSON}"
         exit 1
     fi
 done
@@ -232,3 +296,5 @@ fi
 kubectl delete pod curl-test
 
 log_info "Setup complete! Access the UI at: http://$(hostname -f):7180"
+log_info "Feature 'Load keys from existing SealedSecret' is enabled."
+log_info "In the UI, select namespace '${E2E_NAMESPACE}' and try importing keys from 'app-secrets' or 'db-secrets'."
