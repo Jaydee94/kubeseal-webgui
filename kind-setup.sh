@@ -8,8 +8,10 @@ set -euo pipefail
 readonly CLUSTER_NAME="chart-testing"
 readonly NAMESPACE="kubeseal-webgui"
 readonly E2E_NAMESPACE="e2e"
+readonly DEV_NAMESPACE="dev"
+readonly STAGING_NAMESPACE="staging"
 HOSTNAME_FQDN="$(hostname -f)"
-readonly API_URL="https://${HOSTNAME_FQDN}:7143"
+readonly API_URL="http://${HOSTNAME_FQDN}:7180"
 readonly TIMEOUT="90s"
 readonly MAX_RETRIES=3
 readonly RETRY_DELAY=5
@@ -37,7 +39,7 @@ wait_for_api() {
     local url="$1"
     local retries="$2"
     local delay="$3"
-    
+
     for i in $(seq 1 "$retries"); do
         if curl -s -k -f "$url" > /dev/null 2>&1; then
             log_info "API is ready"
@@ -46,31 +48,39 @@ wait_for_api() {
         log_warn "Waiting for API (attempt $i/$retries)..."
         sleep "$delay"
     done
-    
+
     log_error "API failed to become ready after $retries attempts"
     return 1
 }
 
+# Usage: create_sealed_secret <name> <namespace> <scope> <annotations> <key> [key...]
 create_sealed_secret() {
     local name="$1"
     local namespace="$2"
     local scope="$3"
-    local key="$4"
-    local annotations="$5"
+    local annotations="$4"
+    shift 4
+    local keys=("$@")
+
+    local secrets_json
+    secrets_json=$(printf '%s\n' "${keys[@]}" | jq -R '{key: ., value: "YQ=="}' | jq -s '.')
 
     local payload
     if [[ "$scope" == "strict" ]]; then
-        payload="{\"secret\": \"$name\", \"namespace\": \"$namespace\", \"scope\": \"$scope\", \"secrets\": [{\"key\": \"$key\",\"value\": \"YQ==\"}]}"
+        payload=$(jq -n --arg n "$name" --arg ns "$namespace" --arg s "$scope" --argjson sec "$secrets_json" \
+            '{secret: $n, namespace: $ns, scope: $s, secrets: $sec}')
     elif [[ "$scope" == "namespace-wide" ]]; then
-        payload="{\"namespace\": \"$namespace\", \"scope\": \"$scope\", \"secrets\": [{\"key\": \"$key\",\"value\": \"YQ==\"}]}"
+        payload=$(jq -n --arg ns "$namespace" --arg s "$scope" --argjson sec "$secrets_json" \
+            '{namespace: $ns, scope: $s, secrets: $sec}')
     else
-        payload="{\"scope\": \"$scope\", \"secrets\": [{\"key\": \"$key\",\"value\": \"YQ==\"}]}"
+        payload=$(jq -n --arg s "$scope" --argjson sec "$secrets_json" \
+            '{scope: $s, secrets: $sec}')
     fi
 
     local encrypted_data
     encrypted_data=$(echo "$payload" | \
         curl -sf -H 'content-type: application/json' -X POST -k --data @- "${API_URL}/secrets" | \
-        jq -r -s ".[0][] | select(.key==\"$key\") | \"$key: \" + .value")
+        jq -r '.[] | "    " + .key + ": " + .value')
 
     cat <<EOF | kubectl apply -n "$namespace" -f -
 apiVersion: bitnami.com/v1alpha1
@@ -81,43 +91,7 @@ metadata:
   annotations: $annotations
 spec:
   encryptedData:
-    $encrypted_data
-EOF
-}
-
-# Creates a SealedSecret with multiple keys for testing the key-import feature.
-# Usage: create_multi_key_sealed_secret <name> <namespace> <key1> [key2 ...]
-create_multi_key_sealed_secret() {
-    local name="$1"
-    local namespace="$2"
-    shift 2
-    local keys=("$@")
-
-    local secrets_json
-    secrets_json=$(printf '%s\n' "${keys[@]}" | \
-        jq -Rc '{"key": ., "value": "YQ=="}' | \
-        jq -sc '.')
-
-    local payload
-    payload="{\"secret\": \"$name\", \"namespace\": \"$namespace\", \"scope\": \"strict\", \"secrets\": $secrets_json}"
-
-    local encrypted_data
-    encrypted_data=$(echo "$payload" | \
-        curl -sf -H 'content-type: application/json' -X POST -k --data @- "${API_URL}/secrets" | \
-        jq -r -s '.[0][] | .key + ": " + .value')
-
-    local encrypted_data_indented
-    encrypted_data_indented=$(echo "$encrypted_data" | sed 's/^/    /')
-
-    cat <<EOF | kubectl apply -n "$namespace" -f -
-apiVersion: bitnami.com/v1alpha1
-kind: SealedSecret
-metadata:
-  name: $name
-  namespace: $namespace
-spec:
-  encryptedData:
-$encrypted_data_indented
+${encrypted_data}
 EOF
 }
 
@@ -222,22 +196,49 @@ kubectl wait --namespace "$NAMESPACE" \
 log_info "Verifying API accessibility"
 wait_for_api "$API_URL" "$MAX_RETRIES" "$RETRY_DELAY"
 
-log_info "Creating test namespace: $E2E_NAMESPACE"
+log_info "Creating test namespaces"
 kubectl create namespace "$E2E_NAMESPACE" 2>/dev/null || log_info "Namespace '$E2E_NAMESPACE' already exists"
+kubectl create namespace "$DEV_NAMESPACE" 2>/dev/null || log_info "Namespace '$DEV_NAMESPACE' already exists"
+kubectl create namespace "$STAGING_NAMESPACE" 2>/dev/null || log_info "Namespace '$STAGING_NAMESPACE' already exists"
 
 log_info "Creating sealed secrets for testing"
-create_sealed_secret "strict-secret" "$E2E_NAMESPACE" "strict" "a-secret" "{  }"
-create_sealed_secret "namespace-secret" "$E2E_NAMESPACE" "namespace-wide" "a-secret" "{ sealedsecrets.bitnami.com/namespace-wide: \"true\" }"
-create_sealed_secret "cluster-secret" "$E2E_NAMESPACE" "cluster-wide" "a-secret" "{ sealedsecrets.bitnami.com/cluster-wide: \"true\" }"
 
-log_info "Creating multi-key sealed secrets to test key-import feature"
-create_multi_key_sealed_secret "app-secrets" "$E2E_NAMESPACE" "API_KEY" "API_SECRET" "TOKEN"
-create_multi_key_sealed_secret "db-secrets" "$E2E_NAMESPACE" "DATABASE_URL" "DATABASE_USER" "DATABASE_PASSWORD" "DATABASE_PORT"
+# e2e namespace — one secret per scope for basic verification
+create_sealed_secret "strict-secret"    "$E2E_NAMESPACE" "strict"         "{}" "a-secret"
+create_sealed_secret "namespace-secret" "$E2E_NAMESPACE" "namespace-wide" '{"sealedsecrets.bitnami.com/namespace-wide": "true"}' "a-secret"
+create_sealed_secret "cluster-secret"   "$E2E_NAMESPACE" "cluster-wide"   '{"sealedsecrets.bitnami.com/cluster-wide": "true"}' "a-secret"
+
+# e2e namespace — multi-key secrets for testing the key-import feature
+create_sealed_secret "app-secrets" "$E2E_NAMESPACE" "strict" "{}" \
+    "API_KEY" "API_SECRET" "TOKEN"
+create_sealed_secret "db-secrets" "$E2E_NAMESPACE" "strict" "{}" \
+    "DATABASE_URL" "DATABASE_USER" "DATABASE_PASSWORD" "DATABASE_PORT"
+
+# dev namespace — realistic multi-key secrets
+create_sealed_secret "database-credentials" "$DEV_NAMESPACE" "strict" "{}" \
+    "username" "password" "host" "port"
+create_sealed_secret "app-secrets" "$DEV_NAMESPACE" "strict" "{}" \
+    "jwt-secret" "oauth-token" "session-key"
+create_sealed_secret "dev-shared-config" "$DEV_NAMESPACE" "namespace-wide" \
+    '{"sealedsecrets.bitnami.com/namespace-wide": "true"}' \
+    "tls-cert" "tls-key"
+
+# staging namespace — realistic multi-key secrets
+create_sealed_secret "database-credentials" "$STAGING_NAMESPACE" "strict" "{}" \
+    "username" "password" "connection-string"
+create_sealed_secret "external-api" "$STAGING_NAMESPACE" "strict" "{}" \
+    "api-key" "webhook-secret" "client-id" "client-secret"
+create_sealed_secret "monitoring" "$STAGING_NAMESPACE" "namespace-wide" \
+    '{"sealedsecrets.bitnami.com/namespace-wide": "true"}' \
+    "grafana-password" "prometheus-token"
+create_sealed_secret "global-tls" "$STAGING_NAMESPACE" "cluster-wide" \
+    '{"sealedsecrets.bitnami.com/cluster-wide": "true"}' \
+    "tls-cert" "tls-key"
 
 log_info "Waiting for secrets to be unsealed"
 sleep 5
 
-log_info "Verifying unsealed secrets"
+log_info "Verifying unsealed secrets in $E2E_NAMESPACE"
 for secret_name in strict-secret namespace-secret cluster-secret; do
     if [[ "$(kubectl get secret "$secret_name" -n "$E2E_NAMESPACE" \
         -o go-template --template '{{ index .data "a-secret" }}')" == "YQ==" ]]; then
@@ -298,3 +299,4 @@ kubectl delete pod curl-test
 log_info "Setup complete! Access the UI at: http://$(hostname -f):7180"
 log_info "Feature 'Load keys from existing SealedSecret' is enabled."
 log_info "In the UI, select namespace '${E2E_NAMESPACE}' and try importing keys from 'app-secrets' or 'db-secrets'."
+log_info "Additional test data available in namespaces '${DEV_NAMESPACE}' and '${STAGING_NAMESPACE}'."
