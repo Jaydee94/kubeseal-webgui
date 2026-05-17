@@ -12,16 +12,19 @@
           <span>Specify sensitive value and corresponding key of the secret.<br><i>The key must be of type: DNS Subdomain</i></span>
         </v-tooltip>
       </div>
-      <v-btn
-        prepend-icon="mdi-delete-sweep"
-        variant="text"
-        color="error"
-        size="small"
-        class="text-caption"
-        @click="$emit('remove-all')"
-      >
-        Remove All
-      </v-btn>
+      <div class="d-flex align-center">
+        <slot name="header-actions" />
+        <v-btn
+          prepend-icon="mdi-delete-sweep"
+          variant="text"
+          color="error"
+          size="small"
+          class="text-caption"
+          @click="$emit('remove-all')"
+        >
+          Remove All
+        </v-btn>
+      </div>
     </div>
 
     <SecretInput

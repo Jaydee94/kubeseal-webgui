@@ -51,7 +51,49 @@
             @remove-secret="removeSecret"
             @remove-all="removeAllSecrets"
             @file-change="validateFile"
-          />
+          >
+            <template v-if="sealedSecretImportFeatureEnabled && namespaceName" #header-actions>
+              <v-menu
+                v-model="importMenuOpen"
+                :close-on-content-click="false"
+                location="bottom end"
+                min-width="280"
+              >
+                <template #activator="{ props: menuProps }">
+                  <v-btn
+                    v-bind="menuProps"
+                    prepend-icon="mdi-import"
+                    variant="text"
+                    color="primary"
+                    size="small"
+                    class="text-caption mr-1"
+                    :loading="loadingSealedSecrets"
+                    @click="onImportMenuOpen"
+                  >
+                    Import existing sealed secret
+                  </v-btn>
+                </template>
+                <v-card>
+                  <v-card-text class="pa-3">
+                    <v-autocomplete
+                      v-model="selectedSealedSecret"
+                      :items="availableSealedSecrets"
+                      item-title="name"
+                      return-object
+                      label="Select SealedSecret"
+                      variant="outlined"
+                      density="compact"
+                      color="primary"
+                      no-data-text="No SealedSecrets found"
+                      :loading="loadingSealedSecrets"
+                      auto-select-first
+                      @update:model-value="importMenuOpen = false"
+                    />
+                  </v-card-text>
+                </v-card>
+              </v-menu>
+            </template>
+          </SecretsList>
 
           <v-row justify="center">
             <v-col
@@ -106,6 +148,21 @@
       />
     </transition>
 
+    <!-- Confirmation dialog for overwriting secret keys -->
+    <v-dialog v-model="confirmOverwriteDialog" max-width="440" persistent>
+      <v-card>
+        <v-card-title class="text-h6">Replace key list?</v-card-title>
+        <v-card-text>
+          This will replace the current key-value list with keys from the selected SealedSecret.
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="cancelOverwrite">Cancel</v-btn>
+          <v-btn color="primary" variant="elevated" @click="confirmOverwrite">Continue</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <!-- Snackbars -->
     <v-snackbar
       v-model="showErrorSnackbar"
@@ -129,7 +186,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onBeforeMount, onMounted } from 'vue'
+import { ref, computed, onBeforeMount, onMounted, watch } from 'vue'
 import SecretFormInputs from './SecretFormInputs.vue'
 import SecretsList from './SecretsList.vue'
 import SecretsResults from './SecretsResults.vue'
@@ -141,9 +198,14 @@ defineOptions({
 })
 
 const { fetchConfig } = useConfig()
-const { fetchNamespaces, fetchEncodedSecrets: fetchEncodedSecretsApi } = useSecrets()
+const {
+  fetchNamespaces,
+  fetchSealedSecrets,
+  fetchEncodedSecrets: fetchEncodedSecretsApi
+} = useSecrets()
 
 
+const config = ref({})
 const namespaces = ref([])
 const scopes = ref(["strict", "cluster-wide", "namespace-wide"])
 const errorMessage = ref("")
@@ -165,6 +227,13 @@ const clipboardMessage = ref("");
 const isCopiedMain = ref(false);
 const copiedIndividual = ref({});
 const fileErrors = ref([]);
+const sealedSecretImportFeatureEnabled = ref(false);
+const importMenuOpen = ref(false);
+const availableSealedSecrets = ref([]);
+const selectedSealedSecret = ref(null);
+const loadingSealedSecrets = ref(false);
+const confirmOverwriteDialog = ref(false);
+const pendingNewSealedSecret = ref(null);
 const secretNameError = computed(() => {
   if (!secretName.value) return "Secret name is required.";
   return "";
@@ -177,14 +246,18 @@ const resetForm = () => {
   scope.value = "strict";
   secrets.value = [{ key: "", value: "", file: [] }];
   sealedSecrets.value = [];
+  resetSealedSecretImport();
   hasErrorMessage.value = false;
   errorMessage.value = "";
 };
 
 onBeforeMount(async () => {
-  const config = await fetchConfig();
-  await fetchNamespacesData(config);
-  await fetchDisplayName(config);
+  config.value = await fetchConfig();
+  sealedSecretImportFeatureEnabled.value = isEnabled(
+    config.value.enable_existing_sealed_secret_loading
+  );
+  await fetchNamespacesData(config.value);
+  await fetchDisplayName(config.value);
 })
 
 onMounted(() => {
@@ -200,6 +273,16 @@ function readFavoriteNamespaces() {
   } catch {
     return new Set([]);
   }
+}
+
+function isEnabled(value) {
+  if (typeof value === "boolean") {
+    return value;
+  }
+  if (typeof value === "string") {
+    return ["true", "1", "yes", "on"].includes(value.toLowerCase());
+  }
+  return false;
 }
 
 function validDnsSubdomain(name) {
@@ -322,8 +405,7 @@ async function fetchDisplayName(config) {
 async function fetchEncodedSecrets() {
   try {
     loading.value = true;
-    const config = await fetchConfig();
-    sealedSecrets.value = await fetchEncodedSecretsApi(config, {
+    sealedSecrets.value = await fetchEncodedSecretsApi(await getConfig(), {
       secretName: secretName.value,
       namespaceName: namespaceName.value,
       scope: scope.value,
@@ -386,6 +468,94 @@ function removeSecret(counter) {
 
 function removeAllSecrets() {
   secrets.value = [{ key: "", value: "", file: [] }];
+}
+
+function resetSealedSecretImport() {
+  importMenuOpen.value = false;
+  availableSealedSecrets.value = [];
+  selectedSealedSecret.value = null;
+}
+
+async function loadSealedSecretsForNamespace() {
+  if (!namespaceName.value || !sealedSecretImportFeatureEnabled.value) {
+    availableSealedSecrets.value = [];
+    selectedSealedSecret.value = null;
+    return;
+  }
+
+  try {
+    loadingSealedSecrets.value = true;
+    availableSealedSecrets.value = await fetchSealedSecrets(await getConfig(), namespaceName.value);
+  } catch (error) {
+    setErrorMessage(`Failed to fetch existing SealedSecrets. Error Message: ${error.message}.`);
+    availableSealedSecrets.value = [];
+    selectedSealedSecret.value = null;
+  } finally {
+    loadingSealedSecrets.value = false;
+  }
+}
+
+watch(namespaceName, () => {
+  confirmOverwriteDialog.value = false;
+  pendingNewSealedSecret.value = null;
+  availableSealedSecrets.value = [];
+  selectedSealedSecret.value = null;
+  importMenuOpen.value = false;
+});
+
+async function onImportMenuOpen() {
+  if (!availableSealedSecrets.value.length) {
+    await loadSealedSecretsForNamespace();
+  }
+}
+
+watch(selectedSealedSecret, (newSealedSecret) => {
+  if (!newSealedSecret || !Array.isArray(newSealedSecret.keys)) {
+    return;
+  }
+  if (hasUserEnteredSecretData()) {
+    pendingNewSealedSecret.value = newSealedSecret;
+    confirmOverwriteDialog.value = true;
+    return;
+  }
+  applySelectedSealedSecret(newSealedSecret);
+});
+
+function applySelectedSealedSecret(sealedSecret) {
+  const secretEntries = sealedSecret.keys.map((key) => ({ key, value: "", file: [] }));
+  secrets.value = secretEntries.length > 0 ? secretEntries : [{ key: "", value: "", file: [] }];
+  fileErrors.value = [];
+}
+
+function confirmOverwrite() {
+  confirmOverwriteDialog.value = false;
+  if (pendingNewSealedSecret.value) {
+    applySelectedSealedSecret(pendingNewSealedSecret.value);
+    pendingNewSealedSecret.value = null;
+  }
+}
+
+function cancelOverwrite() {
+  confirmOverwriteDialog.value = false;
+  pendingNewSealedSecret.value = null;
+  selectedSealedSecret.value = null;
+}
+
+async function getConfig() {
+  if (!Object.keys(config.value).length) {
+    config.value = await fetchConfig();
+  }
+  return config.value;
+}
+
+function hasUserEnteredSecretData() {
+  return secrets.value.some((entry) =>
+    entry.key !== "" ||
+    entry.value !== "" ||
+    (Array.isArray(entry.file) && entry.file.length > 0) ||
+    entry.file instanceof Blob ||
+    entry.file instanceof File
+  );
 }
 
 function validateFile(file, counter) {

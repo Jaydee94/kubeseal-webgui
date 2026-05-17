@@ -19,6 +19,11 @@ class KeyValuePair(BaseModel):
     value: str
 
 
+class ExistingSealedSecret(BaseModel):
+    name: str
+    keys: List[str]
+
+
 class Secret(BaseModel):
     key: str
     value: Optional[str] = None

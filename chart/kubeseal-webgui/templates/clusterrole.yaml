@@ -13,5 +13,8 @@ rules:
 - apiGroups: [""]
   resources: ["namespaces"]
   verbs: ["list"]
+- apiGroups: ["bitnami.com"]
+  resources: ["sealedsecrets"]
+  verbs: ["get", "list"]
 {{- end }}
 
