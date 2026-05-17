@@ -40,51 +40,6 @@
             @toggle-favorite="toggleFavorite"
           />
 
-          <v-card
-            v-if="sealedSecretImportFeatureEnabled"
-            class="mb-6"
-            variant="tonal"
-          >
-            <v-card-text>
-              <v-switch
-                v-model="sealedSecretImportEnabled"
-                color="primary"
-                hide-details
-                label="Load keys from existing SealedSecret"
-              />
-              <v-row v-if="sealedSecretImportEnabled" class="mt-1">
-                <v-col cols="12" md="8">
-                  <v-autocomplete
-                    :model-value="selectedSealedSecret"
-                    :items="availableSealedSecrets"
-                    item-title="name"
-                    return-object
-                    label="Existing SealedSecret"
-                    variant="outlined"
-                    class="modern-input"
-                    color="primary"
-                    no-data-text="No SealedSecrets found for this namespace"
-                    :loading="loadingSealedSecrets"
-                    :disabled="!namespaceName || loadingSealedSecrets"
-                    @update:model-value="selectedSealedSecret = $event"
-                  />
-                </v-col>
-                <v-col cols="12" md="4" class="d-flex align-center">
-                  <v-btn
-                    block
-                    prepend-icon="mdi-refresh"
-                    variant="outlined"
-                    color="primary"
-                    :disabled="!namespaceName || loadingSealedSecrets"
-                    @click="loadSealedSecretsForNamespace()"
-                  >
-                    Refresh
-                  </v-btn>
-                </v-col>
-              </v-row>
-            </v-card-text>
-          </v-card>
-
           <SecretsList
             :secrets="secrets"
             :has-value="hasValue"
@@ -96,7 +51,49 @@
             @remove-secret="removeSecret"
             @remove-all="removeAllSecrets"
             @file-change="validateFile"
-          />
+          >
+            <template v-if="sealedSecretImportFeatureEnabled && namespaceName" #header-actions>
+              <v-menu
+                v-model="importMenuOpen"
+                :close-on-content-click="false"
+                location="bottom end"
+                min-width="280"
+              >
+                <template #activator="{ props: menuProps }">
+                  <v-btn
+                    v-bind="menuProps"
+                    prepend-icon="mdi-import"
+                    variant="text"
+                    color="primary"
+                    size="small"
+                    class="text-caption mr-1"
+                    :loading="loadingSealedSecrets"
+                    @click="onImportMenuOpen"
+                  >
+                    Import existing sealed secret
+                  </v-btn>
+                </template>
+                <v-card>
+                  <v-card-text class="pa-3">
+                    <v-autocomplete
+                      v-model="selectedSealedSecret"
+                      :items="availableSealedSecrets"
+                      item-title="name"
+                      return-object
+                      label="Select SealedSecret"
+                      variant="outlined"
+                      density="compact"
+                      color="primary"
+                      no-data-text="No SealedSecrets found"
+                      :loading="loadingSealedSecrets"
+                      auto-select-first
+                      @update:model-value="importMenuOpen = false"
+                    />
+                  </v-card-text>
+                </v-card>
+              </v-menu>
+            </template>
+          </SecretsList>
 
           <v-row justify="center">
             <v-col
@@ -231,7 +228,7 @@ const isCopiedMain = ref(false);
 const copiedIndividual = ref({});
 const fileErrors = ref([]);
 const sealedSecretImportFeatureEnabled = ref(false);
-const sealedSecretImportEnabled = ref(false);
+const importMenuOpen = ref(false);
 const availableSealedSecrets = ref([]);
 const selectedSealedSecret = ref(null);
 const loadingSealedSecrets = ref(false);
@@ -474,13 +471,13 @@ function removeAllSecrets() {
 }
 
 function resetSealedSecretImport() {
-  sealedSecretImportEnabled.value = false;
+  importMenuOpen.value = false;
   availableSealedSecrets.value = [];
   selectedSealedSecret.value = null;
 }
 
 async function loadSealedSecretsForNamespace() {
-  if (!namespaceName.value || !sealedSecretImportFeatureEnabled.value || !sealedSecretImportEnabled.value) {
+  if (!namespaceName.value || !sealedSecretImportFeatureEnabled.value) {
     availableSealedSecrets.value = [];
     selectedSealedSecret.value = null;
     return;
@@ -498,16 +495,19 @@ async function loadSealedSecretsForNamespace() {
   }
 }
 
-watch([namespaceName, sealedSecretImportEnabled], async ([newNamespace, importEnabled]) => {
+watch(namespaceName, () => {
   confirmOverwriteDialog.value = false;
   pendingNewSealedSecret.value = null;
-  if (!newNamespace || !importEnabled) {
-    availableSealedSecrets.value = [];
-    selectedSealedSecret.value = null;
-    return;
-  }
-  await loadSealedSecretsForNamespace();
+  availableSealedSecrets.value = [];
+  selectedSealedSecret.value = null;
+  importMenuOpen.value = false;
 });
+
+async function onImportMenuOpen() {
+  if (!availableSealedSecrets.value.length) {
+    await loadSealedSecretsForNamespace();
+  }
+}
 
 watch(selectedSealedSecret, (newSealedSecret) => {
   if (!newSealedSecret || !Array.isArray(newSealedSecret.keys)) {
