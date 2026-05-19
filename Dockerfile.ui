@@ -6,7 +6,7 @@ COPY ui/ ./
 RUN npm run build && \
     npm cache clean --force
 
-FROM quay.io/nginx/nginx-unprivileged:1.27-alpine AS ui-production-stage
+FROM quay.io/nginx/nginx-unprivileged:1.31-alpine AS ui-production-stage
 USER root
 RUN apk update && \
     apk upgrade && \
