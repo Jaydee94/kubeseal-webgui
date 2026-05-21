@@ -63,12 +63,16 @@ jobs:
             --namespace kubeseal-webgui
       - name: Wait until ready
         run: |
+          kubectl wait --namespace kubeseal-webgui \
+            --for=condition=available \
+            --timeout=180s \
+            deployment -l app=kubeseal-webgui
           while ! curl -f http://$(hostname -f):80/namespaces
           do
             sleep 5
             echo "wait 5s"
           done
-        timeout-minutes: 1
+        timeout-minutes: 3
       - name: Call URL
         run: |
           curl -f http://$(hostname -f):80/namespaces
