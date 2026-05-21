@@ -21,6 +21,10 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       serviceAccountName: {{ .Values.customServiceAccountName | default "kubeseal-webgui" | quote }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       {{- if .Values.tolerations }}
       tolerations:
       {{ toYaml .Values.tolerations | nindent 8 }}
