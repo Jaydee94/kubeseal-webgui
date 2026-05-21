@@ -13,6 +13,10 @@ on:
 
 jobs:
   create-cluster:
+    permissions:
+      contents: read
+      pull-requests: write
+      actions: read
     runs-on: ubuntu-latest
     steps:
       - name: checkout
@@ -34,7 +38,12 @@ jobs:
           helm repo add sealed-secrets https://bitnami-labs.github.io/sealed-secrets
           helm install sealed-secrets -n kube-system \
             --set-string fullnameOverride=sealed-secrets-controller \
+            --wait --timeout=180s \
             sealed-secrets/sealed-secrets
+          kubectl wait --namespace kube-system \
+            --for=condition=ready pod \
+            --selector=app.kubernetes.io/name=sealed-secrets \
+            --timeout=120s
       - name: Build and upload images
         run: |
           docker build -t ghcr.io/jaydee94/kubeseal-webgui/api:snapshot -f Dockerfile.api .
@@ -61,14 +70,148 @@ jobs:
           | kubectl apply \
             -f - \
             --namespace kubeseal-webgui
+      - name: Wait for deployment to be available
+        run: |
+          kubectl rollout status --namespace kubeseal-webgui \
+            deployment/e2e-test-kubeseal-webgui --timeout=240s
+        timeout-minutes: 5
       - name: Wait until ready
         run: |
-          while ! curl -f http://$(hostname -f):80/namespaces
-          do
+          HOST=$(hostname -f)
+          echo "Probing ingress at http://${HOST}:80/namespaces"
+          attempt=0
+          last_code=""
+          while true; do
+            attempt=$((attempt + 1))
+            response=$(curl -s -o /tmp/curl_body -w '%{http_code}' "http://${HOST}:80/namespaces" || echo "curl_failed")
+            if [ "$response" = "200" ]; then
+              echo "Ready after ${attempt} attempts"
+              break
+            fi
+            if [ "$response" != "$last_code" ]; then
+              echo "Attempt ${attempt}: HTTP ${response}"
+              echo "--- body ---"
+              cat /tmp/curl_body || true
+              echo "--- /body ---"
+              last_code=$response
+            fi
             sleep 5
-            echo "wait 5s"
           done
-        timeout-minutes: 1
+        timeout-minutes: 2
+      - name: Debug on failure
+        if: failure()
+        run: |
+          set +e
+          HOST=$(hostname -f)
+          OUT=e2e-debug.log
+          {
+            echo "=== resolved host: ${HOST} ==="
+            echo "=== pods (kubeseal-webgui) ==="
+            kubectl get pods --namespace kubeseal-webgui -o wide
+            echo "=== describe deployment ==="
+            kubectl describe deployment --namespace kubeseal-webgui e2e-test-kubeseal-webgui
+            echo "=== describe pods ==="
+            kubectl describe pods --namespace kubeseal-webgui -l app=kubeseal-webgui
+            echo "=== api logs (current) ==="
+            kubectl logs --namespace kubeseal-webgui -l app=kubeseal-webgui -c api --tail=300
+            echo "=== api logs (previous) ==="
+            kubectl logs --namespace kubeseal-webgui -l app=kubeseal-webgui -c api --tail=300 -p
+            echo "=== ui logs (current) ==="
+            kubectl logs --namespace kubeseal-webgui -l app=kubeseal-webgui -c ui --tail=300
+            echo "=== events (kubeseal-webgui ns) ==="
+            kubectl get events --namespace kubeseal-webgui --sort-by=.lastTimestamp
+            echo "=== ingress ==="
+            kubectl get ingress --namespace kubeseal-webgui -o yaml
+            echo "=== services ==="
+            kubectl get svc --namespace kubeseal-webgui
+            echo "=== ingress-nginx pods ==="
+            kubectl get pods --namespace ingress-nginx -o wide
+            echo "=== ingress-nginx controller logs ==="
+            kubectl logs --namespace ingress-nginx -l app.kubernetes.io/component=controller --tail=200
+            echo "=== sealed-secrets pods ==="
+            kubectl get pods --namespace kube-system -l app.kubernetes.io/name=sealed-secrets -o wide
+            echo "=== service account ==="
+            kubectl get serviceaccount --namespace kubeseal-webgui kubeseal-webgui -o yaml
+            echo "=== clusterrole ==="
+            kubectl get clusterrole kubeseal-webgui-list-namespaces -o yaml
+            echo "=== clusterrolebinding ==="
+            kubectl get clusterrolebinding kubeseal-webgui-list-namespaces -o yaml
+            echo "=== in-pod token / sa env / auth check ==="
+            POD=$(kubectl get pod --namespace kubeseal-webgui -l app=kubeseal-webgui -o jsonpath='{.items[0].metadata.name}')
+            kubectl exec --namespace kubeseal-webgui -c api "$POD" -- sh -c '
+              echo "--- KUBERNETES_* env ---"
+              env | grep ^KUBERNETES_ || true
+              echo "--- token file ---"
+              ls -la /var/run/secrets/kubernetes.io/serviceaccount/ 2>&1
+              wc -c /var/run/secrets/kubernetes.io/serviceaccount/token 2>&1
+              echo "--- token (first 20 chars) ---"
+              head -c 20 /var/run/secrets/kubernetes.io/serviceaccount/token 2>&1; echo
+              echo "--- curl k8s api with token ---"
+              TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+              curl -k -sS -o /tmp/resp -w "HTTP %{http_code}\n" \
+                -H "Authorization: Bearer ${TOKEN}" \
+                "https://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT}/api/v1/namespaces"
+              head -c 500 /tmp/resp; echo
+              echo "--- python load_incluster_config ---"
+              python3 -c "
+from kubernetes import client, config
+config.load_incluster_config()
+cfg = client.Configuration.get_default_copy()
+print(\"host=\", cfg.host)
+print(\"verify_ssl=\", cfg.verify_ssl)
+print(\"ssl_ca_cert=\", cfg.ssl_ca_cert)
+print(\"api_key present:\", bool(cfg.api_key))
+print(\"api_key authorization startswith bearer:\", str(cfg.api_key.get(\"authorization\",\"\"))[:20] if cfg.api_key else None)
+v1 = client.CoreV1Api()
+try:
+    ns = v1.list_namespace()
+    print(\"OK\", len(ns.items))
+except Exception as e:
+    print(\"ERR\", repr(e)[:300])
+"
+            ' 2>&1 || true
+            echo "=== direct curl to ingress ==="
+            curl -v "http://${HOST}:80/namespaces"
+          } 2>&1 | tee "$OUT"
+          {
+            echo '<details><summary>e2e debug output</summary>'
+            echo ''
+            echo '```'
+            cat "$OUT"
+            echo '```'
+            echo '</details>'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload e2e debug log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-debug-log
+          path: e2e-debug.log
+          if-no-files-found: ignore
+      - name: Post debug log as PR comment
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let body;
+            try {
+              const log = fs.readFileSync('e2e-debug.log', 'utf8');
+              // GitHub comments cap at 65536 chars; keep ample headroom
+              const max = 60000;
+              const trimmed = log.length > max ? log.slice(-max) : log;
+              body = '### e2e create-cluster debug output (commit `'
+                + context.sha.substring(0, 7) + '`)\n\n```\n'
+                + trimmed + '\n```';
+            } catch (e) {
+              body = '### e2e create-cluster debug output\n\n_no debug file produced: ' + e.message + '_';
+            }
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
       - name: Call URL
         run: |
           curl -f http://$(hostname -f):80/namespaces

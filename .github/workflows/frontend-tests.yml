@@ -27,24 +27,43 @@ jobs:
         run: |
           cd api
           pip install .
+          pip install pytest-rerunfailures
 
       - name: Install Playwright Browsers
         run: |
           cd api
-          playwright install
+          playwright install --with-deps chromium
       
       - name: Start Vue.js Development Server
         run: |
           cd ui
-          npm install
-          nohup npm run dev &
+          npm ci --legacy-peer-deps
+          nohup npm run dev > dev-server.log 2>&1 &
           echo "Waiting for dev server on port 8080..."
-          for i in $(seq 1 30); do
-            curl -sf http://localhost:8080 > /dev/null 2>&1 && echo "Server ready after ${i}s" && break
+          ready=0
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:8080 > /dev/null 2>&1; then
+              echo "Server ready after ${i}s"
+              ready=1
+              break
+            fi
             sleep 1
           done
+          if [ "$ready" -ne 1 ]; then
+            echo "Dev server failed to start within 60s. Log output:"
+            cat dev-server.log || true
+            exit 1
+          fi
 
       - name: Run Playwright Tests
         run: |
           cd ui
-          pytest tests/
+          pytest tests/ -v --reruns 2 --reruns-delay 3
+
+      - name: Upload dev-server log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-dev-server-log
+          path: ui/dev-server.log
+          if-no-files-found: ignore
