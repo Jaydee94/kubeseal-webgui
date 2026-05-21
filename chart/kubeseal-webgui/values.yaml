@@ -16,6 +16,11 @@ ui:
     tag: 4.9.1
 image:
   pullPolicy: Always
+# Optionally provide image pull secrets for private registries.
+# Example:
+# imagePullSecrets:
+#   - name: my-registry-secret
+imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 # Optionally setup a display name for your kubeseal-webgui instance.

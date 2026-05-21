@@ -43,6 +43,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `ui.image.repository`                     | Image-Repository and name of the ui image.        | `ghcr.io/jaydee94/kubeseal-webgui/ui`  |
 | `ui.image.tag`                            | Image Tag of the ui image.                        | `4.5.4`                                |
 | `image.pullPolicy`                        | Image Pull Policy                                 | `Always`                               |
+| `imagePullSecrets`                        | Image pull secrets for private registries.        | `[]`                                   |
 | `nameOverride`                            | Name-Override for the objects                     | `""`                                   |
 | `fullnameOverride`                        | Fullname-Override for the objects                 | `""`                                   |
 | `customServiceAccountName`                | Optionallyn define your own serviceaccount to use | `true`                                 |
