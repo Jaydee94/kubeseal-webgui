@@ -61,18 +61,34 @@ jobs:
           | kubectl apply \
             -f - \
             --namespace kubeseal-webgui
+      - name: Wait for deployment to be available
+        run: |
+          kubectl rollout status --namespace kubeseal-webgui \
+            deployment/e2e-test-kubeseal-webgui --timeout=240s
+        timeout-minutes: 5
+      - name: Debug on rollout failure
+        if: failure()
+        run: |
+          echo "=== pods ==="
+          kubectl get pods --namespace kubeseal-webgui -o wide || true
+          echo "=== describe deployment ==="
+          kubectl describe deployment --namespace kubeseal-webgui e2e-test-kubeseal-webgui || true
+          echo "=== describe pods ==="
+          kubectl describe pods --namespace kubeseal-webgui -l app=kubeseal-webgui || true
+          echo "=== api logs ==="
+          kubectl logs --namespace kubeseal-webgui -l app=kubeseal-webgui -c api --tail=200 || true
+          echo "=== ui logs ==="
+          kubectl logs --namespace kubeseal-webgui -l app=kubeseal-webgui -c ui --tail=200 || true
+          echo "=== events ==="
+          kubectl get events --namespace kubeseal-webgui --sort-by=.lastTimestamp || true
       - name: Wait until ready
         run: |
-          kubectl wait --namespace kubeseal-webgui \
-            --for=condition=available \
-            --timeout=180s \
-            deployment -l app=kubeseal-webgui
           while ! curl -f http://$(hostname -f):80/namespaces
           do
             sleep 5
             echo "wait 5s"
           done
-        timeout-minutes: 3
+        timeout-minutes: 2
       - name: Call URL
         run: |
           curl -f http://$(hostname -f):80/namespaces
