@@ -130,6 +130,46 @@ jobs:
             kubectl logs --namespace ingress-nginx -l app.kubernetes.io/component=controller --tail=200
             echo "=== sealed-secrets pods ==="
             kubectl get pods --namespace kube-system -l app.kubernetes.io/name=sealed-secrets -o wide
+            echo "=== service account ==="
+            kubectl get serviceaccount --namespace kubeseal-webgui kubeseal-webgui -o yaml
+            echo "=== clusterrole ==="
+            kubectl get clusterrole kubeseal-webgui-list-namespaces -o yaml
+            echo "=== clusterrolebinding ==="
+            kubectl get clusterrolebinding kubeseal-webgui-list-namespaces -o yaml
+            echo "=== in-pod token / sa env / auth check ==="
+            POD=$(kubectl get pod --namespace kubeseal-webgui -l app=kubeseal-webgui -o jsonpath='{.items[0].metadata.name}')
+            kubectl exec --namespace kubeseal-webgui -c api "$POD" -- sh -c '
+              echo "--- KUBERNETES_* env ---"
+              env | grep ^KUBERNETES_ || true
+              echo "--- token file ---"
+              ls -la /var/run/secrets/kubernetes.io/serviceaccount/ 2>&1
+              wc -c /var/run/secrets/kubernetes.io/serviceaccount/token 2>&1
+              echo "--- token (first 20 chars) ---"
+              head -c 20 /var/run/secrets/kubernetes.io/serviceaccount/token 2>&1; echo
+              echo "--- curl k8s api with token ---"
+              TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+              curl -k -sS -o /tmp/resp -w "HTTP %{http_code}\n" \
+                -H "Authorization: Bearer ${TOKEN}" \
+                "https://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT}/api/v1/namespaces"
+              head -c 500 /tmp/resp; echo
+              echo "--- python load_incluster_config ---"
+              python3 -c "
+from kubernetes import client, config
+config.load_incluster_config()
+cfg = client.Configuration.get_default_copy()
+print(\"host=\", cfg.host)
+print(\"verify_ssl=\", cfg.verify_ssl)
+print(\"ssl_ca_cert=\", cfg.ssl_ca_cert)
+print(\"api_key present:\", bool(cfg.api_key))
+print(\"api_key authorization startswith bearer:\", str(cfg.api_key.get(\"authorization\",\"\"))[:20] if cfg.api_key else None)
+v1 = client.CoreV1Api()
+try:
+    ns = v1.list_namespace()
+    print(\"OK\", len(ns.items))
+except Exception as e:
+    print(\"ERR\", repr(e)[:300])
+"
+            ' 2>&1 || true
             echo "=== direct curl to ingress ==="
             curl -v "http://${HOST}:80/namespaces"
           } 2>&1 | tee "$OUT"
