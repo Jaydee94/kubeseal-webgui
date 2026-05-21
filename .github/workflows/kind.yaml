@@ -99,33 +99,51 @@ jobs:
         run: |
           set +e
           HOST=$(hostname -f)
-          echo "=== resolved host: ${HOST} ==="
-          echo "=== pods (kubeseal-webgui) ==="
-          kubectl get pods --namespace kubeseal-webgui -o wide
-          echo "=== describe deployment ==="
-          kubectl describe deployment --namespace kubeseal-webgui e2e-test-kubeseal-webgui
-          echo "=== describe pods ==="
-          kubectl describe pods --namespace kubeseal-webgui -l app=kubeseal-webgui
-          echo "=== api logs (current) ==="
-          kubectl logs --namespace kubeseal-webgui -l app=kubeseal-webgui -c api --tail=300
-          echo "=== api logs (previous) ==="
-          kubectl logs --namespace kubeseal-webgui -l app=kubeseal-webgui -c api --tail=300 -p
-          echo "=== ui logs (current) ==="
-          kubectl logs --namespace kubeseal-webgui -l app=kubeseal-webgui -c ui --tail=300
-          echo "=== events (kubeseal-webgui ns) ==="
-          kubectl get events --namespace kubeseal-webgui --sort-by=.lastTimestamp
-          echo "=== ingress ==="
-          kubectl get ingress --namespace kubeseal-webgui -o yaml
-          echo "=== services ==="
-          kubectl get svc --namespace kubeseal-webgui
-          echo "=== ingress-nginx pods ==="
-          kubectl get pods --namespace ingress-nginx -o wide
-          echo "=== ingress-nginx controller logs ==="
-          kubectl logs --namespace ingress-nginx -l app.kubernetes.io/component=controller --tail=200
-          echo "=== sealed-secrets pods ==="
-          kubectl get pods --namespace kube-system -l app.kubernetes.io/name=sealed-secrets -o wide
-          echo "=== direct curl to ingress ==="
-          curl -v "http://${HOST}:80/namespaces" || true
+          OUT=e2e-debug.log
+          {
+            echo "=== resolved host: ${HOST} ==="
+            echo "=== pods (kubeseal-webgui) ==="
+            kubectl get pods --namespace kubeseal-webgui -o wide
+            echo "=== describe deployment ==="
+            kubectl describe deployment --namespace kubeseal-webgui e2e-test-kubeseal-webgui
+            echo "=== describe pods ==="
+            kubectl describe pods --namespace kubeseal-webgui -l app=kubeseal-webgui
+            echo "=== api logs (current) ==="
+            kubectl logs --namespace kubeseal-webgui -l app=kubeseal-webgui -c api --tail=300
+            echo "=== api logs (previous) ==="
+            kubectl logs --namespace kubeseal-webgui -l app=kubeseal-webgui -c api --tail=300 -p
+            echo "=== ui logs (current) ==="
+            kubectl logs --namespace kubeseal-webgui -l app=kubeseal-webgui -c ui --tail=300
+            echo "=== events (kubeseal-webgui ns) ==="
+            kubectl get events --namespace kubeseal-webgui --sort-by=.lastTimestamp
+            echo "=== ingress ==="
+            kubectl get ingress --namespace kubeseal-webgui -o yaml
+            echo "=== services ==="
+            kubectl get svc --namespace kubeseal-webgui
+            echo "=== ingress-nginx pods ==="
+            kubectl get pods --namespace ingress-nginx -o wide
+            echo "=== ingress-nginx controller logs ==="
+            kubectl logs --namespace ingress-nginx -l app.kubernetes.io/component=controller --tail=200
+            echo "=== sealed-secrets pods ==="
+            kubectl get pods --namespace kube-system -l app.kubernetes.io/name=sealed-secrets -o wide
+            echo "=== direct curl to ingress ==="
+            curl -v "http://${HOST}:80/namespaces"
+          } 2>&1 | tee "$OUT"
+          {
+            echo '<details><summary>e2e debug output</summary>'
+            echo ''
+            echo '```'
+            cat "$OUT"
+            echo '```'
+            echo '</details>'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload e2e debug log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-debug-log
+          path: e2e-debug.log
+          if-no-files-found: ignore
       - name: Call URL
         run: |
           curl -f http://$(hostname -f):80/namespaces
