@@ -34,7 +34,12 @@ jobs:
           helm repo add sealed-secrets https://bitnami-labs.github.io/sealed-secrets
           helm install sealed-secrets -n kube-system \
             --set-string fullnameOverride=sealed-secrets-controller \
+            --wait --timeout=180s \
             sealed-secrets/sealed-secrets
+          kubectl wait --namespace kube-system \
+            --for=condition=ready pod \
+            --selector=app.kubernetes.io/name=sealed-secrets \
+            --timeout=120s
       - name: Build and upload images
         run: |
           docker build -t ghcr.io/jaydee94/kubeseal-webgui/api:snapshot -f Dockerfile.api .
