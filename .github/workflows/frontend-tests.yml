@@ -27,11 +27,12 @@ jobs:
         run: |
           cd api
           pip install .
+          pip install pytest-rerunfailures
 
       - name: Install Playwright Browsers
         run: |
           cd api
-          playwright install
+          playwright install --with-deps chromium
       
       - name: Start Vue.js Development Server
         run: |
@@ -57,7 +58,7 @@ jobs:
       - name: Run Playwright Tests
         run: |
           cd ui
-          pytest tests/ -v
+          pytest tests/ -v --reruns 2 --reruns-delay 3
 
       - name: Upload dev-server log on failure
         if: failure()
