@@ -2,7 +2,7 @@
   <a
     id="logo"
     class="navbar-brand"
-    href="#"
+    href="/"
   >
     <img
       id="logo-img"
