@@ -2,7 +2,7 @@
   <div class="secrets-component">
     <v-container
       v-if="displayName"
-      class="text-h5 text-gradient-primary text-center mb-2 py-0"
+      class="text-h5 text-primary font-weight-medium text-center mb-2 py-0"
       align="center"
     >
       {{ displayName }}
@@ -24,7 +24,7 @@
       <v-card
         v-else-if="displayCreateSealedSecretForm"
         class="secrets-form modern-card pa-6 mb-6"
-        elevation="1"
+        :elevation="0"
         variant="outlined"
       >
         <v-form>
@@ -63,10 +63,10 @@
                   <v-btn
                     v-bind="menuProps"
                     prepend-icon="mdi-import"
-                    variant="text"
+                    variant="outlined"
                     color="primary"
                     size="small"
-                    class="text-caption mr-1"
+                    class="mr-1"
                     :loading="loadingSealedSecrets"
                     @click="onImportMenuOpen"
                   >
@@ -163,24 +163,15 @@
       </v-card>
     </v-dialog>
 
-    <!-- Snackbars -->
+    <!-- Error snackbar (copy feedback is shown inline on the buttons) -->
     <v-snackbar
       v-model="showErrorSnackbar"
-      color="red"
+      color="error"
       timeout="5000"
       top
     >
       <v-icon left>mdi-alert-circle</v-icon>
       {{ errorMessage }}
-    </v-snackbar>
-    <v-snackbar
-      v-model="clipboardSnackbar"
-      color="green"
-      timeout="3000"
-      top
-    >
-      <v-icon left>mdi-check-circle</v-icon>
-      {{ clipboardMessage }}
     </v-snackbar>
   </div>
 </template>
@@ -222,8 +213,6 @@ const secretsResultsRef = ref()
 const clipboardAvailable = ref(false)
 const favoriteNamespaces = ref(readFavoriteNamespaces());
 const showErrorSnackbar = ref(false);
-const clipboardSnackbar = ref(false);
-const clipboardMessage = ref("");
 const isCopiedMain = ref(false);
 const copiedIndividual = ref({});
 const fileErrors = ref([]);
@@ -438,8 +427,6 @@ function copyRenderedSecrets() {
   }
   const sealedSecretContent = sealedSecretElement.innerText.trim();
   navigator.clipboard.writeText(sealedSecretContent).then(() => {
-    clipboardMessage.value = "Sealed secret copied to clipboard!";
-    clipboardSnackbar.value = true;
     isCopiedMain.value = true;
     setTimeout(() => {
       isCopiedMain.value = false;
@@ -449,8 +436,6 @@ function copyRenderedSecrets() {
 
 function copySealedSecret(counter) {
   navigator.clipboard.writeText(sealedSecrets.value[counter].value).then(() => {
-    clipboardMessage.value = `Secret key "${sealedSecrets.value[counter].key}" copied to clipboard!`;
-    clipboardSnackbar.value = true;
     copiedIndividual.value[counter] = true;
     setTimeout(() => {
       copiedIndividual.value[counter] = false;
@@ -585,14 +570,21 @@ pre:has(code) {
   background-color: rgba(var(--v-theme-on-surface), 0.05);
   color: rgb(var(--v-theme-on-surface));
   padding: 12px;
-  border-radius: var(--radius-md, 12px);
+  border-radius: var(--radius-md, 8px);
   border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.6;
+  tab-size: 2;
+  white-space: pre;
+  overflow-x: auto;
 }
 
 pre > code {
   padding: 0 !important;
   background: transparent !important;
   color: inherit !important;
+  font-family: var(--font-mono);
 }
 
 .secrets-component {
@@ -628,23 +620,19 @@ pre > code {
   transition: all var(--transition-fast, 0.15s ease);
 }
 
-.encrypt-btn {
-  font-size: 1rem !important;
-  font-weight: 500 !important;
-  transition: all var(--transition-fast, 0.15s ease) !important;
-}
-
 .result-code {
-  border-radius: var(--radius-md, 12px);
+  border-radius: var(--radius-md, 8px);
   padding: 1rem;
-  font-size: 0.875rem;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
   line-height: 1.6;
 }
 
 .key-code {
-  background: linear-gradient(135deg, rgba(0, 123, 255, 0.1), rgba(253, 126, 20, 0.1));
+  background: rgba(var(--v-theme-primary), 0.08);
   padding: 0.25rem 0.5rem;
-  border-radius: var(--radius-sm, 8px);
+  border-radius: var(--radius-sm, 6px);
+  font-family: var(--font-mono);
   font-weight: 600;
 }
 

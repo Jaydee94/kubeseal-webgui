@@ -4,6 +4,7 @@
     color="primary"
     class="ma-4 dark-mode-switch"
     hide-details
+    :aria-label="darkMode ? 'Switch to light mode' : 'Switch to dark mode'"
     @change="toggleDarkMode"
   >
     <template #label>

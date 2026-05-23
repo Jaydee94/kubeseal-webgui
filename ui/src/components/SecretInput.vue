@@ -10,10 +10,12 @@
         label="Secret key"
         rows="1"
         clearable
-        prepend-icon="mdi-delete"
+        prepend-icon="mdi-delete-outline"
         variant="outlined"
+        density="comfortable"
         class="modern-input"
         color="primary"
+        aria-label="Secret key (use the delete icon to remove this pair)"
         :rules="rules.validSecretKey"
         @update:model-value="$emit('update:key', $event)"
         @click:prepend="$emit('remove')"
@@ -32,6 +34,7 @@
         clearable
         label="Secret value"
         variant="outlined"
+        density="comfortable"
         class="modern-input"
         color="primary"
         :disabled="hasFile"
@@ -47,11 +50,11 @@
         id="fileInput"
         :model-value="secret.file"
         show-size
-        dense
         clearable
         label="Upload File"
         prepend-icon="mdi-file-upload-outline"
         variant="outlined"
+        density="comfortable"
         class="modern-input"
         color="primary"
         :rules="rules.fileSize"

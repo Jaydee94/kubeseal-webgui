@@ -1,17 +1,15 @@
 <template>
-  <v-col>
-    <a
-      id="logo"
-      class="navbar-brand"
-      href="#"
+  <a
+    id="logo"
+    class="navbar-brand"
+    href="/"
+  >
+    <img
+      id="logo-img"
+      alt="Kubeseal-Webgui Logo"
+      src="@/assets/logo-2025.png"
     >
-      <img
-        id="logo-img"
-        alt="Kubeseal-Webgui Logo"
-        src="@/assets/logo-2025.png"
-      >
-    </a>
-  </v-col>
+  </a>
 </template>
 
 <script>
@@ -31,11 +29,16 @@ export default {
 #logo-img {
   vertical-align: middle;
   transition: all var(--transition-fast, 0.15s ease);
-  height: 200px;
+  height: 48px;
+  max-height: 100%;
+  width: auto;
+  object-fit: contain;
   margin: 0;
 }
 
-
-
-/* Removed text styles */
+@media (min-width: 600px) {
+  #logo-img {
+    height: 56px;
+  }
+}
 </style>

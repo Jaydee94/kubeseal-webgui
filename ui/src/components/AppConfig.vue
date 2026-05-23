@@ -1,37 +1,32 @@
 <template>
   <v-footer class="flex-column">
-    <div class="px-1 py-1">
-      <small
+    <div class="px-1 py-1 text-center">
+      <span
         v-if="fetchConfigsSuccessful"
-        class="text-muted"
+        class="config-line text-medium-emphasis"
       >
-        <v-chip 
-          v-for="(value, key) in configs"
+        <span
+          v-for="(value, key, index) in configs"
           :key="key"
-          variant="flat" 
-          size="small" 
-          class="modern-chip ma-1"
-          color="primary"
         >
-          <span class="chip-content">
-            <strong>{{ key }}:</strong> {{ value }}
-          </span>
-        </v-chip>
-      </small>
-      <small
+          <span v-if="index !== 0" class="config-sep"> · </span>
+          <span class="config-key">{{ key }}:</span> {{ value }}
+        </span>
+      </span>
+      <span
         v-else-if="fetchConfigsSuccessful === false"
-        class="text-muted error-message"
+        class="text-medium-emphasis error-message"
       >
-        <v-icon small class="mr-1">mdi-alert-circle</v-icon>
+        <v-icon size="small" class="mr-1">mdi-alert-circle</v-icon>
         Could not retrieve application properties.
-      </small>
-      <small
+      </span>
+      <span
         v-else
-        class="text-muted loading-message"
+        class="text-medium-emphasis loading-message"
       >
-        <v-icon small class="mr-1 rotating">mdi-loading</v-icon>
+        <v-progress-circular indeterminate size="14" width="2" class="mr-2" />
         Loading application properties.
-      </small>
+      </span>
     </div>
   </v-footer>
 </template>
@@ -60,25 +55,18 @@ async function fetchConfigs() {
 </script>
 
 <style scoped>
-.app-config {
-  margin: 8px 0;
-  text-align: center;
+.config-line {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  line-height: 1.6;
 }
 
-.modern-chip {
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  transition: all var(--transition-base, 0.3s ease);
-  opacity: 0.9;
+.config-key {
+  font-weight: 600;
 }
 
-.modern-chip:hover {
-  opacity: 1;
-  transform: translateY(-2px);
-}
-
-.chip-content {
-  font-size: 0.75rem;
+.config-sep {
+  opacity: 0.5;
 }
 
 .error-message,
@@ -86,18 +74,6 @@ async function fetchConfigs() {
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-@keyframes rotate {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.rotating {
-  animation: rotate 1s linear infinite;
+  font-size: 0.78rem;
 }
 </style>
