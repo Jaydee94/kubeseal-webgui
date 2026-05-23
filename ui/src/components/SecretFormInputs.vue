@@ -1,9 +1,10 @@
 <template>
   <div>
-    <v-row justify="end">
+    <v-row>
       <v-col
         cols="12"
-        md="2"
+        sm="4"
+        md="3"
       >
         <v-select
           :model-value="scope"
@@ -12,6 +13,7 @@
           :plain="true"
           label="Scope"
           variant="outlined"
+          density="comfortable"
           class="modern-input"
           color="primary"
           @update:model-value="$emit('update:scope', $event)"
@@ -26,12 +28,10 @@
           </template>
         </v-select>
       </v-col>
-    </v-row>
-    <v-row>
       <v-col
         cols="12"
-        sm="6"
-        md="6"
+        sm="8"
+        md="5"
       >
         <v-autocomplete
           id="namespaceSelection"
@@ -39,6 +39,7 @@
           :items="sortedNamespaces"
           label="Namespace name"
           variant="outlined"
+          density="comfortable"
           class="modern-input"
           color="primary"
           :disabled="['strict', 'namespace-wide'].indexOf(scope) === -1"
@@ -52,10 +53,15 @@
             >
               <template #prepend>
                 <v-icon
-                  small
+                  size="small"
                   color="warning"
                   class="transition-fast"
+                  role="button"
+                  tabindex="0"
+                  :aria-label="(favoriteNamespaces.has(item.value) ? 'Remove ' : 'Add ') + item.value + ' favorite'"
                   @click.stop="$emit('toggle-favorite', item.value)"
+                  @keydown.enter.stop.prevent="$emit('toggle-favorite', item.value)"
+                  @keydown.space.stop.prevent="$emit('toggle-favorite', item.value)"
                 >
                   {{ favoriteNamespaces.has(item.value) ? 'mdi-heart' : 'mdi-heart-outline' }}
                 </v-icon>
@@ -75,8 +81,7 @@
       </v-col>
       <v-col
         cols="12"
-        sm="6"
-        md="6"
+        md="4"
       >
         <v-text-field
           id="secretName"
@@ -85,6 +90,7 @@
           trim
           clearable
           variant="outlined"
+          density="comfortable"
           class="modern-input"
           color="primary"
           :rules="rules.validDnsSubdomain"
