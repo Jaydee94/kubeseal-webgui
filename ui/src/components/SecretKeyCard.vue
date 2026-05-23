@@ -1,7 +1,7 @@
 <template>
   <v-card
     class="modern-card secret-key-card"
-    elevation="1"
+    :elevation="0"
     variant="outlined"
   >
     <v-card-title class="d-flex align-center px-4 py-3">
@@ -16,13 +16,13 @@
         v-if="clipboardAvailable"
         :variant="isCopied ? 'flat' : 'text'"
         :color="isCopied ? 'success' : 'primary'"
-        :icon="isCopied ? 'mdi-check' : 'mdi-content-copy'"
         size="small"
         class="copy-btn"
+        :aria-label="isCopied ? 'Copied to clipboard' : 'Copy value to clipboard'"
         @click="$emit('copy')"
       >
-        <v-icon>{{ isCopied ? 'mdi-check' : 'mdi-content-copy' }}</v-icon>
-        <v-tooltip activator="parent" location="bottom">{{ isCopied ? 'Copied!' : 'Copy value' }}</v-tooltip>
+        <v-icon class="mr-1">{{ isCopied ? 'mdi-check' : 'mdi-content-copy-outline' }}</v-icon>
+        {{ isCopied ? 'Copied!' : 'Copy value' }}
       </v-btn>
     </template>
   </v-card>
