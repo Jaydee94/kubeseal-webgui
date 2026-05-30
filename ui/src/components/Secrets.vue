@@ -261,11 +261,52 @@ onBeforeMount(async () => {
 })
 
 onMounted(() => {
-  if (navigator && navigator.clipboard) {
-    clipboardAvailable.value = true;
-  }
+  // Copy is considered available when either the async Clipboard API is
+  // present (secure contexts / HTTPS / localhost) or the legacy
+  // execCommand fallback can be used. The latter ensures the copy buttons
+  // remain visible when the app is served over plain HTTP, where
+  // navigator.clipboard is undefined.
+  clipboardAvailable.value = isClipboardSupported();
   setErrorMessage("");
 })
+
+function isClipboardSupported() {
+  if (navigator && navigator.clipboard) {
+    return true;
+  }
+  return typeof document !== "undefined" && typeof document.execCommand === "function";
+}
+
+async function copyToClipboard(text) {
+  // Prefer the modern asynchronous Clipboard API when available in a
+  // secure context.
+  if (navigator && navigator.clipboard && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      // Fall through to the legacy fallback below.
+    }
+  }
+
+  // Fallback for non-secure contexts (e.g. served over plain HTTP) where
+  // navigator.clipboard is unavailable.
+  try {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.top = "-9999px";
+    textarea.style.left = "-9999px";
+    document.body.appendChild(textarea);
+    textarea.select();
+    const successful = document.execCommand("copy");
+    document.body.removeChild(textarea);
+    return successful;
+  } catch {
+    return false;
+  }
+}
 
 function readFavoriteNamespaces() {
   try {
@@ -429,7 +470,7 @@ const renderSecrets = (sealedSecrets) => {
   return "\n" + dataEntries.join("\n");
 }
 
-function copyRenderedSecrets() {
+async function copyRenderedSecrets() {
   // Access the nested ref through the SecretsResults component
   const sealedSecretElement = secretsResultsRef.value?.sealedSecretCardRef?.$refs?.sealedSecretRef;
   if (!sealedSecretElement) {
@@ -437,25 +478,31 @@ function copyRenderedSecrets() {
     return;
   }
   const sealedSecretContent = sealedSecretElement.innerText.trim();
-  navigator.clipboard.writeText(sealedSecretContent).then(() => {
-    clipboardMessage.value = "Sealed secret copied to clipboard!";
-    clipboardSnackbar.value = true;
-    isCopiedMain.value = true;
-    setTimeout(() => {
-      isCopiedMain.value = false;
-    }, 2000);
-  });
+  const copied = await copyToClipboard(sealedSecretContent);
+  if (!copied) {
+    setErrorMessage("Failed to copy sealed secret to clipboard.");
+    return;
+  }
+  clipboardMessage.value = "Sealed secret copied to clipboard!";
+  clipboardSnackbar.value = true;
+  isCopiedMain.value = true;
+  setTimeout(() => {
+    isCopiedMain.value = false;
+  }, 2000);
 }
 
-function copySealedSecret(counter) {
-  navigator.clipboard.writeText(sealedSecrets.value[counter].value).then(() => {
-    clipboardMessage.value = `Secret key "${sealedSecrets.value[counter].key}" copied to clipboard!`;
-    clipboardSnackbar.value = true;
-    copiedIndividual.value[counter] = true;
-    setTimeout(() => {
-      copiedIndividual.value[counter] = false;
-    }, 2000);
-  });
+async function copySealedSecret(counter) {
+  const copied = await copyToClipboard(sealedSecrets.value[counter].value);
+  if (!copied) {
+    setErrorMessage("Failed to copy secret value to clipboard.");
+    return;
+  }
+  clipboardMessage.value = `Secret key "${sealedSecrets.value[counter].key}" copied to clipboard!`;
+  clipboardSnackbar.value = true;
+  copiedIndividual.value[counter] = true;
+  setTimeout(() => {
+    copiedIndividual.value[counter] = false;
+  }, 2000);
 }
 
 function removeSecret(counter) {
