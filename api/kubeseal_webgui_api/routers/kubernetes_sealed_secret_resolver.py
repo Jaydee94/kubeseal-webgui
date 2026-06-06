@@ -1,8 +1,8 @@
 import logging
 
 from kubernetes import client, config
-from kubernetes.client import Configuration
 
+from kubeseal_webgui_api.routers.kubernetes_utils import fix_incluster_bearer_token
 from kubeseal_webgui_api.routers.models import ExistingSealedSecret
 
 LOGGER = logging.getLogger("kubeseal-webgui")
@@ -11,7 +11,7 @@ LOGGER = logging.getLogger("kubeseal-webgui")
 def kubernetes_sealed_secret_resolver(namespace: str) -> list[ExistingSealedSecret]:
     """Retrieve SealedSecrets and their keys for a namespace from the cluster."""
     config.load_incluster_config()
-    _fix_incluster_bearer_token()
+    fix_incluster_bearer_token()
     custom_objects_api = client.CustomObjectsApi()
 
     LOGGER.info("Resolving in-cluster SealedSecrets for namespace '%s'", namespace)
@@ -49,12 +49,3 @@ def kubernetes_sealed_secret_resolver(namespace: str) -> list[ExistingSealedSecr
         resolved_sealed_secrets.append(ExistingSealedSecret(name=name, keys=keys))
 
     return sorted(resolved_sealed_secrets, key=lambda sealed_secret: sealed_secret.name)
-
-
-def _fix_incluster_bearer_token() -> None:
-    # kubernetes-client v36 changed auth_settings() to look for 'BearerToken',
-    # but incluster_config.py still sets 'authorization' — copy it over.
-    cfg = Configuration.get_default_copy()
-    if "authorization" in cfg.api_key and "BearerToken" not in cfg.api_key:
-        cfg.api_key["BearerToken"] = cfg.api_key["authorization"]
-        Configuration.set_default(cfg)
