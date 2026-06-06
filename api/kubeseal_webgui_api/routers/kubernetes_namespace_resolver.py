@@ -1,6 +1,7 @@
 import logging
 
 from kubernetes import client, config
+from kubernetes.client import Configuration
 
 LOGGER = logging.getLogger("kubeseal-webgui")
 
@@ -8,6 +9,7 @@ LOGGER = logging.getLogger("kubeseal-webgui")
 def kubernetes_namespaces_resolver() -> list[str]:
     """Retrieve a list of namespaces from current kubernetes cluster."""
     config.load_incluster_config()
+    _fix_incluster_bearer_token()
     namespaces_list = []
 
     LOGGER.info("Resolving in-cluster Namespaces")
@@ -21,3 +23,12 @@ def kubernetes_namespaces_resolver() -> list[str]:
 
     LOGGER.debug("Namespaces list %s", namespaces_list)
     return namespaces_list
+
+
+def _fix_incluster_bearer_token() -> None:
+    # kubernetes-client v36 changed auth_settings() to look for 'BearerToken',
+    # but incluster_config.py still sets 'authorization' — copy it over.
+    cfg = Configuration.get_default_copy()
+    if "authorization" in cfg.api_key and "BearerToken" not in cfg.api_key:
+        cfg.api_key["BearerToken"] = cfg.api_key["authorization"]
+        Configuration.set_default(cfg)
