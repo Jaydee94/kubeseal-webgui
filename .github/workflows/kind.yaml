@@ -153,22 +153,7 @@ jobs:
                 "https://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT}/api/v1/namespaces"
               head -c 500 /tmp/resp; echo
               echo "--- python load_incluster_config ---"
-              python3 -c "
-from kubernetes import client, config
-config.load_incluster_config()
-cfg = client.Configuration.get_default_copy()
-print(\"host=\", cfg.host)
-print(\"verify_ssl=\", cfg.verify_ssl)
-print(\"ssl_ca_cert=\", cfg.ssl_ca_cert)
-print(\"api_key present:\", bool(cfg.api_key))
-print(\"api_key authorization startswith bearer:\", str(cfg.api_key.get(\"authorization\",\"\"))[:20] if cfg.api_key else None)
-v1 = client.CoreV1Api()
-try:
-    ns = v1.list_namespace()
-    print(\"OK\", len(ns.items))
-except Exception as e:
-    print(\"ERR\", repr(e)[:300])
-"
+              python3 -c "from kubernetes import client, config; config.load_incluster_config(); cfg=client.Configuration.get_default_copy(); print(\"host=\",cfg.host); print(\"api_key keys:\",list(cfg.api_key.keys()) if cfg.api_key else None); v1=client.CoreV1Api(); ns=v1.list_namespace(); print(\"OK\",len(ns.items))" 2>&1 || echo "python diagnostic failed"
             ' 2>&1 || true
             echo "=== direct curl to ingress ==="
             curl -v "http://${HOST}:80/namespaces"

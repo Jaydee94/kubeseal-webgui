@@ -2,6 +2,7 @@ import logging
 
 from kubernetes import client, config
 
+from kubeseal_webgui_api.routers.kubernetes_utils import fix_incluster_bearer_token
 from kubeseal_webgui_api.routers.models import ExistingSealedSecret
 
 LOGGER = logging.getLogger("kubeseal-webgui")
@@ -10,6 +11,7 @@ LOGGER = logging.getLogger("kubeseal-webgui")
 def kubernetes_sealed_secret_resolver(namespace: str) -> list[ExistingSealedSecret]:
     """Retrieve SealedSecrets and their keys for a namespace from the cluster."""
     config.load_incluster_config()
+    fix_incluster_bearer_token()
     custom_objects_api = client.CustomObjectsApi()
 
     LOGGER.info("Resolving in-cluster SealedSecrets for namespace '%s'", namespace)
