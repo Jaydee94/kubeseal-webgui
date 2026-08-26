@@ -52,7 +52,7 @@ encryption.
 - Base image: `python:3.12-slim-bookworm`.
 - Built from `Dockerfile.api`. A first build stage downloads the `kubeseal`
   binary (version pinned via the `KUBESEAL_VERSION` build arg, currently
-  `0.36.6`); the runtime stage installs the Python package and copies the
+  `0.39.1`); the runtime stage installs the Python package and copies the
   binary in.
 - Runs `uvicorn` against `kubeseal_webgui_api.app:app` on port 5000.
 - On startup, optionally fetches the controller's public certificate (see
