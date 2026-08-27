@@ -1,0 +1,42 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "timezone": "Europe/Berlin",
+  "schedule": ["before 6am on monday"],
+  "docker": {
+    "pinDigests": true
+  },
+  "packageRules": [
+    {
+      "matchManagers": ["dockerfile"],
+      "matchUpdateTypes": ["digest"],
+      "automerge": false,
+      "commitMessageTopic": "{{depName}} digest"
+    },
+    {
+      "matchManagers": ["poetry"],
+      "matchFileNames": ["api/**"],
+      "groupName": "api dependencies"
+    },
+    {
+      "matchManagers": ["npm"],
+      "matchFileNames": ["ui/**"],
+      "groupName": "ui dependencies"
+    },
+    {
+      "matchDatasources": ["github-releases"],
+      "matchPackageNames": ["bitnami/sealed-secrets"],
+      "commitMessageTopic": "kubeseal CLI"
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["Dockerfile.api"],
+      "matchStrings": ["ARG KUBESEAL_VERSION=(?<currentValue>[\\d.]+)"],
+      "datasourceTemplate": "github-releases",
+      "depNameTemplate": "bitnami/sealed-secrets",
+      "extractVersionTemplate": "^v(?<version>.*)$"
+    }
+  ]
+}
