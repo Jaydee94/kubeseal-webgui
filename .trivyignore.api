@@ -1,0 +1,86 @@
+# Trivy ignore file for the kubeseal-webgui-api image only.
+#
+# Split from a single shared .trivyignore because a plain Trivy ignore file
+# suppresses a CVE ID globally across every image it is passed to -- these
+# entries are all Debian/glibc packages baked into
+# gcr.io/distroless/python3-debian12:nonroot and have no business being
+# consulted when scanning kubeseal-webgui-ui (Alpine-based; see
+# .trivyignore.ui). Each matrix job in
+# .github/workflows/container-security-scan.yml passes only its own file.
+#
+# Format: CVE-ID exp:YYYY-MM-DD
+# The exp: marker is real Trivy syntax (not a comment) -- Trivy stops
+# honoring the entry once that date passes and the CVE starts failing the
+# gate again, forcing a real re-check instead of relying on a human
+# remembering to revisit it.
+#
+# Every entry below was confirmed via `trivy image --format json` to have an
+# EMPTY "Fixed Version" at the time it was added: nothing has been published
+# upstream/by the Debian security tracker to remediate it yet. We do not
+# control the versioning of these OS packages (no apt/pip we can bump
+# ourselves).
+#
+# Do NOT add an entry here for a CVE that has a fixed version available.
+# If Trivy reports one, the fix needs to land by bumping/rebuilding instead
+# (see the "## Amendments" section of
+# docs/superpowers/plans/2026-08-26-container-hardening.md for the 6 HIGH
+# CVE IDs that currently have a fix upstream but are not yet incorporated
+# into this distroless base image snapshot, which is why the CI gate in
+# .github/workflows/container-security-scan.yml is scoped to CRITICAL only).
+#
+# Re-run before each exp: date, and drop (or renew) any line whose CVE now
+# shows a Fixed Version:
+#   docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+#     ghcr.io/aquasecurity/trivy:latest image --severity CRITICAL,HIGH \
+#     --format json kubeseal-webgui-api:gate-check
+
+# zlib1g — CRITICAL — integer overflow / heap buffer overflow in zipOpenNewFileInZip4_6; no fixed version published for Debian 12 bookworm
+CVE-2023-45853 exp:2026-11-15
+
+# libexpat1 — HIGH — large dynamic memory allocation via crafted small document
+CVE-2025-59375 exp:2026-11-15
+
+# libpython3.11-* — HIGH — python-markdown DoS via malformed HTML-like sequences
+CVE-2025-69534 exp:2026-11-15
+
+# libncursesw6 / libtinfo6 — HIGH — ncurses buffer overflow, potential arbitrary code execution
+CVE-2025-69720 exp:2026-11-15
+
+# libsqlite3-0 — CRITICAL — SQLite integer overflow
+CVE-2025-7458 exp:2026-11-15
+
+# libsqlite3-0 — HIGH — arbitrary code execution via crafted FTS5 full-text search data
+CVE-2026-11822 exp:2026-11-15
+
+# libsqlite3-0 — HIGH — arbitrary code execution / crash via heap buffer overflow in FTS5
+CVE-2026-11824 exp:2026-11-15
+
+# libpython3.11-* — HIGH — CPython tarfile extraction filter bypass allows escaping destination directory
+CVE-2026-11940 exp:2026-11-15
+
+# libssl3 — HIGH — OpenSSL DoS via unbounded memory growth in QUIC server
+CVE-2026-14456 exp:2026-11-15
+
+# libpython3.11-* — HIGH — CPU DoS in HTML parser via repeated unterminated markup declarations
+CVE-2026-15308 exp:2026-11-15
+
+# libexpat1 — HIGH — information disclosure / data integrity issues via integer overflow in buffer reallocation
+CVE-2026-25210 exp:2026-11-15
+
+# libpython3.11-* — HIGH — incomplete control character validation in http.cookies
+CVE-2026-3644 exp:2026-11-15
+
+# libexpat1 — HIGH — denial of service via crafted XML input
+CVE-2026-45186 exp:2026-11-15
+
+# libuuid1 — HIGH — TOCTOU in mount program via ancestor directory swap on target path
+CVE-2026-53613 exp:2026-11-15
+
+# libuuid1 — HIGH — integer overflow/wraparound in libblkid partitions/dos.c
+CVE-2026-53615 exp:2026-11-15
+
+# libexpat1 — HIGH — integer overflow in copyString
+CVE-2026-56408 exp:2026-11-15
+
+# libpython3.11-* — HIGH — Python/Expat DoS via crafted XML document
+CVE-2026-7210 exp:2026-11-15

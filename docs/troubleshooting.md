@@ -29,10 +29,10 @@ See [configuration.md](configuration.md#sealed-secrets-controller).
 ## `kubeseal binary not found` or 500 errors on `POST /secrets`
 
 The API expects `kubeseal` at `KUBESEAL_BINARY`. In the published container
-image this is `/tmp/kubeseal`, baked in by `Dockerfile.api`. If you run the
+image this is `/kubeseal-webgui/bin/kubeseal`, baked in by `Dockerfile.api`. If you run the
 API outside the container, you must install `kubeseal` locally and either:
 
-- Place it at `/tmp/kubeseal`, or
+- Place it at `/kubeseal-webgui/bin/kubeseal`, or
 - Set `KUBESEAL_BINARY` to the actual path before starting the API.
 
 See [development.md](development.md#api-python--fastapi).
@@ -77,6 +77,23 @@ If the browser shows a certificate warning or you see HTTP/HTTPS confusion:
   the browser will block mixed content.
 
 See [configuration.md](configuration.md#openshift-route).
+
+## Pod rejected with `CreateContainerConfigError` or SCC-related admission errors
+
+The chart sets a default `securityContext`/`containerSecurityContext` on the
+pod and both containers. On OpenShift, the `restricted`/`restricted-v2` SCC
+assigns its own `runAsUser`/`fsGroup`/`seLinuxOptions` from a
+namespace-scoped range and can reject (or conflict with) a chart-supplied
+one in some cluster configurations.
+
+Disable the chart's own security context and let OpenShift's SCC fully own
+it instead:
+
+```bash
+--set securityContext.enabled=false --set containerSecurityContext.enabled=false
+```
+
+See [configuration.md](configuration.md#security-context).
 
 ## Mock mode not engaging
 

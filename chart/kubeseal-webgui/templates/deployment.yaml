@@ -16,9 +16,9 @@ spec:
       annotations:
         {{ toYaml .Values.annotations | nindent 8 }}
     spec:
-      {{- with .Values.securityContext }}
+      {{- if .Values.securityContext.enabled }}
       securityContext:
-        {{- toYaml . | nindent 8 }}
+        {{- omit .Values.securityContext "enabled" | toYaml | nindent 8 }}
       {{- end }}
       serviceAccountName: {{ .Values.customServiceAccountName | default "kubeseal-webgui" | quote }}
       {{- with .Values.imagePullSecrets }}
@@ -41,6 +41,10 @@ spec:
         - name: "api"
           image: "{{ .Values.api.image.repository }}:{{ .Values.api.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- if .Values.containerSecurityContext.enabled }}
+          securityContext:
+            {{- omit .Values.containerSecurityContext "enabled" | toYaml | nindent 12 }}
+          {{- end }}
           env:
           {{- range $key, $value := .Values.api.environment }}
             - name: {{ $key }}
@@ -88,9 +92,15 @@ spec:
             - name: sealed-secret-configmap
               mountPath: /kubeseal-webgui/src/config/logging_config.yaml
               subPath: logging_config.yaml
+            - name: tmp
+              mountPath: /tmp
         - name: "ui"
           image: "{{ .Values.ui.image.repository }}:{{ .Values.ui.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- if .Values.containerSecurityContext.enabled }}
+          securityContext:
+            {{- omit .Values.containerSecurityContext "enabled" | toYaml | nindent 12 }}
+          {{- end }}
           ports:
             - name: ui
               containerPort: 8080
@@ -111,6 +121,8 @@ spec:
             - name: sealed-secret-configmap
               mountPath: /usr/share/nginx/html/config.json
               subPath: config.json
+            - name: tmp
+              mountPath: /tmp
       volumes:
         {{- if .Values.sealedSecrets.autoFetchCert }}
         - name: sealed-secrets-certs
@@ -119,3 +131,5 @@ spec:
         - name: sealed-secret-configmap
           configMap:
             name: {{ include "kubeseal-webgui.fullname" . }}
+        - name: tmp
+          emptyDir: {}

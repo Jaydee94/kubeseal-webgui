@@ -85,6 +85,31 @@ grants `list` on `namespaces` and `get`/`list` on
 | `api.loglevel` | Log level for the API container (`DEBUG`, `INFO`, `WARNING`, `ERROR`). | `INFO` |
 | `api.environment` | Additional environment variables for the API container as a map. | `{}` |
 
+### Security context
+
+| Parameter | Description | Default |
+|---|---|---|
+| `securityContext` | Pod-level `securityContext`, applied to the whole pod (see [`deployment.yaml`](../chart/kubeseal-webgui/templates/deployment.yaml)). | `enabled: true`, `runAsNonRoot: true`, `seccompProfile.type: RuntimeDefault` |
+| `containerSecurityContext` | Container-level `securityContext`, applied identically to both the `api` and `ui` containers. | `enabled: true`, `allowPrivilegeEscalation: false`, `readOnlyRootFilesystem: true`, `capabilities.drop: [ALL]` |
+
+Both images run as a fixed, non-root numeric UID baked into the image
+itself (the API's distroless base defaults to uid 65532; the UI's
+`nginx-unprivileged` base defaults to uid 101), so there is no need to set
+`securityContext.runAsUser` — the chart's default `securityContext` is
+compatible with both images out of the box.
+
+`enabled` is a chart-only switch, not a real Kubernetes `securityContext`
+field — the chart strips it before rendering. Set
+`securityContext.enabled=false` and/or `containerSecurityContext.enabled=false`
+to render no `securityContext` block at all at that level, letting the
+platform's own admission controller fully own it instead — most relevant on
+**OpenShift**, whose default `restricted`/`restricted-v2` SCC assigns its own
+`runAsUser`/`fsGroup`/`seLinuxOptions` from a namespace-scoped range and
+already enforces non-root execution; a chart-supplied `securityContext` can
+be redundant with, or in some configurations rejected by, that assignment.
+The two flags are independent: disable either or both as your platform
+requires.
+
 ## API environment variables
 
 These are read directly by the API process and can be set via
@@ -93,7 +118,7 @@ These are read directly by the API process and can be set via
 
 | Variable | Description | Default |
 |---|---|---|
-| `KUBESEAL_BINARY` | Absolute path to the `kubeseal` executable inside the container. | `/tmp/kubeseal` (set in `Dockerfile.api`) |
+| `KUBESEAL_BINARY` | Absolute path to the `kubeseal` executable inside the container. | `/kubeseal-webgui/bin/kubeseal` (set in `Dockerfile.api`) |
 | `KUBESEAL_CERT` | Path to the controller's public certificate. | `/kubeseal-webgui/cert/kubeseal-cert.pem` |
 | `KUBESEAL_AUTOFETCH` | Set to `true` to fetch the certificate from the controller on startup. Set by the chart when `sealedSecrets.autoFetchCert=true`. | `false` |
 | `KUBESEAL_CONTROLLER_NAME` | Deployment name of the Sealed Secrets controller (used when auto-fetching). | `sealed-secrets-controller` |

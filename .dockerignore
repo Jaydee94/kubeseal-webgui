@@ -2,7 +2,6 @@
 .*
 !api/pyproject.toml
 !api/README.md
-!api/bin
 !api/config
 !api/kubeseal_webgui_api
 !ui/*

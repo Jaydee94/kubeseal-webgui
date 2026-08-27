@@ -18,7 +18,6 @@ jobs:
   security-scan:
     name: Trivy Security Scan (${{ matrix.name }})
     runs-on: ubuntu-latest
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     strategy:
       fail-fast: false
       matrix:
@@ -26,9 +25,15 @@ jobs:
           - dockerfile: Dockerfile.api
             image: kubeseal-webgui-api
             name: api
+            # See .trivyignore.api's header for why this is per-image: a plain
+            # .trivyignore ignores a CVE ID globally across every image scanned
+            # with it, so the API's Debian-package exceptions must not leak
+            # into the UI (Alpine-based) image's scan.
+            trivyignores: .trivyignore.api
           - dockerfile: Dockerfile.ui
             image: kubeseal-webgui-ui
             name: ui
+            trivyignores: .trivyignore.ui
     permissions:
       contents: read
       security-events: write
@@ -60,7 +65,13 @@ jobs:
 
       - name: Upload Trivy SARIF results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v4
-        if: always()
+        # Uploading to the Security tab needs `security-events: write`, which
+        # GitHub only grants the default token for same-repo pull requests
+        # (fork PRs always get a read-only token, regardless of the
+        # `permissions:` block above) -- skip it for forks rather than let it
+        # fail. The CRITICAL gate below is NOT skipped: it needs no write
+        # access and must run for every pull request, forked or not.
+        if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
         with:
           sarif_file: trivy-results-${{ matrix.name }}.sarif
           category: trivy-${{ matrix.name }}
@@ -75,6 +86,21 @@ jobs:
           severity: CRITICAL,HIGH,MEDIUM
           exit-code: '0'
 
+      - name: Run Trivy vulnerability scanner (CI gate)
+        uses: aquasecurity/trivy-action@v0.35.0
+        if: always()
+        with:
+          image-ref: ${{ matrix.image }}:${{ github.sha }}
+          format: table
+          # HIGH is intentionally excluded from the hard gate for now: gcr.io/distroless/python3-debian12's
+          # pinned digest currently lags a handful of Debian security backports (see .trivyignore and the
+          # container-hardening plan's "## Amendments" section for the full breakdown). HIGH findings stay
+          # visible via the SARIF upload and the table-report step above; revisit widening this gate to
+          # CRITICAL,HIGH once a fresher digest closes that gap.
+          severity: CRITICAL
+          exit-code: '1'
+          trivyignores: ${{ matrix.trivyignores }}
+
       - name: Upload Trivy scan report as artifact
         uses: actions/upload-artifact@v4
         if: always()
@@ -84,7 +110,9 @@ jobs:
           retention-days: 30
 
       - name: Post Trivy results as PR comment
-        if: github.event_name == 'pull_request' && always()
+        # Posting a comment needs `pull-requests: write`, not granted to the
+        # default token on fork PRs -- see the SARIF-upload step's comment.
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && always()
         uses: actions/github-script@v7
         with:
           script: |

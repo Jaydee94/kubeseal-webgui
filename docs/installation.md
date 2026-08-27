@@ -9,7 +9,7 @@ For a full list of tunable values, see [configuration.md](configuration.md).
 ## Prerequisites
 
 - A Kubernetes cluster (1.25 or newer).
-- The [Bitnami Sealed Secrets controller](https://github.com/bitnami-labs/sealed-secrets)
+- The [Bitnami Sealed Secrets controller](https://github.com/bitnami/sealed-secrets)
   already installed in the cluster. kubeseal-webgui does not install the
   controller itself; it only encrypts secrets against the controller's public
   certificate.
@@ -64,6 +64,15 @@ helm install kubeseal-webgui \
 
 Leave `route.hostname` empty to let OpenShift assign a hostname from the
 default apps subdomain.
+
+The chart's default `securityContext`/`containerSecurityContext` are usually
+compatible with OpenShift's `restricted`/`restricted-v2` SCC as-is, but if
+your SCC setup rejects them (or you'd rather let OpenShift's own admission
+controller fully own `runAsUser`/`fsGroup`/`seLinuxOptions`), add
+`--set securityContext.enabled=false --set containerSecurityContext.enabled=false`
+to disable the chart-supplied ones. See
+[configuration.md#security-context](configuration.md#security-context) for
+details.
 
 ## Sealed-Secrets certificate
 

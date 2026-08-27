@@ -1,0 +1,11 @@
+# Trivy ignore file for the kubeseal-webgui-ui image only.
+#
+# Intentionally empty: as of this writing kubeseal-webgui-ui (built on
+# quay.io/nginx/nginx-unprivileged, Alpine-based) scans at 0 CRITICAL/HIGH/
+# MEDIUM findings. Kept as its own file (rather than sharing
+# .trivyignore.api) because a plain Trivy ignore file suppresses a CVE ID
+# globally across every image it is passed to, and the API image's
+# Debian-package exceptions have no relationship to this Alpine-based image.
+# If this image ever needs a genuinely-unfixed-CVE exception, add it here
+# following the same format and rules documented in .trivyignore.api's
+# header.

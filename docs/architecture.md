@@ -1,7 +1,7 @@
 # Architecture
 
 kubeseal-webgui is a thin web frontend around the
-[`kubeseal`](https://github.com/bitnami-labs/sealed-secrets) CLI. It runs as
+[`kubeseal`](https://github.com/bitnami/sealed-secrets) CLI. It runs as
 two containers in a single pod and never stores anything: secrets are encrypted
 in-flight using the Sealed Secrets controller's public certificate, and the
 encrypted result is returned to the browser as JSON.
@@ -49,12 +49,25 @@ encryption.
 
 ### API container
 
-- Base image: `python:3.12-slim-bookworm`.
-- Built from `Dockerfile.api`. A first build stage downloads the `kubeseal`
-  binary (version pinned via the `KUBESEAL_VERSION` build arg, currently
-  `0.36.6`); the runtime stage installs the Python package and copies the
-  binary in.
-- Runs `uvicorn` against `kubeseal_webgui_api.app:app` on port 5000.
+- Base image: `gcr.io/distroless/python3-debian12:nonroot` (no shell, no
+  package manager, runs as uid 65532) — chosen for its smaller footprint
+  and shell-free, package-manager-free trusted computing base, which reduces
+  distinct vulnerable packages by 47% (32 → 17) and CRITICAL findings by 60%
+  (5 → 2). However, the distroless base's slower rebuild and patch-backport
+  cadence has increased HIGH severity findings by 42% (31 → 44) and MEDIUM
+  findings by 47.5% (80 → 118) due to a few lagging packages (libexpat1,
+  libpython3.11-minimal, libc6); this is the security trade-off of choosing
+  a minimal base with infrequent updates.
+- Built from `Dockerfile.api` in three stages: a `debian:bookworm-slim`
+  stage downloads the `kubeseal` binary (version pinned via the
+  `KUBESEAL_VERSION` build arg, currently `0.39.1`); a
+  `python:3.11-slim-bookworm` stage `pip install --target`s the Python
+  package and its dependencies (the builder's Python minor version must
+  match the distroless runtime's bundled 3.11 interpreter — see the ABI
+  note in the hardening plan); the final distroless stage copies both in.
+- Runs `python3 -m uvicorn kubeseal_webgui_api.app:app` on port 5000 (no
+  `ENTRYPOINT` override — the distroless image already targets its bundled
+  interpreter).
 - On startup, optionally fetches the controller's public certificate (see
   `fetch_sealed_secrets_cert` in
   [`api/kubeseal_webgui_api/app_config.py`](../api/kubeseal_webgui_api/app_config.py)).

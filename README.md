@@ -9,10 +9,10 @@
 </p>
 
 kubeseal-webgui is a web frontend for
-[Bitnami Sealed Secrets](https://github.com/bitnami-labs/sealed-secrets). It
+[Bitnami Sealed Secrets](https://github.com/bitnami/sealed-secrets). It
 lets cluster operators encrypt Kubernetes Secrets in the browser using the
 cluster's public certificate, without exposing the `kubeseal` CLI to every
-user. The backend is FastAPI (Python 3.12), the frontend is Vue 3 + Vuetify 4,
+user. The backend is FastAPI (Python 3.11+), the frontend is Vue 3 + Vuetify 4,
 and the app ships as two container images plus a Helm chart on the GitHub
 Container Registry.
 
@@ -23,7 +23,7 @@ Container Registry.
 ## Prerequisites
 
 - A Kubernetes cluster (1.25 or newer).
-- The [Bitnami Sealed Secrets controller](https://github.com/bitnami-labs/sealed-secrets)
+- The [Bitnami Sealed Secrets controller](https://github.com/bitnami/sealed-secrets)
   already installed in the cluster.
 - [Helm 3.8 or newer](https://helm.sh/docs/intro/install/).
 
