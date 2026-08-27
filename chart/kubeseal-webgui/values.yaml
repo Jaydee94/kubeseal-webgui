@@ -42,6 +42,38 @@ resources:
   requests:
     cpu: 20m
     memory: 256Mi
+# Pod-level hardening. Override individual keys via --set if your cluster's
+# PSA/PSP config needs something different (the E2E kind cluster does this
+# for securityContext.runAsUser, see .github/workflows/kind.yaml).
+#
+# On OpenShift, set `securityContext.enabled: false`. OpenShift's SCC
+# admission controller (the "restricted"/"restricted-v2" SCC applied to
+# namespaces by default) assigns its own runAsUser/fsGroup/seLinuxOptions
+# from a namespace-scoped range and already enforces non-root execution on
+# its own -- a chart-supplied securityContext block can conflict with (or
+# become redundant with, and in some OpenShift versions be rejected by) that
+# assignment. Setting `enabled: false` renders no securityContext at all on
+# the pod, leaving OpenShift's own SCC fully in control. The `enabled` key
+# itself is stripped before rendering -- it is not a real Kubernetes
+# securityContext field.
+securityContext:
+  enabled: true
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+# Container-level hardening, applied identically to the api and ui
+# containers. Same OpenShift note as `securityContext` above applies --
+# `allowPrivilegeEscalation`/`readOnlyRootFilesystem`/dropped capabilities
+# are generally fine to keep even under a custom SCC (they don't touch
+# UID/GID/SELinux assignment), but the toggle is here in case a specific
+# OpenShift setup needs it off too.
+containerSecurityContext:
+  enabled: true
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
 # Setup an ingress route optionally
 ingress:
   enabled: false
