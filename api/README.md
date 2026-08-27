@@ -1,6 +1,6 @@
 # kubeseal-webgui API
 
-FastAPI backend that wraps the [`kubeseal`](https://github.com/bitnami-labs/sealed-secrets)
+FastAPI backend that wraps the [`kubeseal`](https://github.com/bitnami/sealed-secrets)
 binary. It exposes the encryption operation, plus a couple of helpers for
 listing namespaces and existing `SealedSecret` objects, as a small HTTP API.
 
