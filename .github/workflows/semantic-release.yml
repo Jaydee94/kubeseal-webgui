@@ -21,7 +21,14 @@ jobs:
       - name: Semantic Release
         uses: cycjimmy/semantic-release-action@v6
         with:
+          # Pinned below 10.x: that major switched to a new
+          # @conventional-changelog/template-based renderer requiring
+          # conventional-changelog-writer@9+, which is newer than what this
+          # action's bundled semantic-release core ships -- an unpinned
+          # (floating-latest) version here breaks generateNotes with
+          # "Missing helper" errors. 9.3.1 is the last release before that
+          # switch.
           extra_plugins: |
-            conventional-changelog-conventionalcommits
+            conventional-changelog-conventionalcommits@9.3.1
         env:
           GITHUB_TOKEN: ${{ secrets.SEMANTIC_RELEASE_TOKEN }}
