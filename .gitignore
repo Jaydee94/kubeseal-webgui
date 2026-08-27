@@ -17,3 +17,6 @@ test.yaml
 .coverage
 .venv/
 .vscode/
+
+# Git worktrees used for isolated plan execution (superpowers:using-git-worktrees)
+.worktrees/

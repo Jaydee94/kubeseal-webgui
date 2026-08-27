@@ -1,64 +1,59 @@
-FROM debian:bookworm-slim AS deps
+FROM debian:bookworm-slim@sha256:88200866dfff7ea7f5cbcb6ec7c8a701889efe6fe859fe64d6990e4b07ea4171 AS deps
 
-ARG KUBESEAL_VERSION=0.36.6
+ARG KUBESEAL_VERSION=0.39.1
 ARG TARGETARCH
-ENV KUBESEAL_BINARY=/deps/kubeseal \
-    PRIVATE_KEY=/dev/null \
-    PUBLIC_KEY=/deps/cert.pem
+ENV KUBESEAL_BINARY=/deps/kubeseal
 
 WORKDIR /deps
 
+# No `apt-get upgrade` here: this stage is discarded (only the single
+# `kubeseal` binary it produces gets copied into the final image), and an
+# upgrade would make the build non-reproducible -- installed OS package
+# versions could drift over time even though the base image digest above is
+# pinned. Security patching for the tools this stage actually uses (curl,
+# ca-certificates) flows through Renovate bumping that pinned digest instead.
 RUN apt-get update && \
-    apt-get upgrade -y && \
-    apt-get install -y --no-install-recommends ca-certificates openssl curl && \
-    openssl req -x509 -days 365 -nodes -newkey rsa:4096 -keyout "$PRIVATE_KEY" -out "$PUBLIC_KEY" -subj "/CN=sealed-secret/O=sealed-secret" && \
-    curl -Lsf -o /tmp/kubeseal.tar.gz "https://github.com/bitnami-labs/sealed-secrets/releases/download/v${KUBESEAL_VERSION}/kubeseal-${KUBESEAL_VERSION}-linux-${TARGETARCH}.tar.gz" && \
-    tar -xzf /tmp/kubeseal.tar.gz && \
+    apt-get install -y --no-install-recommends ca-certificates curl && \
+    KUBESEAL_ARCHIVE="kubeseal-${KUBESEAL_VERSION}-linux-${TARGETARCH}.tar.gz" && \
+    curl -Lsf -o "/tmp/${KUBESEAL_ARCHIVE}" "https://github.com/bitnami/sealed-secrets/releases/download/v${KUBESEAL_VERSION}/${KUBESEAL_ARCHIVE}" && \
+    curl -Lsf "https://github.com/bitnami/sealed-secrets/releases/download/v${KUBESEAL_VERSION}/sealed-secrets_${KUBESEAL_VERSION}_checksums.txt" | grep " ${KUBESEAL_ARCHIVE}\$" > /tmp/kubeseal.sha256 && \
+    test -s /tmp/kubeseal.sha256 && \
+    (cd /tmp && sha256sum -c kubeseal.sha256) && \
+    tar -xzf "/tmp/${KUBESEAL_ARCHIVE}" kubeseal && \
     chmod 0755 "${KUBESEAL_BINARY}" && \
-    rm /tmp/kubeseal.tar.gz && \
+    rm "/tmp/${KUBESEAL_ARCHIVE}" /tmp/kubeseal.sha256 && \
     apt-get autoremove -y && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-FROM python:3.12-slim-bookworm
+FROM python:3.11-slim-bookworm@sha256:0bee7276f83efd4a1ee05bbbf4281d95ed28e079220a9457f25a93e3f1e3c31b AS build
 
-USER root
+ARG APP_PATH="/kubeseal-webgui"
+WORKDIR ${APP_PATH}
+
+COPY api src/
+
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir --target=/opt/deps uvicorn wheel setuptools src/
+
+FROM gcr.io/distroless/python3-debian12:nonroot@sha256:7d1042ce588ab97019fe95c24ffca7bc5a82ccdac572511d5e09bda4435c89c5
 
 ARG APP_PATH="/kubeseal-webgui"
 ARG APP_PORT=5000
-ARG KUBESEAL_VERSION=${KUBESEAL_VERSION}
-
-RUN adduser --gid 0 --home "${APP_PATH}" --disabled-password app \
-    && chmod 0750 "${APP_PATH}"
-
-RUN apt-get update && \
-    apt-get upgrade -y && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-
-
-USER app
 
 ENV UVICORN_PORT=${APP_PORT} \
     UVICORN_NO_DATE_HEADER=1 \
     UVICORN_NO_SERVER_HEADER=1 \
-    KUBESEAL_BINARY=/tmp/kubeseal
+    KUBESEAL_BINARY=${APP_PATH}/bin/kubeseal \
+    PYTHONPATH=/opt/deps \
+    PYTHONDONTWRITEBYTECODE=1
 
 EXPOSE ${APP_PORT}
 
 WORKDIR ${APP_PATH}
 
-COPY api src/
+COPY --from=build --chown=nonroot:nonroot /opt/deps /opt/deps
+COPY --from=build --chown=nonroot:nonroot ${APP_PATH}/src ${APP_PATH}/src
+COPY --from=deps --chown=nonroot:nonroot /deps/kubeseal ${APP_PATH}/bin/kubeseal
 
-RUN python3 -m venv "${APP_PATH}" && \
-    . "${APP_PATH}/bin/activate" && \
-    pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir uvicorn wheel setuptools && \
-    pip install --no-cache-dir src/ && \
-    install --mode=755 --group=0 ./src/bin/* "${APP_PATH}/bin/"
-
-ENV PATH="${PATH}:${APP_PATH}/bin:${APP_PATH}/.local/bin"
-
-COPY --from=deps /deps/* /tmp/
-
-CMD [ "uvicorn", "--host", "", "--log-config", "src/config/logging_config.yaml", "kubeseal_webgui_api.app:app"]
+CMD [ "-m", "uvicorn", "--host", "", "--log-config", "src/config/logging_config.yaml", "kubeseal_webgui_api.app:app"]
