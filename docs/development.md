@@ -8,7 +8,7 @@ If you only want to install the released images on a real cluster, see
 
 ## Prerequisites
 
-- [Python 3.12](https://www.python.org/) (the API targets 3.12 exactly).
+- [Python 3.11 or newer](https://www.python.org/) (the API supports `>=3.11,<4.0`; the shipped container image runs 3.11 to match the distroless base's bundled interpreter).
 - [Poetry](https://python-poetry.org/) for managing the API's Python
   dependencies.
 - [Node.js](https://nodejs.org/) — version `^20.19.0` or `>=22.12.0`
@@ -169,7 +169,9 @@ GitHub Actions workflows live under
 
 - `main.yml`: lint, tests, basic builds on every push and PR.
 - `frontend-tests.yml`: UI test suite.
-- `kind.yaml`: end-to-end test on a KinD cluster (uses `kind-setup.sh`).
+- `kind.yaml`: end-to-end test on a KinD cluster (its own inline steps,
+  independent of `kind-setup.sh` above — the two aren't wired together, but
+  cover equivalent ground).
 - `codeql-analysis.yml`: static analysis.
 - `container-security-scan.yml`: image vulnerability scan.
 - `ghcr-build.yml`: build and push container images to GHCR on release.
