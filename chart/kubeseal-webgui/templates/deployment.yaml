@@ -62,6 +62,18 @@ spec:
             - name: KUBESEAL_CONTROLLER_NAMESPACE
               value: {{ .Values.sealedSecrets.controllerNamespace | quote }}
             {{- end }}
+            {{- if .Values.otel.enabled }}
+            - name: OTEL_ENABLED
+              value: "true"
+            - name: OTEL_SERVICE_NAME
+              value: {{ .Values.otel.serviceName | quote }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .Values.otel.endpoint | quote }}
+            {{- if .Values.otel.extraHeaders }}
+            - name: OTEL_EXPORTER_OTLP_HEADERS
+              value: {{ .Values.otel.extraHeaders | quote }}
+            {{- end }}
+            {{- end }}
           ports:
             - name: api
               containerPort: 5000

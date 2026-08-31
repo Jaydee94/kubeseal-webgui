@@ -85,6 +85,15 @@ grants `list` on `namespaces` and `get`/`list` on
 | `api.loglevel` | Log level for the API container (`DEBUG`, `INFO`, `WARNING`, `ERROR`). | `INFO` |
 | `api.environment` | Additional environment variables for the API container as a map. | `{}` |
 
+### OpenTelemetry tracing
+
+| Parameter | Description | Default |
+|---|---|---|
+| `otel.enabled` | Enable OpenTelemetry tracing in the API container. | `false` |
+| `otel.endpoint` | OTLP HTTP endpoint of the collector (e.g. `http://otel-collector:4318`). | `""` |
+| `otel.serviceName` | Service name reported in traces. | `kubeseal-webgui-api` |
+| `otel.extraHeaders` | Optional extra HTTP headers sent with each span batch, as `key1=value1,key2=value2`. Useful for authenticated collectors. | `""` |
+
 ### Security context
 
 | Parameter | Description | Default |
@@ -124,6 +133,10 @@ These are read directly by the API process and can be set via
 | `KUBESEAL_CONTROLLER_NAME` | Deployment name of the Sealed Secrets controller (used when auto-fetching). | `sealed-secrets-controller` |
 | `KUBESEAL_CONTROLLER_NAMESPACE` | Namespace of the Sealed Secrets controller (used when auto-fetching). | `sealed-secrets` in the API code, overridden to match `sealedSecrets.controllerNamespace` by the chart. |
 | `MOCK_ENABLED` | Replace the Kubernetes client and `kubeseal` invocations with in-memory mocks. Useful for local development without a cluster. | `false` |
+| `OTEL_ENABLED` | Set to `true` to enable OpenTelemetry tracing. Also set by the chart when `otel.enabled=true`. | `false` |
+| `OTEL_SERVICE_NAME` | Service name used in traces. Set by the chart from `otel.serviceName`. | `kubeseal-webgui-api` |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP HTTP endpoint of the collector. Set by the chart from `otel.endpoint`. | `""` |
+| `OTEL_EXPORTER_OTLP_HEADERS` | Optional key=value headers for authenticated collectors. Set by the chart from `otel.extraHeaders`. | `""` |
 
 ## UI configuration
 
