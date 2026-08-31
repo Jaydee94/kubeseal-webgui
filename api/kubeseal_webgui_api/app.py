@@ -1,11 +1,12 @@
-from contextlib import asynccontextmanager
 import logging
+from contextlib import asynccontextmanager
 
 import fastapi
 from fastapi.middleware.cors import CORSMiddleware
 
 from .app_config import fetch_sealed_secrets_cert
 from .routers import config, kubernetes, kubeseal
+from .telemetry import setup_tracing
 
 LOGGER = logging.getLogger("kubeseal-webgui")
 
@@ -19,6 +20,8 @@ async def lifespan(fastapi_app: fastapi.FastAPI):  # noqa: ANN201 skipcq: PYL-W0
 
 
 app = fastapi.FastAPI(lifespan=lifespan)
+
+setup_tracing(app)
 
 origins = [
     "http://localhost:8080",
