@@ -56,7 +56,7 @@ jobs:
           tags: ${{ matrix.image }}:${{ github.sha }}
 
       - name: Run Trivy vulnerability scanner (SARIF)
-        uses: aquasecurity/trivy-action@v0.35.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ matrix.image }}:${{ github.sha }}
           format: sarif
@@ -77,7 +77,7 @@ jobs:
           category: trivy-${{ matrix.name }}
 
       - name: Run Trivy vulnerability scanner (table report)
-        uses: aquasecurity/trivy-action@v0.35.0
+        uses: aquasecurity/trivy-action@v0.36.0
         if: always()
         with:
           image-ref: ${{ matrix.image }}:${{ github.sha }}
@@ -87,7 +87,7 @@ jobs:
           exit-code: '0'
 
       - name: Run Trivy vulnerability scanner (CI gate)
-        uses: aquasecurity/trivy-action@v0.35.0
+        uses: aquasecurity/trivy-action@v0.36.0
         if: always()
         with:
           image-ref: ${{ matrix.image }}:${{ github.sha }}
