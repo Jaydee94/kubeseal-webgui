@@ -3,15 +3,34 @@
   "extends": ["config:recommended"],
   "timezone": "Europe/Berlin",
   "schedule": ["before 6am on monday"],
-  "docker": {
-    "pinDigests": true
-  },
   "packageRules": [
+    {
+      "matchCategories": ["docker"],
+      "pinDigests": true
+    },
     {
       "matchManagers": ["dockerfile"],
       "matchUpdateTypes": ["digest"],
       "automerge": false,
       "commitMessageTopic": "{{depName}} digest"
+    },
+    {
+      "description": "The image tags in the Helm values are written by the release workflow, never by Renovate.",
+      "matchFileNames": ["chart/**"],
+      "matchPackageNames": ["ghcr.io/jaydee94/kubeseal-webgui/**"],
+      "enabled": false
+    },
+    {
+      "description": "The API builder image must stay on the Python minor that ships in the distroless runtime image (ABI match), and the supported range in pyproject.toml is a deliberate choice.",
+      "matchPackageNames": ["python"],
+      "matchManagers": ["dockerfile", "poetry"],
+      "matchUpdateTypes": ["major", "minor"],
+      "enabled": false
+    },
+    {
+      "description": "The supported Node range is a deliberate choice; the Node base image in Dockerfile.ui is still updated.",
+      "matchDepTypes": ["engines"],
+      "enabled": false
     },
     {
       "matchManagers": ["poetry"],
