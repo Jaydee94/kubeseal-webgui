@@ -73,6 +73,36 @@ def test_secret_form_with_invalid_file():
         browser.close()
 
 
+def test_secret_form_with_new_namespace():
+    with sync_playwright() as ctx:
+        browser = ctx.chromium.launch(headless=True)
+        page = browser.new_page()
+        page.goto("http://localhost:8080")
+        page.wait_for_load_state("load")
+
+        disabled_encrypt_button(page)
+        secret_name(page)
+        add_secret_key_value(page)
+
+        # a namespace that is not part of the cluster list can only be typed
+        # in after opting in via the checkbox
+        page.locator("#newNamespaceCheckbox").check()
+        namespace_input = page.locator("input#namespaceSelection")
+        namespace_input.wait_for()
+        namespace_input.fill("Not_Valid")
+        assert page.locator('button:has-text("Encrypt")').is_disabled()
+
+        namespace_input.fill("not-created-yet")
+        assert namespace_input.input_value() == "not-created-yet"
+        assert page.locator('button:has-text("Encrypt")').is_enabled()
+
+        # switching back to the cluster list starts with an empty selection
+        page.locator("#newNamespaceCheckbox").uncheck()
+        assert page.locator('button:has-text("Encrypt")').is_disabled()
+
+        browser.close()
+
+
 def namespace_select(page: Page):
     input_selector = "input#namespaceSelection"
     page.wait_for_selector(input_selector, timeout=10000)

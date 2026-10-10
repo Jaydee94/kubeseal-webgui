@@ -5,6 +5,7 @@ import pytest
 
 from kubeseal_webgui_api.routers.kubeseal import (
     Scope,
+    construct_kubeseal_cmd,
     decode_base64_bytearray,
     decode_base64_string,
     run_kubeseal,
@@ -221,3 +222,17 @@ def test_decode_base64_bytearray(base64_input, expected_output):
     """
     decoded = decode_base64_bytearray(base64_input)
     assert decoded == bytearray(expected_output)
+
+
+def test_construct_kubeseal_cmd_needs_no_existing_namespace():
+    # given a namespace that does not exist in any cluster
+    # when the kubeseal command is constructed
+    # then it only uses the offline certificate and the given names
+    cmd = construct_kubeseal_cmd(
+        "not-created-yet", "my-secret", "kubeseal", "/cert.pem", Scope.STRICT
+    )
+    assert cmd[cmd.index("--cert") + 1] == "/cert.pem"
+    assert cmd[cmd.index("--namespace") + 1] == "not-created-yet"
+    assert cmd[cmd.index("--name") + 1] == "my-secret"
+    assert "--controller-name" not in cmd
+    assert "--fetch-cert" not in cmd

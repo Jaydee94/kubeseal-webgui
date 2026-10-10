@@ -33,7 +33,32 @@
         sm="6"
         md="6"
       >
+        <v-text-field
+          v-if="newNamespace"
+          id="namespaceSelection"
+          :model-value="namespaceName"
+          label="New namespace name"
+          trim
+          clearable
+          variant="outlined"
+          class="modern-input"
+          color="primary"
+          :rules="rules.validNamespace"
+          :disabled="['strict', 'namespace-wide'].indexOf(scope) === -1"
+          hide-details="auto"
+          @update:model-value="$emit('update:namespaceName', $event ?? '')"
+        >
+          <template #append-inner>
+            <v-tooltip location="bottom" max-width="300" open-on-click>
+              <template #activator="{ props: activatorProps }">
+                <v-icon v-bind="activatorProps" icon="mdi-information-outline" size="small" color="medium-emphasis" class="ml-2" />
+              </template>
+              <span>Name of a namespace that does not exist yet.<br><i>The secret is sealed for exactly this name, so double-check it for typos.</i></span>
+            </v-tooltip>
+          </template>
+        </v-text-field>
         <v-autocomplete
+          v-else
           id="namespaceSelection"
           :model-value="namespaceName"
           :items="sortedNamespaces"
@@ -72,6 +97,16 @@
             </v-tooltip>
           </template>
         </v-autocomplete>
+        <v-checkbox
+          id="newNamespaceCheckbox"
+          :model-value="newNamespace"
+          label="Namespace does not exist yet"
+          density="compact"
+          color="primary"
+          hide-details
+          :disabled="['strict', 'namespace-wide'].indexOf(scope) === -1"
+          @update:model-value="$emit('update:newNamespace', !!$event)"
+        />
       </v-col>
       <v-col
         cols="12"
@@ -141,10 +176,14 @@ const props = defineProps({
   favoriteNamespaces: {
     type: Set,
     required: true
+  },
+  newNamespace: {
+    type: Boolean,
+    default: false
   }
 })
 
-defineEmits(['update:namespaceName', 'update:secretName', 'update:scope', 'toggle-favorite'])
+defineEmits(['update:namespaceName', 'update:secretName', 'update:scope', 'update:newNamespace', 'toggle-favorite'])
 
 // Sort namespaces with favorites first
 const sortedNamespaces = computed(() => {
