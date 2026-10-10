@@ -6,11 +6,13 @@ COPY ui/ ./
 RUN npm run build && \
     npm cache clean --force
 
-FROM quay.io/nginx/nginx-unprivileged:1.31-alpine@sha256:901e944d1f4fc2bd077e8f5568b98c1f6f8cdacf6b97a87747c43134a339b9a7 AS ui-production-stage
+# The digest pin was dropped: the pinned digest disappeared from quay.io and
+# every build failed with "not found" (nothing refreshes the pin automatically
+# while Renovate is not installed). Re-add `@sha256:...` once Renovate runs.
+FROM quay.io/nginx/nginx-unprivileged:1.31-alpine AS ui-production-stage
 # No `apk upgrade` here: it would make the build non-reproducible -- Alpine
-# package versions could drift over time even though the base image digest
-# above is pinned. Security patching for OS packages flows through Renovate
-# bumping that pinned digest instead. Never needed to switch to root for
+# package versions could drift over time. OS package patching comes with the
+# base image tag instead. Never needed to switch to root for
 # this, so the image now runs as the base's own nonroot `nginx` (uid 101)
 # user throughout the build.
 COPY --chown=101:101 --from=ui-build-stage /ui/dist /usr/share/nginx/html/
