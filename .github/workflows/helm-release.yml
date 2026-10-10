@@ -20,7 +20,7 @@ jobs:
           token: ${{ secrets.SEMANTIC_RELEASE_TOKEN }}
 
       - name: Install Helm
-        uses: azure/setup-helm@v4
+        uses: azure/setup-helm@v5
         env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
 
