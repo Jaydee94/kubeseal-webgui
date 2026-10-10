@@ -7,8 +7,9 @@ RUN npm run build && \
     npm cache clean --force
 
 # The digest pin was dropped: the pinned digest disappeared from quay.io and
-# every build failed with "not found" (nothing refreshes the pin automatically
-# while Renovate is not installed). Re-add `@sha256:...` once Renovate runs.
+# every build failed with "not found" because nothing refreshed it. Renovate
+# (`pinDigests` in renovate.json) re-adds and maintains the `@sha256:...` pin
+# once the Renovate GitHub App is installed for this repository.
 FROM quay.io/nginx/nginx-unprivileged:1.31-alpine AS ui-production-stage
 # No `apk upgrade` here: it would make the build non-reproducible -- Alpine
 # package versions could drift over time. OS package patching comes with the
