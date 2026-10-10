@@ -211,6 +211,7 @@ const namespaces = ref([])
 const scopes = ref(["strict", "cluster-wide", "namespace-wide"])
 const errorMessage = ref("")
 const hasErrorMessage = ref(false)
+const errorSource = ref("")
 const displayName = ref("")
 const displayCreateSealedSecretForm = ref(true)
 const loading = ref(false)
@@ -251,6 +252,7 @@ const resetForm = () => {
   sealedSecrets.value = [];
   resetSealedSecretImport();
   hasErrorMessage.value = false;
+  errorSource.value = "";
   errorMessage.value = "";
 };
 
@@ -397,8 +399,15 @@ const invalidNewNamespace = computed(() =>
   !validDnsLabel(namespaceName.value)
 )
 
+// Failing to list the cluster's namespaces only affects the dropdown, so it
+// must not block sealing for a manually entered namespace.
+const blockingError = computed(() =>
+  hasErrorMessage.value &&
+  !(newNamespace.value && errorSource.value === "namespaces")
+)
+
 const notReadyToEncode = computed(() =>
-  hasErrorMessage.value ||
+  blockingError.value ||
   incompleteSecretData.value ||
   invalidNewNamespace.value ||
   (scope.value === "strict" && (namespaceName.value === "" || secretName.value === "")) ||
@@ -427,8 +436,9 @@ function updateSecret({ index, field, value }) {
   secrets.value[index][field] = value;
 }
 
-function setErrorMessage(newErrorMessage) {
+function setErrorMessage(newErrorMessage, source = "") {
   errorMessage.value = newErrorMessage;
+  errorSource.value = newErrorMessage ? source : "";
   hasErrorMessage.value = !!newErrorMessage;
   showErrorSnackbar.value = !!newErrorMessage;
 }
@@ -447,7 +457,7 @@ async function fetchNamespacesData(config) {
   try {
     namespaces.value = await fetchNamespaces(config);
   } catch (error) {
-    setErrorMessage(`Failed to fetch namespaces. Error Message: ${error.message}.`);
+    setErrorMessage(`Failed to fetch namespaces. Error Message: ${error.message}.`, "namespaces");
   }
 }
 
