@@ -19,7 +19,7 @@ def setup_tracing(app: fastapi.FastAPI) -> None:
     If ``OTEL_ENABLED`` is not ``true`` (case-insensitive) the function is a
     no-op so the application starts normally without any tracing overhead.
     """
-    if environ.get("OTEL_ENABLED", "false").lower() != "true":
+    if environ.get("OTEL_ENABLED", "false").strip().lower() != "true":
         LOGGER.debug("OpenTelemetry tracing disabled (OTEL_ENABLED != true).")
         return
 

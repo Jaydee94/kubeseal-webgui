@@ -21,8 +21,6 @@ async def lifespan(fastapi_app: fastapi.FastAPI):  # noqa: ANN201 skipcq: PYL-W0
 
 app = fastapi.FastAPI(lifespan=lifespan)
 
-setup_tracing(app)
-
 origins = [
     "http://localhost:8080",
 ]
@@ -44,6 +42,10 @@ app.include_router(
 app.include_router(
     kubeseal.router,
 )
+
+# Instrument last: Starlette makes the most recently added middleware the
+# outermost one, so spans cover the CORS middleware as well.
+setup_tracing(app)
 
 
 @app.get("/")
