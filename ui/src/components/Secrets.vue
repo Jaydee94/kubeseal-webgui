@@ -32,6 +32,7 @@
             v-model:namespace-name="namespaceName"
             v-model:secret-name="secretName"
             v-model:scope="scope"
+            v-model:new-namespace="newNamespace"
             :namespaces="namespaces"
             :scopes="scopes"
             :rules="rules"
@@ -52,7 +53,7 @@
             @remove-all="removeAllSecrets"
             @file-change="validateFile"
           >
-            <template v-if="sealedSecretImportFeatureEnabled && namespaceName" #header-actions>
+            <template v-if="sealedSecretImportFeatureEnabled && namespaceName && !newNamespace" #header-actions>
               <v-menu
                 v-model="importMenuOpen"
                 :close-on-content-click="false"
@@ -210,12 +211,14 @@ const namespaces = ref([])
 const scopes = ref(["strict", "cluster-wide", "namespace-wide"])
 const errorMessage = ref("")
 const hasErrorMessage = ref(false)
+const errorSource = ref("")
 const displayName = ref("")
 const displayCreateSealedSecretForm = ref(true)
 const loading = ref(false)
 const secretName = ref("")
 const namespaceName = ref("")
 const scope = ref("strict")
+const newNamespace = ref(false)
 const secrets = ref([{ key: "", value: "", file: [] }])
 const sealedSecrets = ref([])
 const secretsResultsRef = ref()
@@ -243,11 +246,13 @@ const resetForm = () => {
   displayCreateSealedSecretForm.value = true;
   secretName.value = "";
   namespaceName.value = "";
+  newNamespace.value = false;
   scope.value = "strict";
   secrets.value = [{ key: "", value: "", file: [] }];
   sealedSecrets.value = [];
   resetSealedSecretImport();
   hasErrorMessage.value = false;
+  errorSource.value = "";
   errorMessage.value = "";
 };
 
@@ -334,8 +339,21 @@ function validDnsSubdomain(name) {
   return re.test(name);
 }
 
+// Kubernetes namespaces must be DNS labels (RFC 1123), unlike secret names
+// which may be DNS subdomains.
+function validDnsLabel(name) {
+  return /^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$/.test(name);
+}
 
 const rules = {
+  validNamespace: [
+    (value) => !!value || "Must not be empty",
+    (value) =>
+      !value || value.length <= 63 || "Longer than 63 chars",
+    (value) =>
+      !value || validDnsLabel(value) ||
+      "Must consist of lower case alphanumerics or '-', and start and end with an alphanumeric",
+  ],
   validDnsSubdomain: [
     (value) => value.length < 253 || "Longer than 253 chars",
     (value) => !!value || "Must not be empty",
@@ -375,9 +393,23 @@ const incompleteSecretData = computed(() =>
   )
 )
 
+const invalidNewNamespace = computed(() =>
+  newNamespace.value &&
+  ["strict", "namespace-wide"].includes(scope.value) &&
+  !validDnsLabel(namespaceName.value)
+)
+
+// Failing to list the cluster's namespaces only affects the dropdown, so it
+// must not block sealing for a manually entered namespace.
+const blockingError = computed(() =>
+  hasErrorMessage.value &&
+  !(newNamespace.value && errorSource.value === "namespaces")
+)
+
 const notReadyToEncode = computed(() =>
-  hasErrorMessage.value ||
+  blockingError.value ||
   incompleteSecretData.value ||
+  invalidNewNamespace.value ||
   (scope.value === "strict" && (namespaceName.value === "" || secretName.value === "")) ||
   (scope.value === "namespace-wide" && namespaceName.value === "")
 );
@@ -404,8 +436,9 @@ function updateSecret({ index, field, value }) {
   secrets.value[index][field] = value;
 }
 
-function setErrorMessage(newErrorMessage) {
+function setErrorMessage(newErrorMessage, source = "") {
   errorMessage.value = newErrorMessage;
+  errorSource.value = newErrorMessage ? source : "";
   hasErrorMessage.value = !!newErrorMessage;
   showErrorSnackbar.value = !!newErrorMessage;
 }
@@ -424,7 +457,7 @@ async function fetchNamespacesData(config) {
   try {
     namespaces.value = await fetchNamespaces(config);
   } catch (error) {
-    setErrorMessage(`Failed to fetch namespaces. Error Message: ${error.message}.`);
+    setErrorMessage(`Failed to fetch namespaces. Error Message: ${error.message}.`, "namespaces");
   }
 }
 
@@ -541,6 +574,19 @@ async function loadSealedSecretsForNamespace() {
     loadingSealedSecrets.value = false;
   }
 }
+
+// A value picked from the cluster list is not valid as free text and vice
+// versa, so start from an empty field whenever the mode changes.
+watch(newNamespace, () => {
+  namespaceName.value = "";
+});
+
+// The namespace is irrelevant for cluster-wide secrets.
+watch(scope, (newScope) => {
+  if (!["strict", "namespace-wide"].includes(newScope)) {
+    newNamespace.value = false;
+  }
+});
 
 watch(namespaceName, () => {
   confirmOverwriteDialog.value = false;

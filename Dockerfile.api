@@ -1,6 +1,6 @@
-FROM debian:bookworm-slim@sha256:88200866dfff7ea7f5cbcb6ec7c8a701889efe6fe859fe64d6990e4b07ea4171 AS deps
+FROM debian:bookworm-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587 AS deps
 
-ARG KUBESEAL_VERSION=0.39.1
+ARG KUBESEAL_VERSION=0.40.0
 ARG TARGETARCH
 ENV KUBESEAL_BINARY=/deps/kubeseal
 
@@ -26,7 +26,7 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-FROM python:3.11-slim-bookworm@sha256:0bee7276f83efd4a1ee05bbbf4281d95ed28e079220a9457f25a93e3f1e3c31b AS build
+FROM python:3.11-slim-bookworm@sha256:0a310eeecf4e1f5a0743f9a6520c90c88d089c903ca5fd283f501e3a805f5f89 AS build
 
 ARG APP_PATH="/kubeseal-webgui"
 WORKDIR ${APP_PATH}
