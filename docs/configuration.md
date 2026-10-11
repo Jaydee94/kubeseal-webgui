@@ -90,9 +90,19 @@ grants `list` on `namespaces` and `get`/`list` on
 | Parameter | Description | Default |
 |---|---|---|
 | `otel.enabled` | Enable OpenTelemetry tracing in the API container. | `false` |
-| `otel.endpoint` | OTLP HTTP endpoint of the collector (e.g. `http://otel-collector:4318`). | `""` |
+| `otel.endpoint` | OTLP HTTP endpoint of the collector (e.g. `http://otel-collector:4318`). Required when `otel.enabled=true`; the chart fails to render otherwise. | `""` |
 | `otel.serviceName` | Service name reported in traces. | `kubeseal-webgui-api` |
-| `otel.extraHeaders` | Optional extra HTTP headers sent with each span batch, as `key1=value1,key2=value2`. Useful for authenticated collectors. | `""` |
+| `otel.extraHeaders` | Optional extra HTTP headers sent with each span batch, as `key1=value1,key2=value2`. Useful for authenticated collectors. Rendered as a plain environment variable in the Deployment, so avoid long-lived credentials here. | `""` |
+
+Tracing is opt-in and disabled by default. The OpenTelemetry packages are always
+part of the API image, but nothing is imported or instrumented unless
+`otel.enabled=true`.
+
+> **Data exposure:** the FastAPI instrumentation records the HTTP method, URL
+> path (including namespace names), status code and client address of every
+> request. Request and response bodies are **not** captured, so secret values
+> are not exported. Make sure your collector and tracing backend are trusted to
+> receive this metadata.
 
 ### Security context
 

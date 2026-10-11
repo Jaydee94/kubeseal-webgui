@@ -68,7 +68,7 @@ spec:
             - name: OTEL_SERVICE_NAME
               value: {{ .Values.otel.serviceName | quote }}
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
-              value: {{ .Values.otel.endpoint | quote }}
+              value: {{ required "otel.endpoint must be set when otel.enabled=true" .Values.otel.endpoint | quote }}
             {{- if .Values.otel.extraHeaders }}
             - name: OTEL_EXPORTER_OTLP_HEADERS
               value: {{ .Values.otel.extraHeaders | quote }}
