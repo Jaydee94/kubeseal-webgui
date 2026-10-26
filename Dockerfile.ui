@@ -10,7 +10,7 @@ RUN npm run build && \
 # every build failed with "not found" because nothing refreshed it. Renovate
 # (`pinDigests` in renovate.json) re-adds and maintains the `@sha256:...` pin
 # once the Renovate GitHub App is installed for this repository.
-FROM quay.io/nginx/nginx-unprivileged:1.31-alpine@sha256:b5047b9b76845eac124358373c6852377c52e4b05834a47647e955dd91cb8f1e AS ui-production-stage
+FROM quay.io/nginx/nginx-unprivileged:1.31-alpine@sha256:03df07e5931f8374d440bd62243a5ce9b24719715ef6fc4c9c626a5f1dbef417 AS ui-production-stage
 # No `apk upgrade` here: it would make the build non-reproducible -- Alpine
 # package versions could drift over time. OS package patching comes with the
 # base image tag instead. Never needed to switch to root for
