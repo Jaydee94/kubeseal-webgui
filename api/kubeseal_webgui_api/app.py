@@ -1,11 +1,12 @@
-from contextlib import asynccontextmanager
 import logging
+from contextlib import asynccontextmanager
 
 import fastapi
 from fastapi.middleware.cors import CORSMiddleware
 
 from .app_config import fetch_sealed_secrets_cert
 from .routers import config, kubernetes, kubeseal
+from .telemetry import setup_tracing
 
 LOGGER = logging.getLogger("kubeseal-webgui")
 
@@ -41,6 +42,10 @@ app.include_router(
 app.include_router(
     kubeseal.router,
 )
+
+# Instrument last: Starlette makes the most recently added middleware the
+# outermost one, so spans cover the CORS middleware as well.
+setup_tracing(app)
 
 
 @app.get("/")

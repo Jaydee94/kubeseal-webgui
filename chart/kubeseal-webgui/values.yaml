@@ -129,3 +129,16 @@ sealedSecrets:
     REt3DXiF9j6RyxP53tLAdVpuCvMaw2LRqPln4jbERLwx2ckjtvDhNJiEo0+k4NJV
     120=
     -----END CERTIFICATE-----
+# OpenTelemetry tracing for the API container.
+# Set otel.enabled=true and otel.endpoint to send traces to an OTLP-compatible
+# collector (e.g. OpenTelemetry Collector, Jaeger, Grafana Tempo).
+otel:
+  # Enable OpenTelemetry tracing.
+  enabled: false
+  # OTLP HTTP endpoint of your collector (e.g. http://otel-collector:4318).
+  endpoint: ""
+  # Service name reported in traces. Defaults to "kubeseal-webgui-api".
+  serviceName: "kubeseal-webgui-api"
+  # Optional extra HTTP headers sent with each span batch (e.g. for auth).
+  # Format: "key1=value1,key2=value2"
+  extraHeaders: ""
