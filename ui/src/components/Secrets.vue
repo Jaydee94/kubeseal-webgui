@@ -337,8 +337,10 @@ function validDnsSubdomain(name) {
   if (!name) {
     return;
   }
-  var re = /^[a-z0-9]([a-z0-9._-]{0,251}[a-z0-9])?$/;
-  return re.test(name);
+  // RFC 1123 subdomain: dot-separated labels of lower case alphanumerics
+  // and '-', each starting and ending with an alphanumeric, 253 chars total.
+  var re = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/;
+  return name.length <= 253 && re.test(name);
 }
 
 // Kubernetes namespaces must be DNS labels (RFC 1123), unlike secret names
@@ -357,7 +359,7 @@ const rules = {
       "Must consist of lower case alphanumerics or '-', and start and end with an alphanumeric",
   ],
   validDnsSubdomain: [
-    (value) => !value || value.length < 253 || "Longer than 253 chars",
+    (value) => !value || value.length <= 253 || "Longer than 253 chars",
     (value) => !!value || "Must not be empty",
     (value) =>
       (!!value && /^[a-z0-9-.]*$/.test(value)) ||
@@ -373,7 +375,7 @@ const rules = {
   // Outside the strict scope the secret name is not sealed into the secret.
   // It may stay empty, but a given name still has to be a valid one.
   optionalDnsSubdomain: [
-    (value) => !value || value.length < 253 || "Longer than 253 chars",
+    (value) => !value || value.length <= 253 || "Longer than 253 chars",
     (value) =>
       !value || validDnsSubdomain(value) ||
       "Must consist of lower case alphanumerics, '-' or '.', and start and end with an alphanumeric",

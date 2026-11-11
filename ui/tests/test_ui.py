@@ -122,11 +122,16 @@ def test_secret_name_is_optional_outside_strict_scope():
         assert name_input.is_enabled()
         assert encrypt_button.is_enabled()
 
-        name_input.fill("Not_Valid")
-        assert encrypt_button.is_disabled()
+        # must be a DNS subdomain: no upper case, underscores or empty labels
+        for invalid_name in ["Not_Valid", "a_b", "a..b", "a.-b", "a" * 254]:
+            name_input.fill(invalid_name)
+            assert encrypt_button.is_disabled(), invalid_name
 
-        name_input.fill("valid-secret-name")
-        assert encrypt_button.is_enabled()
+        for valid_name in ["valid-secret-name", "my.secret-1", "a" * 253]:
+            name_input.fill(valid_name)
+            assert encrypt_button.is_enabled(), valid_name
+            # the field rule has to agree with the button state
+            assert page.locator(".v-col:has(#secretName) .v-input--error").count() == 0
 
         # the strict scope requires the name again
         name_input.fill("")
