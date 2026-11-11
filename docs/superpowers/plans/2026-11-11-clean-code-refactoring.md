@@ -469,4 +469,188 @@ happens, drop this commit from the branch, push the rest and report it.
 
 ## Execution notes
 
-_(Filled in during execution: deviations, reverted tasks, measured results.)_
+All 13 tasks were worked through in order. No task was reverted. No existing
+test was deleted, skipped or loosened, except the unreachable "list of dicts"
+test that Task 3 names.
+
+### Status and commits
+
+| Task | Status | Commit(s) |
+|---|---|---|
+| 1 E2E safety net | done | `895bc43` |
+| 2 `app_config.py` | done | `492f115` |
+| 3 Sealing pipeline | partly done (no `Data` rename) | `88093b9` |
+| 4 Resolvers and wiring | done, caching adapted | `935a9ad`, `fa721c2` |
+| 5 Consistency, lint, dependencies | done | `2bf564d` |
+| 6 Prettier, check scripts, dev proxy | done, as two commits | `c861a59`, `df799dc` |
+| 7 Dead code | done, one package kept | `d7b1db0` |
+| 8 Constants and entry model | done | `caf3184` |
+| 9 Extract and unit-test logic | done | `5da2640` |
+| 10 Stop copying from the DOM | done | `3d17d94` |
+| 11 Config loading and API modules | done | `8a8b1ca` |
+| 12 Small components | done, keyboard access adapted | `b238446`, `3e4a225` |
+| 13 CI checks | done, pushed | `97a8529` (docs), `b895cb7` (workflow) |
+
+### Deviations from the plan, and why
+
+- **Task 3: `Data` was not renamed to `SealingRequest`.** The class name is
+  the schema name in `/openapi.json`. An existing test
+  (`test_secret_name_keeps_its_json_key`) reads
+  `components.schemas.Data`, and generated API clients see that name, so
+  "JSON unchanged" does not hold for the rename.
+- **Task 4: the in-cluster config is not cached unconditionally.**
+  `Dockerfile.api` installs with `pip install ./src`, not from `poetry.lock`,
+  so the image gets whatever `kubernetes>=35` is current. A client that still
+  needs `fix_incluster_bearer_token` refreshes a rotated service account token
+  only under the old `authorization` key; loading once would leave the copied
+  token stale after about an hour. `ensure_incluster_config()` therefore
+  loads once only when the fix was not needed and reloads per call otherwise.
+  A test with the real loader of the locked client (37.0.2) proves that a
+  rotated token file is picked up after a single load.
+- **Task 4: the resolvers are chosen per call, not at import.** The module
+  attributes `kubernetes.namespace_resolver` / `sealed_secret_resolver` still
+  exist and tests still replace them; they are now two small functions that
+  check `settings.mock_enabled`, like the sealing code.
+- **Task 6 is two commits**: the plan asks for a formatting-only commit and
+  for script/proxy changes; mixing them would have defeated the first.
+- **Task 7: `vue-eslint-parser` was kept.** It is a peer dependency of
+  `eslint-plugin-vue`, and `npm ci --legacy-peer-deps` does not install peers
+  by itself. Also removed, although not listed: `src/plugins/vuetify.js`
+  (imported nowhere).
+- **Tasks 7 and 9: `package-lock.json` was edited minimally** instead of
+  taking the output of the local npm 10, which also dropped every `libc`
+  field and rewrote `dev` flags of unrelated packages. The result only
+  removes `core-js` and `@rushstack/eslint-patch` and adds vitest's 19
+  packages; `npm ci --legacy-peer-deps` accepts it in a fresh clone.
+- **Task 11: files are read with `Blob.arrayBuffer()`** instead of
+  `FileReader.readAsDataURL` plus string splitting, so that the request
+  building can be unit-tested in Node. The base64 sent is the same (asserted
+  in the E2E test).
+- **Task 12: the favourite toggle is reached with the arrow keys, not Tab.**
+  Vuetify closes the autocomplete menu on Tab, by design. Inside the list the
+  arrow keys visit each item and then its toggle; Enter and Space toggle it
+  without selecting the namespace. The plan's finding that the old `v-icon`
+  was not focusable was not accurate for Vuetify 4.3 (it rendered
+  `role="button" tabindex="0"`), but it had no label, no pressed state and no
+  key handling.
+- **Task 12 is preceded by an unplanned bug fix (`b238446`).** Favourite
+  namespaces did not work at all at the baseline: Vuetify 4 passes the raw
+  item to the `item` slot, the template read `item.value` (undefined), so any
+  click stored `[null]`, filled every heart and sorted nothing. The toggle
+  rewrite needed the right value for `aria-pressed`, so this was fixed first,
+  in its own commit, with an E2E test.
+- **Task 13: `mypy .` is not what CI runs.** The documented `mypy .` fails on
+  `tests/test_logging.py` (PyYAML has no stubs installed) at the baseline
+  too; CI and the docs now use `mypy kubeseal_webgui_api`. Node is not pinned
+  with `actions/setup-node` because no existing workflow uses it and its
+  current major could not be checked from the sandbox; like
+  `frontend-tests.yml`, the job uses the runner's Node. Docs changes are in
+  a separate commit so that they would have survived dropping the workflow
+  commit.
+
+### Measured results
+
+Same commands as in "Verified baseline", run after the last commit.
+
+| Check | Baseline | Result |
+|---|---|---|
+| API unit tests (`-m "not container and not cluster"`) | 64 passed, 6 deselected | 136 passed, 6 deselected, with and without `KUBESEAL_BINARY`; same on Python 3.11 |
+| API tests as documented (`poetry run pytest`) | collection error | collects; 139 passed, 3 failed (the three `container`/`cluster` tests that need a real kubeseal binary) |
+| API import in mock mode | RuntimeError | succeeds |
+| ruff | 39 findings | clean |
+| mypy `kubeseal_webgui_api` | 3 errors | 0 errors |
+| black / isort | 2 / 2 files fail | pass |
+| ESLint | clean | clean |
+| Prettier (`src/`, and `tests/unit/`) | all 18 files fail | clean |
+| UI build | JS 798 kB, CSS 886 kB | JS 429 kB (gzip 145 kB), CSS 692 kB (gzip 112 kB) |
+| UI E2E | 6 passed | 25 passed (three consecutive runs) |
+| UI unit tests (`npm test`) | none | 153 passed in 9 files |
+| `Secrets.vue` | 793 lines | 393 lines |
+
+Screenshots (dev server and production build; light/dark; 1280 px and
+390 px; empty form, namespace menu, filled form, import menu, result view,
+error snackbar) were compared pixel by pixel after Tasks 7 to 12. Apart from
+the namespace menu, whose content changed with the favourites fix, the
+production build after Task 12 is identical to the one before Task 7; the
+namespace menu differs from its state after the fix by at most 14
+anti-aliased pixels.
+
+### Behaviour changes
+
+Intended by the plan:
+
+- `KUBESEAL_AUTOFETCH` is a boolean. `False`, `0`, `no`, `off` now switch
+  auto-fetch off (they switched it on before). A value that is not a boolean
+  stops the API at start-up with a pydantic validation error; before it
+  meant "on".
+- Mock mode needs no kubeseal binary; importing the API package runs nothing.
+  An unusable binary is still fatal at start-up, with the same message, but
+  is reported by the ASGI lifespan ("Application startup failed", exit code
+  3) instead of as an import error.
+- `KUBESEAL_CERT` unset: sealing used `/dev/null`, now the documented
+  `/kubeseal-webgui/cert/kubeseal-cert.pem`. The chart always sets it.
+- `POST /secrets` rejects an entry in which both `value` and `file` are
+  present, even if one is the empty string (422). The validation error has
+  type `value_error` and a message starting with "Value error," instead of
+  `assertion_error` / "Assertion failed,".
+- Input ids are `secretKey-<n>`, `secretValue-<n>`, `fileInput-<n>`.
+- The logo links to `/` instead of `#`: a click loads the start page and
+  with it an empty form.
+- `VITE_MOCK_NAMESPACES` only enables the mock when it is `true`.
+- The dev server proxies `/sealed-secrets/...` to the API.
+
+Side effects of the refactoring (all small, none on the happy path):
+
+- The start-up log line prints `certificate auto-fetch: False/True` instead
+  of the raw string.
+- `GET /namespaces` and `GET /sealed-secrets/{ns}`: a response of an
+  unexpected type yields a warning and an empty list instead of an HTTP 500;
+  namespace objects without metadata or name are skipped. Mock mode is
+  evaluated per request.
+- `MOCK_NAMESPACE_COUNT` and the other settings can only be set through the
+  environment variables of `AppSettings`; nothing else reads `os.environ`.
+- The sealing request body is compact JSON instead of tab-indented.
+- `config.json` is requested once per page load instead of twice. The display
+  name appears as soon as it is loaded, not after the namespace list.
+- The file-size rule no longer throws `files.some is not a function` in the
+  browser console when a file is selected. A file error disappears together
+  with its row.
+- Removing a row keeps the validation state of the other rows with them.
+- The UI works when `localStorage` is blocked; writing favourites is guarded.
+- The copy button's "Copied!" state uses one timer per button.
+- No Vue/Vuetify warnings are left in the browser console (duplicate input
+  names, `theme.global.name`, `dense`).
+
+Not planned, done deliberately: favourite namespaces work again (see above).
+
+### Found, not changed
+
+- After a failed seal the Encrypt button stays disabled until the page is
+  reloaded or a valid file is selected: `hasErrorMessage` is only cleared in
+  those two places. The same holds after a failed copy. Existing behaviour,
+  now visible in `test_failed_sealing_keeps_the_form_and_shows_the_error`.
+- Right after toggling a favourite, the open list can stay scrolled so that
+  the new first entry is above the visible part (Vuetify virtual scroll);
+  re-opening the list shows it. The E2E tests re-open the list for that
+  reason.
+- The result card renders its title below the manifest (`v-card-title`
+  after the `#text` slot), and on a 390 px screen the dark mode switch
+  overlaps the logo. Both unchanged.
+- `docs/development.md` describes `main.yml` as "lint, tests, basic builds";
+  it is a manually triggered image build.
+- `<v-footer inset width="auto">` in `App.vue`: neither is a prop of
+  Vuetify 4's `VFooter`. Left alone because it was not on the list.
+
+### Not verified by running
+
+- `checks.yml` has not run on GitHub: no pull request was opened and the
+  workflow does not trigger on this branch. Its commands were run in a fresh
+  clone with Python 3.11 and 3.13 and the local Node 22; the action versions
+  are the ones the other workflows use.
+- `Dockerfile.api` / `Dockerfile.ui` builds, the Helm chart and a real
+  cluster (in-cluster config, RBAC, a real `kubeseal` binary) were not
+  exercised. The sealing pipeline was tested against a stand-in script, the
+  token refresh against the real client code with fake token files.
+- The typo check (`crate-ci/typos`) was not run locally.
+- The client-version branch of `ensure_incluster_config()` that reloads on
+  every call was tested with a simulated old client, not a real 36.x one.
