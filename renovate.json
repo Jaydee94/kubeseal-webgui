@@ -15,15 +15,21 @@
       "commitMessageTopic": "{{depName}} digest"
     },
     {
+      "description": "The Python builder (latest-dev) and runtime (latest) images in Dockerfile.api must move together: compiled wheels are tied to one CPython minor version.",
+      "matchManagers": ["dockerfile"],
+      "matchPackageNames": ["cgr.dev/chainguard/python"],
+      "groupName": "chainguard python images"
+    },
+    {
       "description": "The image tags in the Helm values are written by the release workflow, never by Renovate.",
       "matchFileNames": ["chart/**"],
       "matchPackageNames": ["ghcr.io/jaydee94/kubeseal-webgui/**"],
       "enabled": false
     },
     {
-      "description": "The API builder image must stay on the Python minor that ships in the distroless runtime image (ABI match), and the supported range in pyproject.toml is a deliberate choice.",
+      "description": "The supported Python range in pyproject.toml is a deliberate choice; the API image's interpreter comes from the digest-pinned Chainguard python images.",
       "matchPackageNames": ["python"],
-      "matchManagers": ["dockerfile", "poetry"],
+      "matchManagers": ["poetry"],
       "matchUpdateTypes": ["major", "minor"],
       "enabled": false
     },
@@ -44,7 +50,7 @@
     },
     {
       "matchDatasources": ["github-releases"],
-      "matchPackageNames": ["bitnami/sealed-secrets"],
+      "matchPackageNames": ["bitnami-labs/sealed-secrets"],
       "commitMessageTopic": "kubeseal CLI"
     }
   ],
@@ -54,7 +60,7 @@
       "managerFilePatterns": ["Dockerfile.api"],
       "matchStrings": ["ARG KUBESEAL_VERSION=(?<currentValue>[\\d.]+)"],
       "datasourceTemplate": "github-releases",
-      "depNameTemplate": "bitnami/sealed-secrets",
+      "depNameTemplate": "bitnami-labs/sealed-secrets",
       "extractVersionTemplate": "^v(?<version>.*)$"
     }
   ]

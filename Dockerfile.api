@@ -1,4 +1,16 @@
-FROM debian:bookworm-slim@sha256:734a72b3d6142a71993b4bc580ca01d8ca687f77a2c422d96a961d3376b179bc AS deps
+# --- kubeseal CLI --------------------------------------------------------------
+# Downloads the official upstream release binary and verifies it against the
+# release's checksums file. This stage is discarded -- only the single
+# `kubeseal` binary is copied into the final image -- so its own OS packages
+# never ship. It runs on the build host's native platform (it only downloads),
+# while TARGETARCH still selects the binary for the image being built.
+#
+# No `apt-get upgrade` here: an upgrade would make the build non-reproducible
+# -- installed OS package versions could drift over time even though the base
+# image digest above is pinned. Security patching for the tools this stage
+# actually uses (curl, ca-certificates) flows through Renovate bumping that
+# pinned digest instead.
+FROM --platform=$BUILDPLATFORM debian:bookworm-slim@sha256:734a72b3d6142a71993b4bc580ca01d8ca687f77a2c422d96a961d3376b179bc AS deps
 
 ARG KUBESEAL_VERSION=0.41.2
 ARG TARGETARCH
@@ -6,37 +18,46 @@ ENV KUBESEAL_BINARY=/deps/kubeseal
 
 WORKDIR /deps
 
-# No `apt-get upgrade` here: this stage is discarded (only the single
-# `kubeseal` binary it produces gets copied into the final image), and an
-# upgrade would make the build non-reproducible -- installed OS package
-# versions could drift over time even though the base image digest above is
-# pinned. Security patching for the tools this stage actually uses (curl,
-# ca-certificates) flows through Renovate bumping that pinned digest instead.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends ca-certificates curl && \
     KUBESEAL_ARCHIVE="kubeseal-${KUBESEAL_VERSION}-linux-${TARGETARCH}.tar.gz" && \
-    curl -Lsf -o "/tmp/${KUBESEAL_ARCHIVE}" "https://github.com/bitnami/sealed-secrets/releases/download/v${KUBESEAL_VERSION}/${KUBESEAL_ARCHIVE}" && \
-    curl -Lsf "https://github.com/bitnami/sealed-secrets/releases/download/v${KUBESEAL_VERSION}/sealed-secrets_${KUBESEAL_VERSION}_checksums.txt" | grep " ${KUBESEAL_ARCHIVE}\$" > /tmp/kubeseal.sha256 && \
+    curl -Lsf -o "/tmp/${KUBESEAL_ARCHIVE}" "https://github.com/bitnami-labs/sealed-secrets/releases/download/v${KUBESEAL_VERSION}/${KUBESEAL_ARCHIVE}" && \
+    curl -Lsf "https://github.com/bitnami-labs/sealed-secrets/releases/download/v${KUBESEAL_VERSION}/sealed-secrets_${KUBESEAL_VERSION}_checksums.txt" | grep " ${KUBESEAL_ARCHIVE}\$" > /tmp/kubeseal.sha256 && \
     test -s /tmp/kubeseal.sha256 && \
     (cd /tmp && sha256sum -c kubeseal.sha256) && \
     tar -xzf "/tmp/${KUBESEAL_ARCHIVE}" kubeseal && \
     chmod 0755 "${KUBESEAL_BINARY}" && \
     rm "/tmp/${KUBESEAL_ARCHIVE}" /tmp/kubeseal.sha256 && \
-    apt-get autoremove -y && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-FROM python:3.11-slim-bookworm@sha256:a83ba18aef0f865b1a4a611c2cf460fe446f2795673bbb9fe43be570439e3b39 AS build
+# --- Python dependencies -------------------------------------------------------
+# Python builder and runtime use Chainguard's free, publicly pullable hardened
+# images (https://images.chainguard.dev): rebuilt daily from source on Wolfi,
+# typically with zero known CVEs. The free tier only publishes the floating
+# `latest`/`latest-dev` tags, so both are pinned by digest and Renovate bumps
+# the digests.
+#
+# The builder must be the -dev variant of the *same* image as the runtime
+# stage: compiled wheels (pydantic-core, PyYAML, ...) are tagged for one
+# CPython minor version. Renovate updates both python digests together in one
+# PR (see renovate.json), and the smoke test in the runtime stage fails the
+# build if they ever drift apart.
+FROM cgr.dev/chainguard/python:latest-dev@sha256:9f76d277ca81d3079eb3be24c742de3b6598f032fc9943fed6951ff99e581d02 AS build
 
-ARG APP_PATH="/kubeseal-webgui"
-WORKDIR ${APP_PATH}
+# Build stage only (discarded): the image defaults to the nonroot user, which
+# cannot create /opt/deps. The runtime stage below keeps the nonroot default.
+USER root
+WORKDIR /build
 
 COPY api src/
 
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir --target=/opt/deps uvicorn wheel setuptools src/
+RUN pip install --no-cache-dir --no-compile --target=/opt/deps ./src
 
-FROM gcr.io/distroless/python3-debian12:nonroot@sha256:7d1042ce588ab97019fe95c24ffca7bc5a82ccdac572511d5e09bda4435c89c5
+# --- Runtime -------------------------------------------------------------------
+# No shell, no package manager, runs as uid 65532 (nonroot). ENTRYPOINT is
+# /usr/bin/python, so CMD only carries the interpreter arguments.
+FROM cgr.dev/chainguard/python:latest@sha256:e5322b9d32064a645225b8b2419f11127bcf2d8b9927f9514f0acee1e1d25751
 
 ARG APP_PATH="/kubeseal-webgui"
 ARG APP_PORT=5000
@@ -46,14 +67,21 @@ ENV UVICORN_PORT=${APP_PORT} \
     UVICORN_NO_SERVER_HEADER=1 \
     KUBESEAL_BINARY=${APP_PATH}/bin/kubeseal \
     PYTHONPATH=/opt/deps \
-    PYTHONDONTWRITEBYTECODE=1
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
 EXPOSE ${APP_PORT}
 
 WORKDIR ${APP_PATH}
 
-COPY --from=build --chown=nonroot:nonroot /opt/deps /opt/deps
-COPY --from=build --chown=nonroot:nonroot ${APP_PATH}/src ${APP_PATH}/src
-COPY --from=deps --chown=nonroot:nonroot /deps/kubeseal ${APP_PATH}/bin/kubeseal
+# Files stay owned by root: the nonroot runtime user only needs to read them.
+COPY --from=build /opt/deps /opt/deps
+COPY --from=build /build/src/config ${APP_PATH}/src/config
+COPY --from=deps /deps/kubeseal ${APP_PATH}/bin/kubeseal
+
+# Exec-form smoke test (the image has no shell): fails the build if the
+# compiled dependencies do not match this interpreter or the kubeseal binary
+# cannot run on this platform.
+RUN ["python", "-c", "import subprocess, kubeseal_webgui_api.app; subprocess.run(['/kubeseal-webgui/bin/kubeseal', '--version'], check=True)"]
 
 CMD [ "-m", "uvicorn", "--host", "", "--log-config", "src/config/logging_config.yaml", "kubeseal_webgui_api.app:app"]

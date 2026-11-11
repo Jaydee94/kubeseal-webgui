@@ -6,16 +6,21 @@ COPY ui/ ./
 RUN npm run build && \
     npm cache clean --force
 
-# The digest pin was dropped: the pinned digest disappeared from quay.io and
-# every build failed with "not found" because nothing refreshed it. Renovate
-# (`pinDigests` in renovate.json) re-adds and maintains the `@sha256:...` pin
-# once the Renovate GitHub App is installed for this repository.
-FROM quay.io/nginx/nginx-unprivileged:1.31-alpine@sha256:26277f4923331a5ecda9096c0e378de65a30a5037129a8036c3ef5d9feee833d AS ui-production-stage
-# No `apk upgrade` here: it would make the build non-reproducible -- Alpine
-# package versions could drift over time. OS package patching comes with the
-# base image tag instead. Never needed to switch to root for
-# this, so the image now runs as the base's own nonroot `nginx` (uid 101)
-# user throughout the build.
-COPY --chown=101:101 --from=ui-build-stage /ui/dist /usr/share/nginx/html/
-COPY --chown=101:101 ui/nginx-default.conf /etc/nginx/conf.d/default.conf
-COPY --chown=101:101 ui/hooks /docker-entrypoint.d/
+# Chainguard's free, publicly pullable hardened nginx image
+# (https://images.chainguard.dev): rebuilt daily from source on Wolfi,
+# typically with zero known CVEs. No shell, no package manager, runs as the
+# nonroot user (uid 65532). The free tier only publishes the floating `latest`
+# tag, so it is pinned by digest and Renovate bumps the digest.
+#
+# Because there is no shell, the image has no /docker-entrypoint.d/ hook
+# mechanism: the configuration is static. ui/nginx.conf moves every runtime
+# write to /tmp (readOnlyRootFilesystem-compatible); the SPA's config.json is
+# provided by the Helm chart's ConfigMap.
+FROM cgr.dev/chainguard/nginx:latest@sha256:a2bbeeda97bb059018d7a022b3d704e2c0ac55ca738e6f7654ae743189dac24e AS ui-production-stage
+
+# Files stay owned by root: the nonroot runtime user only needs to read them.
+COPY ui/nginx.conf /etc/nginx/nginx.conf
+COPY ui/nginx-default.conf /etc/nginx/conf.d/default.conf
+COPY --from=ui-build-stage /ui/dist /usr/share/nginx/html/
+
+EXPOSE 8080

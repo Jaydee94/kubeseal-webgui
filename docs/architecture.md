@@ -29,10 +29,15 @@ encryption.
 
 ### UI container
 
-- Base image: [`quay.io/nginx/nginx-unprivileged`](https://quay.io/repository/nginx/nginx-unprivileged) (Alpine).
+- Base image: [`cgr.dev/chainguard/nginx`](https://images.chainguard.dev/directory/image/nginx/overview)
+  (Chainguard hardened image on Wolfi: no shell, no package manager, runs as
+  uid 65532, rebuilt daily and typically free of known CVEs). Pinned by
+  digest; Renovate bumps the digest.
 - Built from `Dockerfile.ui`. The build stage compiles the Vue 3 + Vuetify 4
   SPA with Vite; the runtime stage copies the static bundle into the nginx
-  image.
+  image together with [`ui/nginx.conf`](../ui/nginx.conf), which moves the
+  PID file and all temp paths to `/tmp` so the container runs with
+  `readOnlyRootFilesystem`.
 - Listens on port 8080 (IPv4 and IPv6).
 - Reverse-proxies the API routes to the in-pod API:
 
@@ -43,30 +48,31 @@ encryption.
   ```
 
   See [`ui/nginx-default.conf`](../ui/nginx-default.conf).
-- An entrypoint hook in `ui/hooks/` renders `api.url` into a `config.json`
-  that the SPA fetches at startup. This lets the same image be deployed to
-  any environment without rebuilding.
+- The SPA fetches `config.json` at startup to find the API. The Helm chart
+  renders it from `api.url` into a ConfigMap that is mounted over
+  `/usr/share/nginx/html/config.json`, so the same image can be deployed to
+  any environment without rebuilding. The image has no shell and therefore
+  no entrypoint hooks: to point the reverse proxy at a different API
+  upstream outside the chart, mount your own server block over
+  `/etc/nginx/conf.d/default.conf`.
 
 ### API container
 
-- Base image: `gcr.io/distroless/python3-debian12:nonroot` (no shell, no
-  package manager, runs as uid 65532) — chosen for its smaller footprint
-  and shell-free, package-manager-free trusted computing base, which reduces
-  distinct vulnerable packages by 47% (32 → 17) and CRITICAL findings by 60%
-  (5 → 2). However, the distroless base's slower rebuild and patch-backport
-  cadence has increased HIGH severity findings by 42% (31 → 44) and MEDIUM
-  findings by 47.5% (80 → 118) due to a few lagging packages (libexpat1,
-  libpython3.11-minimal, libc6); this is the security trade-off of choosing
-  a minimal base with infrequent updates.
+- Base image: [`cgr.dev/chainguard/python`](https://images.chainguard.dev/directory/image/python/overview)
+  (Chainguard hardened image on Wolfi: no shell, no package manager, runs as
+  uid 65532, rebuilt daily and typically free of known CVEs). The free tier
+  only publishes the floating `latest`/`latest-dev` tags, so both are pinned
+  by digest and Renovate bumps them together.
 - Built from `Dockerfile.api` in three stages: a `debian:bookworm-slim`
-  stage downloads the `kubeseal` binary (version pinned via the
-  `KUBESEAL_VERSION` build arg, currently `0.39.1`); a
-  `python:3.11-slim-bookworm` stage `pip install --target`s the Python
-  package and its dependencies (the builder's Python minor version must
-  match the distroless runtime's bundled 3.11 interpreter — see the ABI
-  note in the hardening plan); the final distroless stage copies both in.
-- Runs `python3 -m uvicorn kubeseal_webgui_api.app:app` on port 5000 (no
-  `ENTRYPOINT` override — the distroless image already targets its bundled
+  stage downloads the official `kubeseal` release binary and verifies its
+  checksum (version pinned via the `KUBESEAL_VERSION` build arg); a
+  `cgr.dev/chainguard/python:latest-dev` stage `pip install --target`s the
+  Python package and its runtime dependencies (it must be the -dev variant of
+  the same image as the runtime, because compiled wheels are tied to one
+  CPython minor version); the final stage copies both in and runs an
+  import smoke test at build time that fails on an ABI mismatch.
+- Runs `python -m uvicorn kubeseal_webgui_api.app:app` on port 5000 (no
+  `ENTRYPOINT` override — the base image already targets its bundled
   interpreter).
 - On startup, optionally fetches the controller's public certificate (see
   `fetch_sealed_secrets_cert` in

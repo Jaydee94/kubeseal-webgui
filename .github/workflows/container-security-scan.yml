@@ -92,12 +92,11 @@ jobs:
         with:
           image-ref: ${{ matrix.image }}:${{ github.sha }}
           format: table
-          # HIGH is intentionally excluded from the hard gate for now: gcr.io/distroless/python3-debian12's
-          # pinned digest currently lags a handful of Debian security backports (see .trivyignore and the
-          # container-hardening plan's "## Amendments" section for the full breakdown). HIGH findings stay
-          # visible via the SARIF upload and the table-report step above; revisit widening this gate to
-          # CRITICAL,HIGH once a fresher digest closes that gap.
-          severity: CRITICAL
+          # Both images are built on Chainguard (Wolfi) hardened base images that scan clean, so the gate
+          # covers HIGH as well. Findings we cannot fix ourselves (e.g. in the upstream kubeseal binary)
+          # go into the per-image .trivyignore.* file with an expiry date. MEDIUM and below stay visible
+          # via the SARIF upload and the table-report step above.
+          severity: CRITICAL,HIGH
           exit-code: '1'
           trivyignores: ${{ matrix.trivyignores }}
 
