@@ -1,16 +1,8 @@
 <template>
-  <v-col>
-    <a id="logo" href="#">
-      <img id="logo-img" alt="Kubeseal-Webgui Logo" src="@/assets/logo-2025.png" />
-    </a>
-  </v-col>
+  <a id="logo" href="/">
+    <img id="logo-img" alt="Kubeseal-Webgui Logo" src="@/assets/logo-2025.png" />
+  </a>
 </template>
-
-<script>
-export default {
-  name: 'AppLogo'
-}
-</script>
 
 <style scoped>
 #logo {

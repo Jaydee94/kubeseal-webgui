@@ -5,21 +5,13 @@
     <div class="d-flex justify-space-between align-center mb-3">
       <div class="d-flex align-center">
         <v-card-subtitle class="text-subtitle-2 px-0 mr-2">Secret Key-Value Pairs</v-card-subtitle>
-        <v-tooltip location="bottom" max-width="300" open-on-click>
-          <template #activator="{ props }">
-            <v-icon
-              v-bind="props"
-              icon="mdi-information-outline"
-              size="small"
-              color="medium-emphasis"
-            />
-          </template>
+        <InfoTooltip>
           <span
             >Specify sensitive value and corresponding key of the secret.<br /><i
               >The key must be of type: DNS Subdomain</i
             ></span
           >
-        </v-tooltip>
+        </InfoTooltip>
       </div>
       <div class="d-flex align-center">
         <slot name="header-actions" />
@@ -66,6 +58,7 @@
 </template>
 
 <script setup>
+import InfoTooltip from './InfoTooltip.vue'
 import SecretInput from './SecretInput.vue'
 
 defineProps({

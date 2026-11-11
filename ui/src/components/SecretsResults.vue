@@ -9,7 +9,7 @@
         />
       </v-col>
     </v-row>
-    <v-row dense align-content="center" class="mt-4">
+    <v-row density="compact" align-content="center" class="mt-4">
       <v-col v-for="(secret, counter) in sealedSecrets" :key="counter" cols="12" sm="6" md="4">
         <SecretKeyCard
           :secret-key="secret.key"

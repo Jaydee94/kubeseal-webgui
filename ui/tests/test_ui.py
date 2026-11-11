@@ -115,6 +115,17 @@ def open_namespace_list(page: Page) -> list[str]:
     return page.locator(".v-list-item-title").all_inner_texts()
 
 
+def reopen_namespace_list(page: Page) -> list[str]:
+    """Close and open the list again: it then starts at its first entry.
+
+    Right after toggling a favorite the open list can stay scrolled to where
+    the toggled entry was, with the new first entry above the visible part.
+    """
+    page.keyboard.press("Escape")
+    expect(page.locator(".v-overlay .v-list-item-title")).to_have_count(0)
+    return open_namespace_list(page)
+
+
 def namespace_item(page: Page, name: str):
     return page.locator(".v-overlay .v-list-item", has_text=name)
 
@@ -140,15 +151,19 @@ def test_favorite_namespaces_are_listed_first_and_remembered(page: Page):
 
     # marking a namespace moves it to the top, above a divider
     favorite_toggle(page, names[3]).click()
-    expect(page.locator(".v-list-item-title").first).to_have_text(names[3])
-    assert favorite_names(page) == [names[3]]
-    expect(page.locator(".v-overlay .v-divider")).to_have_count(1)
     # toggling a favorite does not select the namespace
     expect(page.locator("input#namespaceSelection")).to_have_value("")
+    expect(page.locator(".v-autocomplete__selection-text")).to_have_text("")
+    assert reopen_namespace_list(page) == [
+        names[3],
+        *names[:3],
+        *names[4:],
+    ]
+    assert favorite_names(page) == [names[3]]
+    expect(page.locator(".v-overlay .v-divider")).to_have_count(1)
 
     favorite_toggle(page, names[1]).click()
-    expect(page.locator(".v-list-item-title").nth(1)).to_have_text(names[3])
-    assert page.locator(".v-list-item-title").all_inner_texts() == [
+    assert reopen_namespace_list(page) == [
         names[1],
         names[3],
         names[0],
@@ -170,9 +185,115 @@ def test_favorite_namespaces_are_listed_first_and_remembered(page: Page):
 
     # and can be removed again
     favorite_toggle(page, names[1]).click()
-    expect(page.locator(".v-list-item-title").first).to_have_text(names[3])
+    assert reopen_namespace_list(page)[:3] == [names[3], names[0], names[1]]
     assert favorite_names(page) == [names[3]]
-    assert page.locator(".v-list-item-title").all_inner_texts()[1:3] == names[0:2]
+
+
+def test_favorite_toggle_works_with_the_keyboard(page: Page):
+    page.add_init_script(SEEDED_RANDOM)
+    page.goto("/")
+    page.wait_for_selector("input#namespaceSelection")
+    names = open_namespace_list(page)
+    focused = page.locator("*:focus")
+
+    # arrow keys walk through the list: an item, then its favorite toggle
+    page.focus("input#namespaceSelection")
+    page.keyboard.press("ArrowDown")
+    expect(focused).to_have_text(names[0])
+    page.keyboard.press("ArrowDown")
+    expect(focused).to_have_role("button")
+    expect(focused).to_have_attribute("aria-label", f"Add {names[0]} to favorites")
+    expect(focused).to_have_attribute("aria-pressed", "false")
+    page.keyboard.press("ArrowDown")
+    page.keyboard.press("ArrowDown")
+    expect(focused).to_have_attribute("aria-label", f"Add {names[1]} to favorites")
+
+    # Enter toggles the favorite and does not select the namespace
+    page.keyboard.press("Enter")
+    expect(page.locator("input#namespaceSelection")).to_have_value("")
+    expect(page.locator(".v-autocomplete__selection-text")).to_have_text("")
+    assert reopen_namespace_list(page)[0] == names[1]
+    assert favorite_names(page) == [names[1]]
+    toggle = favorite_toggle(page, names[1])
+    expect(toggle).to_have_attribute("aria-label", f"Remove {names[1]} from favorites")
+    expect(toggle).to_have_attribute("aria-pressed", "true")
+
+    # so does Space
+    toggle.focus()
+    page.keyboard.press("Space")
+    expect(page.locator("input#namespaceSelection")).to_have_value("")
+    assert reopen_namespace_list(page) == names
+    assert favorite_names(page) == []
+
+
+def is_dark(page: Page) -> bool:
+    return page.locator(".v-application.v-theme--dark").count() == 1
+
+
+def dark_mode_switch(page: Page):
+    return page.locator(".dark-mode-switch input")
+
+
+def test_dark_mode_follows_the_system_until_the_user_chooses(page: Page):
+    page.emulate_media(color_scheme="dark")
+    page.goto("/")
+    expect(page.locator(".dark-mode-switch")).to_contain_text("Dark")
+    assert is_dark(page)
+    expect(dark_mode_switch(page)).to_be_checked()
+    # nothing is stored before the user makes a choice
+    assert page.evaluate("localStorage.getItem('useDarkTheme')") is None
+
+    dark_mode_switch(page).click()
+    expect(page.locator(".dark-mode-switch")).to_contain_text("Light")
+    assert not is_dark(page)
+    assert page.evaluate("localStorage.getItem('useDarkTheme')") == "false"
+
+    # the choice wins over the system preference on the next visit
+    page.reload()
+    expect(page.locator(".dark-mode-switch")).to_contain_text("Light")
+    assert not is_dark(page)
+
+    dark_mode_switch(page).click()
+    expect(page.locator(".dark-mode-switch")).to_contain_text("Dark")
+    assert is_dark(page)
+    assert page.evaluate("localStorage.getItem('useDarkTheme')") == "true"
+
+
+def test_light_system_preference_starts_light(page: Page):
+    page.emulate_media(color_scheme="light")
+    page.goto("/")
+    expect(page.locator(".dark-mode-switch")).to_contain_text("Light")
+    assert not is_dark(page)
+    expect(dark_mode_switch(page)).not_to_be_checked()
+
+
+def test_ui_works_without_local_storage(page: Page):
+    # e.g. a browser that blocks site data: reading window.localStorage throws
+    page.add_init_script("""
+        Object.defineProperty(window, 'localStorage', {
+            get() { throw new DOMException('The operation is insecure.', 'SecurityError') }
+        })
+    """)
+    errors: list[str] = []
+    page.on("pageerror", lambda error: errors.append(str(error)))
+    page.emulate_media(color_scheme="light")
+    page.goto("/")
+
+    expect(page.locator(".dark-mode-switch")).to_contain_text("Light")
+    dark_mode_switch(page).click()
+    expect(page.locator(".dark-mode-switch")).to_contain_text("Dark")
+    assert is_dark(page)
+
+    names = open_namespace_list(page)
+    favorite_toggle(page, names[2]).click()
+    assert reopen_namespace_list(page)[0] == names[2]
+    assert errors == []
+
+
+def test_logo_links_to_the_start_page(app_page: Page):
+    logo = app_page.locator("a#logo")
+    expect(logo).to_have_attribute("href", "/")
+    expect(logo.locator("img")).to_have_attribute("alt", "Kubeseal-Webgui Logo")
 
 
 def test_ui_start(app_page: Page):

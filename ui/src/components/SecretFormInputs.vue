@@ -12,18 +12,9 @@
           @update:model-value="$emit('update:scope', $event)"
         >
           <template #append-inner>
-            <v-tooltip location="bottom" max-width="300" open-on-click>
-              <template #activator="{ props: activatorProps }">
-                <v-icon
-                  v-bind="activatorProps"
-                  icon="mdi-information-outline"
-                  size="small"
-                  color="medium-emphasis"
-                  class="ml-2"
-                />
-              </template>
+            <InfoTooltip class="ml-2">
               <span>Specify scope of the secret.<br /><i>Scopes for sealed secrets</i></span>
-            </v-tooltip>
+            </InfoTooltip>
           </template>
         </v-select>
       </v-col>
@@ -46,22 +37,13 @@
           @update:model-value="$emit('update:namespaceName', $event ?? '')"
         >
           <template #append-inner>
-            <v-tooltip location="bottom" max-width="300" open-on-click>
-              <template #activator="{ props: activatorProps }">
-                <v-icon
-                  v-bind="activatorProps"
-                  icon="mdi-information-outline"
-                  size="small"
-                  color="medium-emphasis"
-                  class="ml-2"
-                />
-              </template>
+            <InfoTooltip class="ml-2">
               <span
                 >Name of a namespace that does not exist yet.<br /><i
                   >The secret is sealed for exactly this name, so double-check it for typos.</i
                 ></span
               >
-            </v-tooltip>
+            </InfoTooltip>
           </template>
         </v-text-field>
         <v-autocomplete
@@ -81,13 +63,21 @@
           <template #item="{ props: itemProps, item }">
             <v-list-item v-bind="itemProps" :value="item" class="transition-fast">
               <template #prepend>
-                <v-icon
+                <v-btn
+                  icon
+                  variant="text"
                   color="warning"
-                  class="transition-fast"
+                  size="24"
+                  class="favorite-toggle transition-fast"
+                  :aria-label="favoriteToggleLabel(item)"
+                  :aria-pressed="favoriteNamespaces.has(item)"
                   @click.stop="$emit('toggle-favorite', item)"
+                  @keydown.enter.space.stop
                 >
-                  {{ favoriteNamespaces.has(item) ? 'mdi-heart' : 'mdi-heart-outline' }}
-                </v-icon>
+                  <v-icon
+                    :icon="favoriteNamespaces.has(item) ? 'mdi-heart' : 'mdi-heart-outline'"
+                  />
+                </v-btn>
               </template>
             </v-list-item>
             <v-divider
@@ -97,18 +87,9 @@
             ></v-divider>
           </template>
           <template #append-inner>
-            <v-tooltip location="bottom" max-width="300" open-on-click>
-              <template #activator="{ props: activatorProps }">
-                <v-icon
-                  v-bind="activatorProps"
-                  icon="mdi-information-outline"
-                  size="small"
-                  color="medium-emphasis"
-                  class="ml-2"
-                />
-              </template>
+            <InfoTooltip class="ml-2">
               Select the target namespace where the sealed secret will be deployed.
-            </v-tooltip>
+            </InfoTooltip>
           </template>
         </v-autocomplete>
         <v-checkbox
@@ -142,16 +123,7 @@
           @update:model-value="$emit('update:secretName', $event ?? '')"
         >
           <template #append-inner>
-            <v-tooltip location="bottom" max-width="300" open-on-click>
-              <template #activator="{ props: activatorProps }">
-                <v-icon
-                  v-bind="activatorProps"
-                  icon="mdi-information-outline"
-                  size="small"
-                  color="medium-emphasis"
-                  class="ml-2"
-                />
-              </template>
+            <InfoTooltip class="ml-2">
               <span
                 >Specify name of the secret.<br /><i
                   >The secret name must be of type: DNS Subdomain.</i
@@ -161,7 +133,7 @@
                   ></template
                 ></span
               >
-            </v-tooltip>
+            </InfoTooltip>
           </template>
         </v-text-field>
       </v-col>
@@ -171,6 +143,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import InfoTooltip from './InfoTooltip.vue'
 import { SCOPES, scopeNeedsName, scopeNeedsNamespace } from '@/constants'
 import { rules } from '@/utils/validation'
 
@@ -213,12 +186,17 @@ defineEmits([
   'toggle-favorite'
 ])
 
-// Sort namespaces with favorites first
-const sortedNamespaces = computed(() => {
-  const favorites = props.namespaces.filter((ns) => props.favoriteNamespaces.has(ns))
-  const others = props.namespaces.filter((ns) => !props.favoriteNamespaces.has(ns))
-  return [...favorites, ...others]
-})
+const favoritesInList = computed(() =>
+  props.namespaces.filter((namespace) => props.favoriteNamespaces.has(namespace))
+)
+
+// Favorites first, separated from the rest by a divider after the last one.
+const sortedNamespaces = computed(() => [
+  ...favoritesInList.value,
+  ...props.namespaces.filter((namespace) => !props.favoriteNamespaces.has(namespace))
+])
+
+const lastFavoriteNamespace = computed(() => favoritesInList.value.at(-1) ?? null)
 
 // Only the strict scope seals the secret for one specific name.
 const secretNameRequired = computed(() => scopeNeedsName(props.scope))
@@ -226,8 +204,17 @@ const secretNameRequired = computed(() => scopeNeedsName(props.scope))
 // The namespace is irrelevant for cluster-wide secrets.
 const namespaceNeeded = computed(() => scopeNeedsNamespace(props.scope))
 
-const lastFavoriteNamespace = computed(() => {
-  const favorites = props.namespaces.filter((ns) => props.favoriteNamespaces.has(ns))
-  return favorites.length > 0 ? favorites[favorites.length - 1] : null
-})
+function favoriteToggleLabel(namespace) {
+  return props.favoriteNamespaces.has(namespace)
+    ? `Remove ${namespace} from favorites`
+    : `Add ${namespace} to favorites`
+}
 </script>
+
+<style scoped>
+/* Same emphasis and distance to the title as a plain prepend icon. */
+.favorite-toggle {
+  opacity: var(--v-medium-emphasis-opacity);
+  margin-inline-end: 32px;
+}
+</style>
