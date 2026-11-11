@@ -98,15 +98,10 @@ def test_json_formatter_includes_exception():
     try:
         raise RuntimeError("boom")
     except RuntimeError:
-        record = logging.getLogger("kubeseal-webgui").makeRecord(
-            "kubeseal-webgui",
-            logging.ERROR,
-            __file__,
-            1,
-            "failed",
-            (),
-            sys.exc_info(),
-        )
+        exc_info = sys.exc_info()
+    record = logging.LogRecord(
+        "kubeseal-webgui", logging.ERROR, __file__, 1, "failed", None, exc_info
+    )
     payload = json.loads(JsonFormatter().format(record))
     assert payload["request_id"] == NO_REQUEST_ID
     assert "RuntimeError: boom" in payload["exception"]
