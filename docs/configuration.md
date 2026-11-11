@@ -121,10 +121,10 @@ These are read directly by the API process and can be set via
 |---|---|---|
 | `KUBESEAL_BINARY` | Absolute path to the `kubeseal` executable inside the container. | `/kubeseal-webgui/bin/kubeseal` (set in `Dockerfile.api`) |
 | `KUBESEAL_CERT` | Path to the controller's public certificate. | `/kubeseal-webgui/cert/kubeseal-cert.pem` |
-| `KUBESEAL_AUTOFETCH` | Set to `true` to fetch the certificate from the controller on startup. Set by the chart when `sealedSecrets.autoFetchCert=true`. | `false` |
+| `KUBESEAL_AUTOFETCH` | Set to `true` to fetch the certificate from the controller on startup. Set by the chart when `sealedSecrets.autoFetchCert=true`. A boolean: `true`/`false`, `1`/`0`, `yes`/`no`, `on`/`off` in any case; any other value stops the API at startup. | `false` |
 | `KUBESEAL_CONTROLLER_NAME` | Deployment name of the Sealed Secrets controller (used when auto-fetching). | `sealed-secrets-controller` |
 | `KUBESEAL_CONTROLLER_NAMESPACE` | Namespace of the Sealed Secrets controller (used when auto-fetching). | `sealed-secrets` in the API code, overridden to match `sealedSecrets.controllerNamespace` by the chart. |
-| `MOCK_ENABLED` | Replace the Kubernetes client and `kubeseal` invocations with in-memory mocks. Useful for local development without a cluster. | `false` |
+| `MOCK_ENABLED` | Replace the Kubernetes client and `kubeseal` invocations with in-memory mocks. Useful for local development without a cluster; no `kubeseal` binary is needed. A boolean like `KUBESEAL_AUTOFETCH`. | `false` |
 
 ## UI configuration
 
