@@ -13,7 +13,7 @@ def kubernetes_namespaces_resolver() -> list[str]:
     fix_incluster_bearer_token()
     namespaces_list = []
 
-    LOGGER.info("Resolving in-cluster Namespaces")
+    LOGGER.debug("Resolving in-cluster Namespaces")
     v1 = client.CoreV1Api()
     namespaces = v1.list_namespace()
     if isinstance(namespaces, client.V1NamespaceList) and namespaces.items:
@@ -22,5 +22,6 @@ def kubernetes_namespaces_resolver() -> list[str]:
     else:
         LOGGER.warning("No valid namespace list available via %s", namespaces)
 
+    LOGGER.info("Resolved %d in-cluster Namespaces", len(namespaces_list))
     LOGGER.debug("Namespaces list %s", namespaces_list)
     return namespaces_list

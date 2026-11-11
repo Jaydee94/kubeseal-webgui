@@ -29,19 +29,26 @@ else:
 
 @router.get("/namespaces", response_model=List[str])
 def get_namespaces() -> List[str]:
+    # Kubernetes client errors (e.g. a 403 caused by missing RBAC) are not
+    # RuntimeErrors, hence the broad catch at this API boundary.
     try:
         return namespace_resolver()
-    except RuntimeError:
+    except Exception:
+        LOGGER.exception("Failed to list namespaces from the cluster.")
         raise fastapi.HTTPException(
             status_code=500, detail="Can't get namespaces from cluster."
-        )
+        ) from None
 
 
 @router.get("/sealed-secrets/{namespace}", response_model=List[ExistingSealedSecret])
 def get_sealed_secrets(namespace: str) -> List[ExistingSealedSecret]:
     try:
         return sealed_secret_resolver(namespace)
-    except RuntimeError:
+    except Exception:
+        LOGGER.exception(
+            "Failed to list SealedSecrets in namespace '%s' from the cluster.",
+            namespace,
+        )
         raise fastapi.HTTPException(
             status_code=500, detail="Can't get SealedSecrets from cluster."
-        )
+        ) from None

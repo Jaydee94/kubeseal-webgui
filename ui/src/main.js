@@ -9,6 +9,9 @@ import "@fontsource/roboto"
 import 'vuetify/styles' // Global CSS has to be imported
 import '@mdi/font/css/materialdesignicons.css' // Ensure you are using css-loader
 import './assets/styles.css' // Import custom global styles
+import { createLogger, getLogLevel } from './utils/logger'
+
+const log = createLogger('app')
 
 const app = createApp(App)
 const vuetify = createVuetify({
@@ -61,6 +64,14 @@ const vuetify = createVuetify({
     }
   }
 })
+
+// Errors thrown in components (render, lifecycle hooks, event handlers) that
+// nothing else caught. `info` names where in the component it happened.
+app.config.errorHandler = (error, instance, info) => {
+  log.error(`Unhandled error in ${instance?.$options?.__name || 'component'} (${info}):`, error)
+}
+
+log.info(`Starting UI (mode: ${import.meta.env.MODE}, log level: ${getLogLevel()})`)
 
 app
   .use(vuetify)

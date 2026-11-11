@@ -6,7 +6,7 @@ section of the other docs.
 ## Auto-fetch certificate fails on startup
 
 The API container logs an error like
-`Error in run_kubeseal: cannot find sealed-secrets controller`
+`Failed to fetch the certificate from controller '...' in namespace '...' (exit code 1): cannot find sealed-secrets controller`
 or hangs in `CrashLoopBackOff` shortly after start.
 
 Most common causes:
@@ -113,6 +113,50 @@ kubectl logs -n <namespace> -l app=kubeseal-webgui -c api
 kubectl logs -n <namespace> -l app=kubeseal-webgui -c ui
 ```
 
-API log level is controlled by `api.loglevel` (default `INFO`). Set it to
-`DEBUG` to get verbose startup output, including the resolved certificate
-path and the controller name/namespace used by auto-fetch.
+API log level is controlled by `api.loglevel` (default `INFO`). At startup the
+API logs its effective settings (kubeseal version, binary and certificate
+path, auto-fetch and mock mode). `DEBUG` additionally logs every kubeseal
+invocation and one line per sealed key. Set `api.logformat: json` to get one
+JSON object per line instead of text.
+
+Cleartext secret values are never logged, at any level -- only secret names,
+key names, namespaces and scopes.
+
+Successful health probes (`GET /` from the kubelet) are left out of both
+access logs; failing probes are logged.
+
+### Following one request through all logs
+
+Every request gets a request id. nginx generates it, writes it to its access
+log (`request_id=...`), forwards it to the API as `X-Request-ID`, and the API
+puts it in brackets into every log line of that request:
+
+```text
+# ui container
+10.0.0.7 - - [...] "POST /secrets HTTP/1.1" 500 ... rt=0.041 urt=0.040 request_id=b3b50e39bc11f16ccbb286a000374417
+# api container
+... - kubeseal-webgui - ERROR - [b3b50e39bc11f16ccbb286a000374417] - Failed to seal secret 'foo' in namespace 'bar' with scope 'strict'.
+```
+
+The UI shows the same id in its error message (`... - request id b3b5...`), so
+a user can report it and you can grep for it:
+
+```bash
+kubectl logs -n <namespace> -l app=kubeseal-webgui --all-containers | grep <request-id>
+```
+
+`rt` is the total request time seen by nginx, `urt` the time spent waiting for
+the API.
+
+### Browser console
+
+The UI logs to the browser console with the prefix `[kubeseal-webgui]`:
+failed requests (method, URL, HTTP status, duration, request id) and
+unexpected errors. Request bodies and secret values are never logged. For
+per-request debug output run this in the browser console and reload:
+
+```js
+localStorage.setItem("kubeseal-webgui:loglevel", "debug")
+```
+
+Valid levels are `debug`, `info` (default), `warn`, `error` and `silent`.

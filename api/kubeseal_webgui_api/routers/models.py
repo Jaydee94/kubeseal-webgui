@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import List, Optional, Self
 
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 def to_camel(value: str) -> str:
@@ -52,7 +52,10 @@ class Scope(str, Enum):
 
 
 class Data(BaseModel):
-    secret: Optional[str] = None
+    # The name of the secret, not a secret value. The JSON key stays "secret";
+    # the attribute is called `name` so that neither readers nor static
+    # analysis mistake it for sensitive data (the values live in `secrets`).
+    name: Optional[str] = Field(default=None, alias="secret")
     namespace: Optional[str] = None
     secrets: List[Secret]
     scope: Optional[Scope] = None

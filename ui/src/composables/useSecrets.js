@@ -1,25 +1,18 @@
 import { Base64 } from "js-base64";
 import { mockNamespacesResolver } from "@/utils/mockData";
+import { requestJson } from "@/utils/http";
 
 export function useSecrets() {
   async function fetchNamespaces(config) {
     if (import.meta.env.VITE_MOCK_NAMESPACES) {
       return mockNamespacesResolver(10);
     } else {
-      const response = await fetch(`${config.api_url}/namespaces`);
-      if (!response.ok) {
-          throw new Error(`Failed to fetch namespaces: ${response.statusText}`);
-      }
-      return await response.json();
+      return await requestJson(`${config.api_url}/namespaces`);
     }
   }
 
   async function fetchSealedSecrets(config, namespaceName) {
-    const response = await fetch(`${config.api_url}/sealed-secrets/${encodeURIComponent(namespaceName)}`);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch SealedSecrets: ${response.statusText}`);
-    }
-    return await response.json();
+    return await requestJson(`${config.api_url}/sealed-secrets/${encodeURIComponent(namespaceName)}`);
   }
 
   function readFileAsync(file) {
@@ -60,22 +53,15 @@ export function useSecrets() {
 
     const requestBody = JSON.stringify(requestObject, null, "\t");
 
-    const response = await fetch(`${config.api_url}/secrets`, {
+    // requestJson logs method, URL and status only -- never this body, which
+    // contains the cleartext secrets.
+    return await requestJson(`${config.api_url}/secrets`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: requestBody,
     });
-
-    if (!response.ok) {
-      throw Error(
-        "No sealed secrets in response from backend: " +
-        (await response.text())
-      );
-    } else {
-      return await response.json();
-    }
   }
 
   return {

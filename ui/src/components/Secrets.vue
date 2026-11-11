@@ -193,6 +193,7 @@ import SecretFormInputs from './SecretFormInputs.vue'
 import SecretsList from './SecretsList.vue'
 import SecretsResults from './SecretsResults.vue'
 import { useConfig } from '@/composables/useConfig'
+import { createLogger } from '@/utils/logger'
 import { useSecrets } from '@/composables/useSecrets'
 
 defineOptions({
@@ -200,6 +201,7 @@ defineOptions({
 })
 
 const { fetchConfig } = useConfig()
+const log = createLogger('Secrets')
 const {
   fetchNamespaces,
   fetchSealedSecrets,
@@ -259,7 +261,13 @@ const resetForm = () => {
 };
 
 onBeforeMount(async () => {
-  config.value = await fetchConfig();
+  try {
+    config.value = await fetchConfig();
+  } catch (error) {
+    log.error("Failed to load the UI configuration (config.json):", error);
+    setErrorMessage(`Failed to load the UI configuration. Error Message: ${error.message}.`);
+    return;
+  }
   sealedSecretImportFeatureEnabled.value = isEnabled(
     config.value.enable_existing_sealed_secret_loading
   );
@@ -291,7 +299,8 @@ async function copyToClipboard(text) {
     try {
       await navigator.clipboard.writeText(text);
       return true;
-    } catch {
+    } catch (error) {
+      log.warn("Clipboard API failed, falling back to execCommand:", error);
       // Fall through to the legacy fallback below.
     }
   }
@@ -309,16 +318,24 @@ async function copyToClipboard(text) {
     textarea.select();
     const successful = document.execCommand("copy");
     document.body.removeChild(textarea);
+    if (!successful) {
+      log.warn("Copying to the clipboard via execCommand was rejected.");
+    }
     return successful;
-  } catch {
+  } catch (error) {
+    log.error("Copying to the clipboard failed:", error);
     return false;
   }
 }
 
 function readFavoriteNamespaces() {
   try {
+    if (localStorage.favoriteNamespaces === undefined) {
+      return new Set([]);
+    }
     return new Set(JSON.parse(localStorage.favoriteNamespaces));
-  } catch {
+  } catch (error) {
+    log.warn("Ignoring unreadable favorite namespaces in localStorage:", error);
     return new Set([]);
   }
 }
@@ -466,6 +483,7 @@ async function fetchNamespacesData(config) {
   try {
     namespaces.value = await fetchNamespaces(config);
   } catch (error) {
+    log.error("Failed to fetch namespaces:", error);
     setErrorMessage(`Failed to fetch namespaces. Error Message: ${error.message}.`, "namespaces");
   }
 }
@@ -499,7 +517,9 @@ async function fetchEncodedSecrets() {
     displayCreateSealedSecretForm.value = false;
     setErrorMessage("");
   } catch (error) {
-    setErrorMessage(error.message || error);
+    // Only the error is logged -- never the submitted secrets.
+    log.error(`Failed to seal secret "${secretName.value}" in namespace "${namespaceName.value}":`, error);
+    setErrorMessage(`Failed to seal secrets. Error Message: ${error.message || error}.`);
   } finally {
     loading.value = false;
   }
@@ -516,7 +536,7 @@ async function copyRenderedSecrets() {
   // Access the nested ref through the SecretsResults component
   const sealedSecretElement = secretsResultsRef.value?.sealedSecretCardRef?.$refs?.sealedSecretRef;
   if (!sealedSecretElement) {
-    console.error('Could not access sealed secret element');
+    log.error("Could not access sealed secret element");
     return;
   }
   const sealedSecretContent = sealedSecretElement.innerText.trim();
@@ -576,6 +596,7 @@ async function loadSealedSecretsForNamespace() {
     loadingSealedSecrets.value = true;
     availableSealedSecrets.value = await fetchSealedSecrets(await getConfig(), namespaceName.value);
   } catch (error) {
+    log.error(`Failed to fetch existing SealedSecrets in namespace "${namespaceName.value}":`, error);
     setErrorMessage(`Failed to fetch existing SealedSecrets. Error Message: ${error.message}.`);
     availableSealedSecrets.value = [];
     selectedSealedSecret.value = null;

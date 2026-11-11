@@ -16,6 +16,7 @@ def get_configs() -> WebGuiConfig:
     try:
         return WebGuiConfig(kubeseal_version=settings.kubeseal_version)
     except RuntimeError:
+        LOGGER.exception("Failed to retrieve application configs.")
         raise fastapi.HTTPException(
             status_code=500, detail="Failed to retrieve application configs."
         )

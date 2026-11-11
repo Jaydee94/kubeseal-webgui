@@ -1,21 +1,44 @@
+# Templated copy of api/config/logging_config.yaml -- keep both in sync.
 version: 1
 disable_existing_loggers: False
+filters:
+  # Adds %(request_id)s, the id shared with the nginx access log and the UI.
+  request_id:
+    "()": kubeseal_webgui_api.logging_utils.RequestIdFilter
+  # Drops successful "GET /" probe requests from the access log.
+  health_check:
+    "()": kubeseal_webgui_api.logging_utils.HealthCheckAccessFilter
 formatters:
   default:
     "()": uvicorn.logging.DefaultFormatter
-    format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    format: "%(asctime)s - %(name)s - %(levelname)s - [%(request_id)s] - %(message)s"
   access:
     "()": uvicorn.logging.AccessFormatter
-    format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    format: "%(asctime)s - %(name)s - %(levelname)s - [%(request_id)s] - %(message)s"
+  # One JSON object per line, selected with `api.logformat: json`.
+  json:
+    "()": kubeseal_webgui_api.logging_utils.JsonFormatter
 handlers:
   default:
-    formatter: default
+    formatter: {{ ternary "json" "default" (eq (lower (toString .Values.api.logformat)) "json") }}
     class: logging.StreamHandler
     stream: ext://sys.stderr
+    filters:
+      - request_id
   access:
-    formatter: access
+    formatter: {{ ternary "json" "access" (eq (lower (toString .Values.api.logformat)) "json") }}
     class: logging.StreamHandler
     stream: ext://sys.stdout
+    filters:
+      - request_id
+      - health_check
+# Third-party libraries (kubernetes client, urllib3, ...) log through the root
+# logger. It stays at WARNING on purpose: at DEBUG the kubernetes client dumps
+# complete API requests and responses.
+root:
+  level: WARNING
+  handlers:
+    - default
 loggers:
   uvicorn.error:
     level: {{ .Values.api.loglevel }}

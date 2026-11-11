@@ -2,6 +2,7 @@ import base64
 import logging
 import re
 import subprocess  # noqa: S404 the binary has to be configured by an admin
+import time
 from typing import List, Optional, Union, overload
 
 from fastapi import APIRouter, HTTPException
@@ -15,17 +16,54 @@ LOGGER = logging.getLogger("kubeseal-webgui")
 
 @router.post("/secrets", response_model=List[KeyValuePair])
 def encrypt(data: Data) -> list[KeyValuePair]:
+    scope = data.scope or Scope.STRICT
+    started = time.perf_counter()
+    # Only metadata is logged here. Never log `data.secrets` values: they are
+    # the cleartext secrets. Name and namespace are logged with %r because they
+    # are client input that may not have been validated (escapes line breaks).
     try:
-        return run_kubeseal(
-            data.secrets,
-            data.namespace,
-            data.secret,
-            data.scope or Scope.STRICT,
-        )
+        sealed_secrets = run_kubeseal(data.secrets, data.namespace, data.name, scope)
     except (KeyError, ValueError) as e:
-        raise HTTPException(400, f"Invalid data for sealing secrets: {e}")
+        LOGGER.warning(
+            "Rejected sealing request for secret %r in namespace %r: %s",
+            data.name,
+            data.namespace,
+            loggable_reason(e),
+        )
+        raise HTTPException(400, f"Invalid data for sealing secrets: {e}") from None
     except RuntimeError:
-        raise HTTPException(500, "Server is dreaming...")
+        LOGGER.exception(
+            "Failed to seal secret %r in namespace %r with scope '%s'.",
+            data.name,
+            data.namespace,
+            scope.value,
+        )
+        raise HTTPException(
+            500, "Failed to seal secrets. See the API logs for details."
+        ) from None
+
+    LOGGER.info(
+        "Sealed %d key(s) %s of secret %r in namespace %r with scope '%s' "
+        "in %.0f ms.",
+        len(sealed_secrets),
+        [sealed_secret.key for sealed_secret in sealed_secrets],
+        data.name,
+        data.namespace,
+        scope.value,
+        (time.perf_counter() - started) * 1000,
+    )
+    return sealed_secrets
+
+
+def loggable_reason(error: Exception) -> str:
+    """Describe a rejected request without quoting any part of a secret value."""
+    # Encoding errors name the offending byte or character of the value.
+    if isinstance(error, UnicodeError):
+        error_type = type(error).__name__
+        return f"a secret value is not valid base64-encoded UTF-8 ({error_type})"
+    # Validation messages can quote client input; escape line breaks and other
+    # control characters so it cannot forge additional log lines.
+    return str(error).encode("unicode_escape").decode("ascii")
 
 
 def is_blank(value: Optional[str]) -> bool:
@@ -34,9 +72,7 @@ def is_blank(value: Optional[str]) -> bool:
 
 def verify(name: str, value: Optional[str], mandatory: bool = True) -> None:
     if mandatory and is_blank(value):
-        error_message = f"{name} was not given"
-        LOGGER.error(error_message)
-        raise ValueError(error_message)
+        raise ValueError(f"{name} was not given")
 
 
 def run_kubeseal(
@@ -79,12 +115,12 @@ def run_kubeseal_command(
     secret_name: Optional[str],
     scope: Scope = Scope.STRICT,
 ) -> KeyValuePair:
-    LOGGER.info(
+    LOGGER.debug(
         "Sealing secret '%s.%s' for namespace '%s' with scope '%s'.",
         secret_name,
         cleartext_secret_tuple.key,
         secret_namespace,
-        scope,
+        scope.value,
     )
 
     if settings.mock_enabled:
@@ -177,10 +213,12 @@ def encrypt_value_or_file(
         )
         output, error = output_bytes.decode("utf-8"), error_bytes.decode("utf-8")
 
-    if error:
-        error_message = f"Error in run_kubeseal: {error}"
-        LOGGER.error(error_message)
-        raise RuntimeError(error_message)
+    # Not logged here: the caller logs the failure once, with request context.
+    if error or kubeseal_subprocess.returncode != 0:
+        raise RuntimeError(
+            f"Error in run_kubeseal (exit code {kubeseal_subprocess.returncode}): "
+            f"{error.strip() or 'no error output'}"
+        )
 
     sealed_secret = "".join(output.split("\n"))
     return KeyValuePair(key=cleartext_secret_tuple.key, value=sealed_secret)
