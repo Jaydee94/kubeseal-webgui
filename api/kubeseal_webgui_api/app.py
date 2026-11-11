@@ -7,7 +7,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from .app_config import autofetch, fetch_sealed_secrets_cert, settings
+from .app_config import fetch_sealed_secrets_cert, get_kubeseal_version, settings
 from .logging_utils import REQUEST_ID_HEADER, RequestIdMiddleware
 from .routers import config, kubernetes, kubeseal
 
@@ -16,13 +16,16 @@ LOGGER = logging.getLogger("kubeseal-webgui")
 
 @asynccontextmanager
 async def lifespan(fastapi_app: fastapi.FastAPI):  # noqa: ANN201 skipcq: PYL-W0613
+    # Resolved here, once: a deployment with an unusable kubeseal binary has
+    # to fail at start-up and not on the first request.
+    kubeseal_version = get_kubeseal_version()
     LOGGER.info(
         "Starting kubeseal-webgui API (kubeseal version: %s, binary: '%s', "
         "certificate: '%s', certificate auto-fetch: %s, mock mode: %s)",
-        settings.kubeseal_version,
+        kubeseal_version,
         settings.kubeseal_binary,
         settings.kubeseal_cert,
-        autofetch,
+        settings.kubeseal_autofetch,
         settings.mock_enabled,
     )
     fetch_sealed_secrets_cert()

@@ -1,28 +1,40 @@
+"""Application settings and the start-up tasks that depend on them.
+
+Importing this module has no side effects: the kubeseal binary is only run
+when the application starts (see ``lifespan`` in ``app.py``) or when a value
+that needs it is requested.
+"""
+
+import functools
 import logging
-import subprocess
-from os import environ
+import subprocess  # noqa: S404 the binary has to be configured by an admin
+from pathlib import Path
 
 from pydantic_settings import BaseSettings
 
-binary = environ.get("KUBESEAL_BINARY", "/bin/false")
-mock = environ.get("MOCK_ENABLED", "False").lower() == "true"
-autofetch = environ.get("KUBESEAL_AUTOFETCH", "false")
-kubeseal_cert = environ.get("KUBESEAL_CERT", "/kubeseal-webgui/cert/kubeseal-cert.pem")
+LOGGER = logging.getLogger("kubeseal-webgui")
+
+MOCK_KUBESEAL_VERSION = "0.1.0"
 
 
 class AppSettings(BaseSettings):
-    kubeseal_version: str
-    kubeseal_binary: str = binary
-    kubeseal_cert: str = environ.get("KUBESEAL_CERT", "/dev/null")
-    mock_enabled: bool = mock
+    """All configuration, read from the environment (``KUBESEAL_BINARY`` ...)."""
+
+    kubeseal_binary: str = "/bin/false"
+    kubeseal_cert: str = "/kubeseal-webgui/cert/kubeseal-cert.pem"
+    kubeseal_autofetch: bool = False
+    kubeseal_controller_namespace: str = "sealed-secrets"
+    kubeseal_controller_name: str = "sealed-secrets-controller"
+    mock_enabled: bool = False
     mock_namespace_count: int = 120
 
 
-LOGGER = logging.getLogger("kubeseal-webgui")
+settings = AppSettings()
 
 
 def _run_kubeseal(arguments: list[str], purpose: str) -> str:
     """Run the kubeseal binary and return its stdout, logging any failure."""
+    binary = settings.kubeseal_binary
     command = [binary, *arguments]
     LOGGER.debug("Running %s", command)
     try:
@@ -48,24 +60,20 @@ def _run_kubeseal(arguments: list[str], purpose: str) -> str:
 
 
 def fetch_sealed_secrets_cert() -> None:
-    if mock:
+    if settings.mock_enabled:
         LOGGER.info("Mock mode is enabled, not fetching a certificate.")
         return
-    if autofetch == "false":
+    if not settings.kubeseal_autofetch:
         LOGGER.info(
             "Certificate auto-fetch is disabled, using certificate at '%s'.",
-            kubeseal_cert,
+            settings.kubeseal_cert,
         )
         return
 
     # Named without "secret": these identify the controller and are not
     # sensitive, but static analysis flags any "*secret*" variable in a log call.
-    controller_namespace = environ.get(
-        "KUBESEAL_CONTROLLER_NAMESPACE", "sealed-secrets"
-    )
-    controller_name = environ.get(
-        "KUBESEAL_CONTROLLER_NAME", "sealed-secrets-controller"
-    )
+    controller_namespace = settings.kubeseal_controller_namespace
+    controller_name = settings.kubeseal_controller_name
 
     LOGGER.info(
         "Fetch certificate from sealed secrets controller '%s' in namespace '%s'",
@@ -83,13 +91,13 @@ def fetch_sealed_secrets_cert() -> None:
         f"fetch the certificate from controller '{controller_name}' "
         f"in namespace '{controller_namespace}'",
     )
-    with open(kubeseal_cert, "w") as file:
-        LOGGER.info("Saving certificate in '%s'", kubeseal_cert)
-        file.write(output)
+    LOGGER.info("Saving certificate in '%s'", settings.kubeseal_cert)
+    Path(settings.kubeseal_cert).write_text(output)
 
 
-def get_kubeseal_version() -> str:
-    """Retrieve the kubeseal binary version."""
+@functools.cache
+def _detect_kubeseal_version(binary: str) -> str:
+    """Ask the binary for its version. Successful results are cached."""
     LOGGER.debug("Retrieving kubeseal binary version.")
     output = _run_kubeseal(["--version"], "determine the kubeseal version")
 
@@ -107,6 +115,12 @@ def get_kubeseal_version() -> str:
     return version
 
 
-settings = AppSettings(
-    kubeseal_version=get_kubeseal_version(),
-)
+def get_kubeseal_version() -> str:
+    """Return the kubeseal version; the binary is run at most once.
+
+    Mock mode never runs the binary. Called during application start-up, so
+    an unusable binary stops a real deployment before it serves any request.
+    """
+    if settings.mock_enabled:
+        return MOCK_KUBESEAL_VERSION
+    return _detect_kubeseal_version(settings.kubeseal_binary)
