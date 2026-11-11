@@ -27,7 +27,7 @@
         elevation="1"
         variant="outlined"
       >
-        <v-form>
+        <v-form autocomplete="off">
           <SecretFormInputs
             v-model:namespace-name="namespaceName"
             v-model:secret-name="secretName"
@@ -82,6 +82,7 @@
                       item-title="name"
                       return-object
                       label="Select SealedSecret"
+                      autocomplete="off"
                       variant="outlined"
                       density="compact"
                       color="primary"
@@ -117,11 +118,11 @@
               </v-btn>
               <transition name="fade">
                 <div
-                  v-if="!isEncryptButtonEnabled && !hasErrorMessage"
+                  v-if="notReadyToEncode && !hasErrorMessage"
                   class="text-caption text-medium-emphasis text-center mt-3 d-flex align-center justify-center"
                 >
                   <v-icon size="small" class="mr-1">mdi-information-outline</v-icon>
-                  Please complete all fields to encrypt
+                  Please complete all required fields to encrypt
                 </div>
               </transition>
             </v-col>
@@ -238,7 +239,8 @@ const loadingSealedSecrets = ref(false);
 const confirmOverwriteDialog = ref(false);
 const pendingNewSealedSecret = ref(null);
 const secretNameError = computed(() => {
-  if (!secretName.value) return "Secret name is required.";
+  // The name is only sealed into the secret for the strict scope.
+  if (scope.value === "strict" && !secretName.value) return "Secret name is required.";
   return "";
 });
 
@@ -335,8 +337,10 @@ function validDnsSubdomain(name) {
   if (!name) {
     return;
   }
-  var re = /^[a-z0-9]([a-z0-9._-]{0,251}[a-z0-9])?$/;
-  return re.test(name);
+  // RFC 1123 subdomain: dot-separated labels of lower case alphanumerics
+  // and '-', each starting and ending with an alphanumeric, 253 chars total.
+  var re = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/;
+  return name.length <= 253 && re.test(name);
 }
 
 // Kubernetes namespaces must be DNS labels (RFC 1123), unlike secret names
@@ -355,7 +359,7 @@ const rules = {
       "Must consist of lower case alphanumerics or '-', and start and end with an alphanumeric",
   ],
   validDnsSubdomain: [
-    (value) => value.length < 253 || "Longer than 253 chars",
+    (value) => !value || value.length <= 253 || "Longer than 253 chars",
     (value) => !!value || "Must not be empty",
     (value) =>
       (!!value && /^[a-z0-9-.]*$/.test(value)) ||
@@ -367,6 +371,14 @@ const rules = {
       (!!value && /[a-z0-9]$/.test(value)) ||
       "Must end with a lower char or digit",
     (value) => validDnsSubdomain(value) || "Not a valid DNS subdomain",
+  ],
+  // Outside the strict scope the secret name is not sealed into the secret.
+  // It may stay empty, but a given name still has to be a valid one.
+  optionalDnsSubdomain: [
+    (value) => !value || value.length <= 253 || "Longer than 253 chars",
+    (value) =>
+      !value || validDnsSubdomain(value) ||
+      "Must consist of lower case alphanumerics, '-' or '.', and start and end with an alphanumeric",
   ],
   validSecretKey: [
     (value) => !!value || "Must not be empty",
@@ -406,10 +418,17 @@ const blockingError = computed(() =>
   !(newNamespace.value && errorSource.value === "namespaces")
 )
 
+// A secret name is optional outside the strict scope, but a name that is not
+// a valid DNS subdomain would end up as broken YAML in the result.
+const invalidSecretName = computed(() =>
+  !!secretName.value && !validDnsSubdomain(secretName.value)
+)
+
 const notReadyToEncode = computed(() =>
   blockingError.value ||
   incompleteSecretData.value ||
   invalidNewNamespace.value ||
+  invalidSecretName.value ||
   (scope.value === "strict" && (namespaceName.value === "" || secretName.value === "")) ||
   (scope.value === "namespace-wide" && namespaceName.value === "")
 );
@@ -442,16 +461,6 @@ function setErrorMessage(newErrorMessage, source = "") {
   hasErrorMessage.value = !!newErrorMessage;
   showErrorSnackbar.value = !!newErrorMessage;
 }
-
-const isEncryptButtonEnabled = computed(() => {
-  return (
-    secretName.value &&
-    namespaceName.value &&
-    secrets.value.every(secret => secret.key && (
-      secret.value || secret.file instanceof Blob || secret.file instanceof File
-    ))
-  );
-});
 
 async function fetchNamespacesData(config) {
   try {

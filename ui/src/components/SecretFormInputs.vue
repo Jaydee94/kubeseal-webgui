@@ -3,7 +3,7 @@
     <v-row justify="end">
       <v-col
         cols="12"
-        md="2"
+        sm="6"
       >
         <v-select
           :model-value="scope"
@@ -38,6 +38,7 @@
           id="namespaceSelection"
           :model-value="namespaceName"
           label="New namespace name"
+          autocomplete="off"
           trim
           clearable
           variant="outlined"
@@ -63,6 +64,7 @@
           :model-value="namespaceName"
           :items="sortedNamespaces"
           label="Namespace name"
+          autocomplete="off"
           variant="outlined"
           class="modern-input"
           color="primary"
@@ -103,6 +105,7 @@
           label="Namespace does not exist yet"
           density="compact"
           color="primary"
+          class="mt-1"
           hide-details
           :disabled="['strict', 'namespace-wide'].indexOf(scope) === -1"
           @update:model-value="$emit('update:newNamespace', !!$event)"
@@ -116,23 +119,25 @@
         <v-text-field
           id="secretName"
           :model-value="secretName"
-          label="Secret name"
+          :label="secretNameRequired ? 'Secret name' : 'Secret name (optional)'"
+          autocomplete="off"
           trim
           clearable
           variant="outlined"
           class="modern-input"
           color="primary"
-          :rules="rules.validDnsSubdomain"
+          :rules="secretNameRequired ? rules.validDnsSubdomain : rules.optionalDnsSubdomain"
           :error-messages="secretNameError"
-          :disabled="['strict'].indexOf(scope) === -1"
-          @update:model-value="$emit('update:secretName', $event)"
+          :hint="secretNameRequired ? '' : 'Not sealed in this scope, only used in the generated YAML.'"
+          persistent-hint
+          @update:model-value="$emit('update:secretName', $event ?? '')"
         >
           <template #append-inner>
             <v-tooltip location="bottom" max-width="300" open-on-click>
               <template #activator="{ props: activatorProps }">
                 <v-icon v-bind="activatorProps" icon="mdi-information-outline" size="small" color="medium-emphasis" class="ml-2" />
               </template>
-              <span>Specify name of the secret.<br><i>The secret name must be of type: DNS Subdomain</i></span>
+              <span>Specify name of the secret.<br><i>The secret name must be of type: DNS Subdomain.</i><template v-if="!secretNameRequired"><br><i>Only the "strict" scope binds the sealed secret to this name.</i></template></span>
             </v-tooltip>
           </template>
         </v-text-field>
@@ -191,6 +196,9 @@ const sortedNamespaces = computed(() => {
   const others = props.namespaces.filter(ns => !props.favoriteNamespaces.has(ns))
   return [...favorites, ...others]
 })
+
+// Only the strict scope seals the secret for one specific name.
+const secretNameRequired = computed(() => props.scope === 'strict')
 
 const lastFavoriteNamespace = computed(() => {
   const favorites = props.namespaces.filter(ns => props.favoriteNamespaces.has(ns))
