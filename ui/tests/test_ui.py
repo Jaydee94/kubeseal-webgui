@@ -99,6 +99,82 @@ def test_footer_reports_an_unreachable_api(page: Page):
     expect(page.locator(".v-footer .v-chip")).to_have_count(0)
 
 
+# Makes the made-up namespace list of the dev server the same on every load.
+SEEDED_RANDOM = """
+    let seed = 42;
+    Math.random = () => {
+        seed = (seed * 1664525 + 1013904223) % 4294967296;
+        return seed / 4294967296;
+    };
+"""
+
+
+def open_namespace_list(page: Page) -> list[str]:
+    page.click("input#namespaceSelection")
+    page.wait_for_selector(".v-list-item-title")
+    return page.locator(".v-list-item-title").all_inner_texts()
+
+
+def namespace_item(page: Page, name: str):
+    return page.locator(".v-overlay .v-list-item", has_text=name)
+
+
+def favorite_toggle(page: Page, name: str):
+    return namespace_item(page, name).locator(".v-list-item__prepend").get_by_role("button")
+
+
+def favorite_names(page: Page) -> list[str]:
+    return page.locator(
+        ".v-overlay .v-list-item:has(.mdi-heart) .v-list-item-title"
+    ).all_inner_texts()
+
+
+def test_favorite_namespaces_are_listed_first_and_remembered(page: Page):
+    page.add_init_script(SEEDED_RANDOM)
+    page.goto("/")
+    page.wait_for_selector("input#namespaceSelection")
+    names = open_namespace_list(page)
+    assert names == sorted(names) and len(names) >= 5
+    assert favorite_names(page) == []
+    expect(page.locator(".v-overlay .v-divider")).to_have_count(0)
+
+    # marking a namespace moves it to the top, above a divider
+    favorite_toggle(page, names[3]).click()
+    expect(page.locator(".v-list-item-title").first).to_have_text(names[3])
+    assert favorite_names(page) == [names[3]]
+    expect(page.locator(".v-overlay .v-divider")).to_have_count(1)
+    # toggling a favorite does not select the namespace
+    expect(page.locator("input#namespaceSelection")).to_have_value("")
+
+    favorite_toggle(page, names[1]).click()
+    expect(page.locator(".v-list-item-title").nth(1)).to_have_text(names[3])
+    assert page.locator(".v-list-item-title").all_inner_texts() == [
+        names[1],
+        names[3],
+        names[0],
+        names[2],
+        *names[4:],
+    ]
+    assert favorite_names(page) == [names[1], names[3]]
+    expect(page.locator(".v-overlay .v-divider")).to_have_count(1)
+    assert json.loads(page.evaluate("localStorage.favoriteNamespaces")) == [
+        names[3],
+        names[1],
+    ]
+
+    # favorites are kept across page loads
+    page.reload()
+    page.wait_for_selector("input#namespaceSelection")
+    assert open_namespace_list(page)[:2] == [names[1], names[3]]
+    assert favorite_names(page) == [names[1], names[3]]
+
+    # and can be removed again
+    favorite_toggle(page, names[1]).click()
+    expect(page.locator(".v-list-item-title").first).to_have_text(names[3])
+    assert favorite_names(page) == [names[3]]
+    assert page.locator(".v-list-item-title").all_inner_texts()[1:3] == names[0:2]
+
+
 def test_ui_start(app_page: Page):
     assert app_page.title() == "Kubeseal WebGui - Sealed Secrets Management"
 

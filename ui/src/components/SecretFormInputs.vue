@@ -77,20 +77,21 @@
           :disabled="!namespaceNeeded"
           @update:model-value="$emit('update:namespaceName', $event)"
         >
+          <!-- `item` is the namespace name (Vuetify 4 passes the raw item). -->
           <template #item="{ props: itemProps, item }">
             <v-list-item v-bind="itemProps" :value="item" class="transition-fast">
               <template #prepend>
                 <v-icon
                   color="warning"
                   class="transition-fast"
-                  @click.stop="$emit('toggle-favorite', item.value)"
+                  @click.stop="$emit('toggle-favorite', item)"
                 >
-                  {{ favoriteNamespaces.has(item.value) ? 'mdi-heart' : 'mdi-heart-outline' }}
+                  {{ favoriteNamespaces.has(item) ? 'mdi-heart' : 'mdi-heart-outline' }}
                 </v-icon>
               </template>
             </v-list-item>
             <v-divider
-              v-if="item.value === lastFavoriteNamespace"
+              v-if="item === lastFavoriteNamespace"
               :thickness="2"
               class="my-2"
             ></v-divider>
