@@ -93,8 +93,8 @@ grants `list` on `namespaces` and `get`/`list` on
 | `containerSecurityContext` | Container-level `securityContext`, applied identically to both the `api` and `ui` containers. | `enabled: true`, `allowPrivilegeEscalation: false`, `readOnlyRootFilesystem: true`, `capabilities.drop: [ALL]` |
 
 Both images run as a fixed, non-root numeric UID baked into the image
-itself (the API's distroless base defaults to uid 65532; the UI's
-`nginx-unprivileged` base defaults to uid 101), so there is no need to set
+itself (both Chainguard base images default to the nonroot uid 65532), so
+there is no need to set
 `securityContext.runAsUser` — the chart's default `securityContext` is
 compatible with both images out of the box.
 
@@ -127,9 +127,9 @@ These are read directly by the API process and can be set via
 
 ## UI configuration
 
-The UI is a static SPA. At container startup, an entrypoint hook renders
-`api.url` into a `config.json` file served alongside the bundled HTML, so the
-browser knows where to find the API.
+The UI is a static SPA. The chart renders `api.url` into a `config.json`
+ConfigMap that is mounted next to the bundled HTML, so the browser knows
+where to find the API.
 
 You only need to set one value:
 

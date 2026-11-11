@@ -8,7 +8,7 @@ If you only want to install the released images on a real cluster, see
 
 ## Prerequisites
 
-- [Python 3.11 or newer](https://www.python.org/) (the API supports `>=3.11,<4.0`; the shipped container image runs 3.11 to match the distroless base's bundled interpreter).
+- [Python 3.11 or newer](https://www.python.org/) (the API supports `>=3.11,<4.0`; the shipped container image runs the Python version of the digest-pinned `cgr.dev/chainguard/python` image, currently 3.15).
 - [Poetry](https://python-poetry.org/) for managing the API's Python
   dependencies.
 - [Node.js](https://nodejs.org/) — version `^20.19.0` or `>=22.12.0`

@@ -17,8 +17,6 @@ JSON-log-formatter = ">=1.1.1"
 uvicorn = ">=0.47.0"
 pydantic = ">=2.13.4"
 pydantic-settings = ">=2.14.1"
-playwright = ">=1.59.0"
-pytest-playwright = ">=0.7.2"
 starlette = ">=1.0.0"
 
 [tool.poetry.group.dev.dependencies]
@@ -31,6 +29,8 @@ mypy = ">=2.1.0"
 pyupgrade = ">=3.21.2"
 httpx = ">=0.28.1"
 ruff = ">=0.15.13"
+playwright = ">=1.59.0"
+pytest-playwright = ">=0.7.2"
 
 [build-system]
 requires = ["poetry-core"]

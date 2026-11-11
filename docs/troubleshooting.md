@@ -62,8 +62,8 @@ kubectl describe pod -n <namespace> -l app=kubeseal-webgui
 Look for:
 
 - The API container failing to fetch the certificate (see above).
-- The UI container failing to render `config.json` (check the entrypoint
-  hook logs for `api.url` being unset).
+- The UI container not serving the expected `config.json` (check that the
+  chart's ConfigMap contains the right `api.url`).
 
 ## OpenShift Route TLS mismatch
 

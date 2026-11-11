@@ -612,7 +612,7 @@ version = "0.4.6"
 description = "Cross-platform colored terminal text."
 optional = false
 python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,>=2.7"
-groups = ["main", "dev"]
+groups = ["dev"]
 markers = "sys_platform == \"win32\""
 files = [
     {file = "colorama-0.4.6-py2.py3-none-any.whl", hash = "sha256:4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6"},
@@ -933,7 +933,7 @@ version = "3.5.6"
 description = "Lightweight in-process concurrent programming"
 optional = false
 python-versions = ">=3.10"
-groups = ["main"]
+groups = ["dev"]
 files = [
     {file = "greenlet-3.5.6-cp310-cp310-macosx_11_0_universal2.whl", hash = "sha256:95e7c44d072db623a1aab04ce488cf9533294a77ed9d072cd503a3596f4106ac"},
     {file = "greenlet-3.5.6-cp310-cp310-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:b7d501d5eb5d4f67207df364752ad697465b834268744be7581c18d81d35d41d"},
@@ -1100,7 +1100,7 @@ version = "2.3.1"
 description = "brain-dead simple config-ini parsing"
 optional = false
 python-versions = ">=3.10"
-groups = ["main", "dev"]
+groups = ["dev"]
 files = [
     {file = "iniconfig-2.3.1-py3-none-any.whl", hash = "sha256:9121e2c1fdb355232495be3194c8dfe87ccc2d5dee45947b78e68f499790d7a7"},
     {file = "iniconfig-2.3.1.tar.gz", hash = "sha256:67f4b9c50da0dedf52af349e7749a80a9057a5031199791b906c3bb3ae878960"},
@@ -1818,7 +1818,7 @@ version = "26.3"
 description = "Core utilities for Python packages"
 optional = false
 python-versions = ">=3.9"
-groups = ["main", "dev"]
+groups = ["dev"]
 files = [
     {file = "packaging-26.3-py3-none-any.whl", hash = "sha256:d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c"},
     {file = "packaging-26.3.tar.gz", hash = "sha256:94edc256424af38762eb31306eed28beb9f0efc50a8837492c9d6fd6004aed79"},
@@ -1859,7 +1859,7 @@ version = "1.65.0"
 description = "A high-level API to automate web browsers"
 optional = false
 python-versions = ">=3.10"
-groups = ["main"]
+groups = ["dev"]
 files = [
     {file = "playwright-1.65.0-py3-none-macosx_10_13_x86_64.whl", hash = "sha256:78d2bd6127463552ddd890516e5eb4cc805559af474aa5ccf5b62e907972ce16"},
     {file = "playwright-1.65.0-py3-none-macosx_11_0_arm64.whl", hash = "sha256:229d6b184de3da7bf292cc38a63ee82aefb5c9f0a4233b1142f3ffb1cbd410ec"},
@@ -1881,7 +1881,7 @@ version = "1.7.0"
 description = "plugin and hook calling mechanisms for python"
 optional = false
 python-versions = ">=3.10"
-groups = ["main", "dev"]
+groups = ["dev"]
 files = [
     {file = "pluggy-1.7.0-py3-none-any.whl", hash = "sha256:7dd7b0d8832ba3cb632c306926ded123429211b83641b35dc5c41ad2d34f9bec"},
     {file = "pluggy-1.7.0.tar.gz", hash = "sha256:d1eaa46ebb595891b860ab086b4d09c8588af65ebd4361b8e8f4bb8920b90ba8"},
@@ -2259,7 +2259,7 @@ version = "2.21.0"
 description = "Pygments is a syntax highlighting package written in Python."
 optional = false
 python-versions = ">=3.9"
-groups = ["main", "dev"]
+groups = ["dev"]
 files = [
     {file = "pygments-2.21.0-py3-none-any.whl", hash = "sha256:2363c69b61c4a97c838da3b130dcd6468f4848992b21a82f2a63ec34377137d9"},
     {file = "pygments-2.21.0.tar.gz", hash = "sha256:610ca751c9bc2492b38eb9a38a7fbc93edbbb2d7182edaf34e66ae493dee5c8c"},
@@ -2274,7 +2274,7 @@ version = "9.2.0"
 description = "pytest: simple powerful testing with Python"
 optional = false
 python-versions = ">=3.10"
-groups = ["main", "dev"]
+groups = ["dev"]
 files = [
     {file = "pytest-9.2.0-py3-none-any.whl", hash = "sha256:07acdcf88ec174f907dc01af70bf52d49b014bbab03faeeade31c96b18c2e588"},
     {file = "pytest-9.2.0.tar.gz", hash = "sha256:97c4f3b1f3c7414aa36465e09b8220f1d03627993bd51b1282e193753c80557b"},
@@ -2316,7 +2316,7 @@ version = "0.10.0"
 description = "A pytest wrapper with fixtures for Playwright to automate web browsers"
 optional = false
 python-versions = ">=3.10"
-groups = ["main"]
+groups = ["dev"]
 files = [
     {file = "pytest_playwright-0.10.0-py3-none-any.whl", hash = "sha256:8314d1af726e2c15531635902ece3ee47ed83f5a75c937a7eda8686d3dae6c0d"},
     {file = "pytest_playwright-0.10.0.tar.gz", hash = "sha256:47baf574dfb120bb53675d05c9784f8bf94e04c6dd7477dc56159ce732191952"},
@@ -2366,7 +2366,7 @@ version = "9.1.3"
 description = "A Python slugify application that also handles Unicode"
 optional = false
 python-versions = ">=3.10"
-groups = ["main"]
+groups = ["dev"]
 files = [
     {file = "python_slugify-9.1.3-py3-none-any.whl", hash = "sha256:9aced0670e54c5603e2335c0fa9a4011ad4bc41ecb3c46e8097294c46fd60ed4"},
     {file = "python_slugify-9.1.3.tar.gz", hash = "sha256:90e997f2e0987239ce95e12f700086eb18e1d1d3ee22624fbbdbd095afca42b6"},
@@ -2638,7 +2638,7 @@ version = "1.3"
 description = "The most basic Text::Unidecode port"
 optional = false
 python-versions = "*"
-groups = ["main"]
+groups = ["dev"]
 files = [
     {file = "text-unidecode-1.3.tar.gz", hash = "sha256:bad6603bb14d279193107714b288be206cac565dfa49aa5b105294dd5c4aab93"},
     {file = "text_unidecode-1.3-py2.py3-none-any.whl", hash = "sha256:1311f10e8b895935241623731c2ba64f4c455287888b18189350b67134a822e8"},
@@ -2905,4 +2905,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<4.0"
-content-hash = "0ad66a6684c006440e28e939b11186e8dd3325b7e3fe863a6d530785d90f8a53"
+content-hash = "fb4789e7b8d8b6863ab0d5e441b32d3f5463166d1053b334aa3eae81482d848d"
