@@ -1,15 +1,24 @@
 <template>
   <div>
     <v-divider class="my-6" />
-    
+
     <div class="d-flex justify-space-between align-center mb-3">
       <div class="d-flex align-center">
         <v-card-subtitle class="text-subtitle-2 px-0 mr-2">Secret Key-Value Pairs</v-card-subtitle>
         <v-tooltip location="bottom" max-width="300" open-on-click>
           <template #activator="{ props }">
-            <v-icon v-bind="props" icon="mdi-information-outline" size="small" color="medium-emphasis" />
+            <v-icon
+              v-bind="props"
+              icon="mdi-information-outline"
+              size="small"
+              color="medium-emphasis"
+            />
           </template>
-          <span>Specify sensitive value and corresponding key of the secret.<br><i>The key must be of type: DNS Subdomain</i></span>
+          <span
+            >Specify sensitive value and corresponding key of the secret.<br /><i
+              >The key must be of type: DNS Subdomain</i
+            ></span
+          >
         </v-tooltip>
       </div>
       <div class="d-flex align-center">
@@ -47,7 +56,7 @@
         <v-btn
           block
           variant="outlined"
-          style="border-style: dashed; border-width: 2px; opacity: 0.8;"
+          style="border-style: dashed; border-width: 2px; opacity: 0.8"
           prepend-icon="mdi-plus"
           color="primary"
           class="mb-4"
@@ -86,7 +95,13 @@ defineProps({
   }
 })
 
-const emit = defineEmits(['update:secrets', 'add-secret', 'remove-secret', 'remove-all', 'file-change'])
+const emit = defineEmits([
+  'update:secrets',
+  'add-secret',
+  'remove-secret',
+  'remove-all',
+  'file-change'
+])
 
 function updateSecret(index, field, value) {
   emit('update:secrets', { index, field, value })

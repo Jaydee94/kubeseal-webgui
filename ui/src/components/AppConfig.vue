@@ -1,15 +1,12 @@
 <template>
   <v-footer class="flex-column">
     <div class="px-1 py-1">
-      <small
-        v-if="fetchConfigsSuccessful"
-        class="text-muted"
-      >
-        <v-chip 
+      <small v-if="fetchConfigsSuccessful" class="text-muted">
+        <v-chip
           v-for="(value, key) in configs"
           :key="key"
-          variant="flat" 
-          size="small" 
+          variant="flat"
+          size="small"
           class="modern-chip ma-1"
           color="primary"
         >
@@ -18,17 +15,11 @@
           </span>
         </v-chip>
       </small>
-      <small
-        v-else-if="fetchConfigsSuccessful === false"
-        class="text-muted error-message"
-      >
+      <small v-else-if="fetchConfigsSuccessful === false" class="text-muted error-message">
         <v-icon small class="mr-1">mdi-alert-circle</v-icon>
         Could not retrieve application properties.
       </small>
-      <small
-        v-else
-        class="text-muted loading-message"
-      >
+      <small v-else class="text-muted loading-message">
         <v-icon small class="mr-1 rotating">mdi-loading</v-icon>
         Loading application properties.
       </small>
@@ -44,7 +35,7 @@ import { createLogger } from '@/utils/logger'
 const log = createLogger('AppConfig')
 
 const configs = ref({})
-const errorMessage = ref("")
+const errorMessage = ref('')
 const fetchConfigsSuccessful = ref(null)
 const { fetchAppConfig } = useConfig()
 
@@ -52,15 +43,15 @@ onMounted(async () => fetchConfigs())
 
 async function fetchConfigs() {
   try {
-    const result = await fetchAppConfig();
-    configs.value = result.configs;
-    fetchConfigsSuccessful.value = result.success;
+    const result = await fetchAppConfig()
+    configs.value = result.configs
+    fetchConfigsSuccessful.value = result.success
   } catch (error) {
-    log.error('Could not retrieve application properties:', error);
-    errorMessage.value = error.message || String(error);
-    fetchConfigsSuccessful.value = false;
+    log.error('Could not retrieve application properties:', error)
+    errorMessage.value = error.message || String(error)
+    fetchConfigsSuccessful.value = false
   }
-};
+}
 </script>
 
 <style scoped>

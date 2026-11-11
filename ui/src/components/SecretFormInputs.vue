@@ -1,10 +1,7 @@
 <template>
   <div>
     <v-row justify="end">
-      <v-col
-        cols="12"
-        sm="6"
-      >
+      <v-col cols="12" sm="6">
         <v-select
           :model-value="scope"
           :items="scopes"
@@ -19,20 +16,22 @@
           <template #append-inner>
             <v-tooltip location="bottom" max-width="300" open-on-click>
               <template #activator="{ props: activatorProps }">
-                <v-icon v-bind="activatorProps" icon="mdi-information-outline" size="small" color="medium-emphasis" class="ml-2" />
+                <v-icon
+                  v-bind="activatorProps"
+                  icon="mdi-information-outline"
+                  size="small"
+                  color="medium-emphasis"
+                  class="ml-2"
+                />
               </template>
-              <span>Specify scope of the secret.<br><i>Scopes for sealed secrets</i></span>
+              <span>Specify scope of the secret.<br /><i>Scopes for sealed secrets</i></span>
             </v-tooltip>
           </template>
         </v-select>
       </v-col>
     </v-row>
     <v-row>
-      <v-col
-        cols="12"
-        sm="6"
-        md="6"
-      >
+      <v-col cols="12" sm="6" md="6">
         <v-text-field
           v-if="newNamespace"
           id="namespaceSelection"
@@ -52,9 +51,19 @@
           <template #append-inner>
             <v-tooltip location="bottom" max-width="300" open-on-click>
               <template #activator="{ props: activatorProps }">
-                <v-icon v-bind="activatorProps" icon="mdi-information-outline" size="small" color="medium-emphasis" class="ml-2" />
+                <v-icon
+                  v-bind="activatorProps"
+                  icon="mdi-information-outline"
+                  size="small"
+                  color="medium-emphasis"
+                  class="ml-2"
+                />
               </template>
-              <span>Name of a namespace that does not exist yet.<br><i>The secret is sealed for exactly this name, so double-check it for typos.</i></span>
+              <span
+                >Name of a namespace that does not exist yet.<br /><i
+                  >The secret is sealed for exactly this name, so double-check it for typos.</i
+                ></span
+              >
             </v-tooltip>
           </template>
         </v-text-field>
@@ -72,11 +81,7 @@
           @update:model-value="$emit('update:namespaceName', $event)"
         >
           <template #item="{ props: itemProps, item }">
-            <v-list-item
-              v-bind="itemProps"
-              :value="item"
-              class="transition-fast"
-            >
+            <v-list-item v-bind="itemProps" :value="item" class="transition-fast">
               <template #prepend>
                 <v-icon
                   small
@@ -88,12 +93,22 @@
                 </v-icon>
               </template>
             </v-list-item>
-            <v-divider v-if="item.value === lastFavoriteNamespace" :thickness="2" class="my-2"></v-divider>
+            <v-divider
+              v-if="item.value === lastFavoriteNamespace"
+              :thickness="2"
+              class="my-2"
+            ></v-divider>
           </template>
           <template #append-inner>
             <v-tooltip location="bottom" max-width="300" open-on-click>
               <template #activator="{ props: activatorProps }">
-                <v-icon v-bind="activatorProps" icon="mdi-information-outline" size="small" color="medium-emphasis" class="ml-2" />
+                <v-icon
+                  v-bind="activatorProps"
+                  icon="mdi-information-outline"
+                  size="small"
+                  color="medium-emphasis"
+                  class="ml-2"
+                />
               </template>
               Select the target namespace where the sealed secret will be deployed.
             </v-tooltip>
@@ -111,11 +126,7 @@
           @update:model-value="$emit('update:newNamespace', !!$event)"
         />
       </v-col>
-      <v-col
-        cols="12"
-        sm="6"
-        md="6"
-      >
+      <v-col cols="12" sm="6" md="6">
         <v-text-field
           id="secretName"
           :model-value="secretName"
@@ -128,16 +139,32 @@
           color="primary"
           :rules="secretNameRequired ? rules.validDnsSubdomain : rules.optionalDnsSubdomain"
           :error-messages="secretNameError"
-          :hint="secretNameRequired ? '' : 'Not sealed in this scope, only used in the generated YAML.'"
+          :hint="
+            secretNameRequired ? '' : 'Not sealed in this scope, only used in the generated YAML.'
+          "
           persistent-hint
           @update:model-value="$emit('update:secretName', $event ?? '')"
         >
           <template #append-inner>
             <v-tooltip location="bottom" max-width="300" open-on-click>
               <template #activator="{ props: activatorProps }">
-                <v-icon v-bind="activatorProps" icon="mdi-information-outline" size="small" color="medium-emphasis" class="ml-2" />
+                <v-icon
+                  v-bind="activatorProps"
+                  icon="mdi-information-outline"
+                  size="small"
+                  color="medium-emphasis"
+                  class="ml-2"
+                />
               </template>
-              <span>Specify name of the secret.<br><i>The secret name must be of type: DNS Subdomain.</i><template v-if="!secretNameRequired"><br><i>Only the "strict" scope binds the sealed secret to this name.</i></template></span>
+              <span
+                >Specify name of the secret.<br /><i
+                  >The secret name must be of type: DNS Subdomain.</i
+                ><template v-if="!secretNameRequired"
+                  ><br /><i
+                    >Only the "strict" scope binds the sealed secret to this name.</i
+                  ></template
+                ></span
+              >
             </v-tooltip>
           </template>
         </v-text-field>
@@ -188,12 +215,18 @@ const props = defineProps({
   }
 })
 
-defineEmits(['update:namespaceName', 'update:secretName', 'update:scope', 'update:newNamespace', 'toggle-favorite'])
+defineEmits([
+  'update:namespaceName',
+  'update:secretName',
+  'update:scope',
+  'update:newNamespace',
+  'toggle-favorite'
+])
 
 // Sort namespaces with favorites first
 const sortedNamespaces = computed(() => {
-  const favorites = props.namespaces.filter(ns => props.favoriteNamespaces.has(ns))
-  const others = props.namespaces.filter(ns => !props.favoriteNamespaces.has(ns))
+  const favorites = props.namespaces.filter((ns) => props.favoriteNamespaces.has(ns))
+  const others = props.namespaces.filter((ns) => !props.favoriteNamespaces.has(ns))
   return [...favorites, ...others]
 })
 
@@ -201,7 +234,7 @@ const sortedNamespaces = computed(() => {
 const secretNameRequired = computed(() => props.scope === 'strict')
 
 const lastFavoriteNamespace = computed(() => {
-  const favorites = props.namespaces.filter(ns => props.favoriteNamespaces.has(ns))
+  const favorites = props.namespaces.filter((ns) => props.favoriteNamespaces.has(ns))
   return favorites.length > 0 ? favorites[favorites.length - 1] : null
 })
 </script>

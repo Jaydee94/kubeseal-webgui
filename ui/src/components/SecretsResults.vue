@@ -14,18 +14,8 @@
         />
       </v-col>
     </v-row>
-    <v-row
-      dense
-      align-content="center"
-      class="mt-4"
-    >
-      <v-col
-        v-for="(secret, counter) in sealedSecrets"
-        :key="counter"
-        cols="12"
-        sm="6"
-        md="4"
-      >
+    <v-row dense align-content="center" class="mt-4">
+      <v-col v-for="(secret, counter) in sealedSecrets" :key="counter" cols="12" sm="6" md="4">
         <SecretKeyCard
           :secret-key="secret['key']"
           :secret-value="secret['value']"
@@ -35,30 +25,10 @@
         />
       </v-col>
     </v-row>
-    <v-row
-      justify="center"
-      class="mt-4"
-    >
-      <v-col
-        cols="12"
-        sm="6"
-        md="4"
-        class="d-flex justify-center ga-3"
-      >
-        <v-btn
-          variant="outlined"
-          color="primary"
-          @click="$emit('clear')"
-        >
-          Clear
-        </v-btn>
-        <v-btn
-          variant="outlined"
-          color="secondary"
-          @click="$emit('edit')"
-        >
-          Edit Secrets
-        </v-btn>
+    <v-row justify="center" class="mt-4">
+      <v-col cols="12" sm="6" md="4" class="d-flex justify-center ga-3">
+        <v-btn variant="outlined" color="primary" @click="$emit('clear')"> Clear </v-btn>
+        <v-btn variant="outlined" color="secondary" @click="$emit('edit')"> Edit Secrets </v-btn>
       </v-col>
     </v-row>
   </div>

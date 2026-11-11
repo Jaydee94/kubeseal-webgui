@@ -1,9 +1,5 @@
 <template>
-  <v-card
-    class="ma-1 modern-card result-card"
-    elevation="1"
-    variant="outlined"
-  >
+  <v-card class="ma-1 modern-card result-card" elevation="1" variant="outlined">
     <v-card-title class="d-flex align-center justify-space-between px-4 py-3">
       <div class="d-flex align-center">
         <v-icon class="mr-2" color="success" size="small">mdi-check-circle</v-icon>
@@ -35,7 +31,9 @@ spec:
         @click="$emit('copy')"
       >
         <v-icon>{{ isCopied ? 'mdi-check' : 'mdi-content-copy' }}</v-icon>
-        <v-tooltip activator="parent" location="bottom">{{ isCopied ? 'Copied!' : 'Copy to clipboard' }}</v-tooltip>
+        <v-tooltip activator="parent" location="bottom">{{
+          isCopied ? 'Copied!' : 'Copy to clipboard'
+        }}</v-tooltip>
       </v-btn>
     </template>
   </v-card>

@@ -1,9 +1,6 @@
 <template>
   <v-row>
-    <v-col
-      cols="12"
-      md="4"
-    >
+    <v-col cols="12" md="4">
       <v-textarea
         id="secretKey"
         :model-value="secret.key"
@@ -19,11 +16,7 @@
         @click:prepend="$emit('remove')"
       />
     </v-col>
-    <v-col
-      cols="12"
-      :sm="hasValue ? 11 : hasFile ? 1 : 6"
-      :md="hasValue ? 7 : hasFile ? 1 : 4"
-    >
+    <v-col cols="12" :sm="hasValue ? 11 : hasFile ? 1 : 6" :md="hasValue ? 7 : hasFile ? 1 : 4">
       <v-textarea
         id="secretValue"
         :model-value="secret.value"
@@ -38,11 +31,7 @@
         @update:model-value="$emit('update:value', $event)"
       />
     </v-col>
-    <v-col
-      cols="12"
-      :sm="hasFile ? 11 : hasValue ? 1 : 6"
-      :md="hasFile ? 7 : hasValue ? 1 : 4"
-    >
+    <v-col cols="12" :sm="hasFile ? 11 : hasValue ? 1 : 6" :md="hasFile ? 7 : hasValue ? 1 : 4">
       <v-file-input
         id="fileInput"
         :model-value="secret.file"

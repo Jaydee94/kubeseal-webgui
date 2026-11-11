@@ -10,16 +10,8 @@
 
     <!-- Form and Results Section -->
     <transition name="fade" mode="out-in">
-      <div
-        v-if="loading"
-        class="d-flex justify-center align-center"
-        style="min-height: 400px;"
-      >
-        <v-progress-circular
-          indeterminate
-          color="primary"
-          size="64"
-        ></v-progress-circular>
+      <div v-if="loading" class="d-flex justify-center align-center" style="min-height: 400px">
+        <v-progress-circular indeterminate color="primary" size="64"></v-progress-circular>
       </div>
       <v-card
         v-else-if="displayCreateSealedSecretForm"
@@ -53,7 +45,10 @@
             @remove-all="removeAllSecrets"
             @file-change="validateFile"
           >
-            <template v-if="sealedSecretImportFeatureEnabled && namespaceName && !newNamespace" #header-actions>
+            <template
+              v-if="sealedSecretImportFeatureEnabled && namespaceName && !newNamespace"
+              #header-actions
+            >
               <v-menu
                 v-model="importMenuOpen"
                 :close-on-content-click="false"
@@ -98,12 +93,7 @@
           </SecretsList>
 
           <v-row justify="center">
-            <v-col
-              cols="12"
-              sm="8"
-              md="6"
-              class="d-flex flex-column align-center"
-            >
+            <v-col cols="12" sm="8" md="6" class="d-flex flex-column align-center">
               <v-btn
                 size="large"
                 prepend-icon="mdi-lock"
@@ -130,8 +120,6 @@
         </v-form>
       </v-card>
 
-
-
       <SecretsResults
         v-else
         ref="secretsResultsRef"
@@ -146,7 +134,7 @@
         @copy-main="copyRenderedSecrets"
         @copy-individual="copySealedSecret"
         @clear="resetForm"
-        @edit="displayCreateSealedSecretForm=true"
+        @edit="displayCreateSealedSecretForm = true"
       />
     </transition>
 
@@ -166,21 +154,11 @@
     </v-dialog>
 
     <!-- Snackbars -->
-    <v-snackbar
-      v-model="showErrorSnackbar"
-      color="red"
-      timeout="5000"
-      top
-    >
+    <v-snackbar v-model="showErrorSnackbar" color="red" timeout="5000" top>
       <v-icon left>mdi-alert-circle</v-icon>
       {{ errorMessage }}
     </v-snackbar>
-    <v-snackbar
-      v-model="clipboardSnackbar"
-      color="green"
-      timeout="3000"
-      top
-    >
+    <v-snackbar v-model="clipboardSnackbar" color="green" timeout="3000" top>
       <v-icon left>mdi-check-circle</v-icon>
       {{ clipboardMessage }}
     </v-snackbar>
@@ -208,71 +186,70 @@ const {
   fetchEncodedSecrets: fetchEncodedSecretsApi
 } = useSecrets()
 
-
 const config = ref({})
 const namespaces = ref([])
-const scopes = ref(["strict", "cluster-wide", "namespace-wide"])
-const errorMessage = ref("")
+const scopes = ref(['strict', 'cluster-wide', 'namespace-wide'])
+const errorMessage = ref('')
 const hasErrorMessage = ref(false)
-const errorSource = ref("")
-const displayName = ref("")
+const errorSource = ref('')
+const displayName = ref('')
 const displayCreateSealedSecretForm = ref(true)
 const loading = ref(false)
-const secretName = ref("")
-const namespaceName = ref("")
-const scope = ref("strict")
+const secretName = ref('')
+const namespaceName = ref('')
+const scope = ref('strict')
 const newNamespace = ref(false)
-const secrets = ref([{ key: "", value: "", file: [] }])
+const secrets = ref([{ key: '', value: '', file: [] }])
 const sealedSecrets = ref([])
 const secretsResultsRef = ref()
 const clipboardAvailable = ref(false)
-const favoriteNamespaces = ref(readFavoriteNamespaces());
-const showErrorSnackbar = ref(false);
-const clipboardSnackbar = ref(false);
-const clipboardMessage = ref("");
-const isCopiedMain = ref(false);
-const copiedIndividual = ref({});
-const fileErrors = ref([]);
-const sealedSecretImportFeatureEnabled = ref(false);
-const importMenuOpen = ref(false);
-const availableSealedSecrets = ref([]);
-const selectedSealedSecret = ref(null);
-const loadingSealedSecrets = ref(false);
-const confirmOverwriteDialog = ref(false);
-const pendingNewSealedSecret = ref(null);
+const favoriteNamespaces = ref(readFavoriteNamespaces())
+const showErrorSnackbar = ref(false)
+const clipboardSnackbar = ref(false)
+const clipboardMessage = ref('')
+const isCopiedMain = ref(false)
+const copiedIndividual = ref({})
+const fileErrors = ref([])
+const sealedSecretImportFeatureEnabled = ref(false)
+const importMenuOpen = ref(false)
+const availableSealedSecrets = ref([])
+const selectedSealedSecret = ref(null)
+const loadingSealedSecrets = ref(false)
+const confirmOverwriteDialog = ref(false)
+const pendingNewSealedSecret = ref(null)
 const secretNameError = computed(() => {
   // The name is only sealed into the secret for the strict scope.
-  if (scope.value === "strict" && !secretName.value) return "Secret name is required.";
-  return "";
-});
+  if (scope.value === 'strict' && !secretName.value) return 'Secret name is required.'
+  return ''
+})
 
 const resetForm = () => {
-  displayCreateSealedSecretForm.value = true;
-  secretName.value = "";
-  namespaceName.value = "";
-  newNamespace.value = false;
-  scope.value = "strict";
-  secrets.value = [{ key: "", value: "", file: [] }];
-  sealedSecrets.value = [];
-  resetSealedSecretImport();
-  hasErrorMessage.value = false;
-  errorSource.value = "";
-  errorMessage.value = "";
-};
+  displayCreateSealedSecretForm.value = true
+  secretName.value = ''
+  namespaceName.value = ''
+  newNamespace.value = false
+  scope.value = 'strict'
+  secrets.value = [{ key: '', value: '', file: [] }]
+  sealedSecrets.value = []
+  resetSealedSecretImport()
+  hasErrorMessage.value = false
+  errorSource.value = ''
+  errorMessage.value = ''
+}
 
 onBeforeMount(async () => {
   try {
-    config.value = await fetchConfig();
+    config.value = await fetchConfig()
   } catch (error) {
-    log.error("Failed to load the UI configuration (config.json):", error);
-    setErrorMessage(`Failed to load the UI configuration. Error Message: ${error.message}.`);
-    return;
+    log.error('Failed to load the UI configuration (config.json):', error)
+    setErrorMessage(`Failed to load the UI configuration. Error Message: ${error.message}.`)
+    return
   }
   sealedSecretImportFeatureEnabled.value = isEnabled(
     config.value.enable_existing_sealed_secret_loading
-  );
-  await fetchNamespacesData(config.value);
-  await fetchDisplayName(config.value);
+  )
+  await fetchNamespacesData(config.value)
+  await fetchDisplayName(config.value)
 })
 
 onMounted(() => {
@@ -281,15 +258,15 @@ onMounted(() => {
   // execCommand fallback can be used. The latter ensures the copy buttons
   // remain visible when the app is served over plain HTTP, where
   // navigator.clipboard is undefined.
-  clipboardAvailable.value = isClipboardSupported();
-  setErrorMessage("");
+  clipboardAvailable.value = isClipboardSupported()
+  setErrorMessage('')
 })
 
 function isClipboardSupported() {
   if (navigator && navigator.clipboard) {
-    return true;
+    return true
   }
-  return typeof document !== "undefined" && typeof document.execCommand === "function";
+  return typeof document !== 'undefined' && typeof document.execCommand === 'function'
 }
 
 async function copyToClipboard(text) {
@@ -297,10 +274,10 @@ async function copyToClipboard(text) {
   // secure context.
   if (navigator && navigator.clipboard && window.isSecureContext) {
     try {
-      await navigator.clipboard.writeText(text);
-      return true;
+      await navigator.clipboard.writeText(text)
+      return true
     } catch (error) {
-      log.warn("Clipboard API failed, falling back to execCommand:", error);
+      log.warn('Clipboard API failed, falling back to execCommand:', error)
       // Fall through to the legacy fallback below.
     }
   }
@@ -308,394 +285,381 @@ async function copyToClipboard(text) {
   // Fallback for non-secure contexts (e.g. served over plain HTTP) where
   // navigator.clipboard is unavailable.
   try {
-    const textarea = document.createElement("textarea");
-    textarea.value = text;
-    textarea.setAttribute("readonly", "");
-    textarea.style.position = "fixed";
-    textarea.style.top = "-9999px";
-    textarea.style.left = "-9999px";
-    document.body.appendChild(textarea);
-    textarea.select();
-    const successful = document.execCommand("copy");
-    document.body.removeChild(textarea);
+    const textarea = document.createElement('textarea')
+    textarea.value = text
+    textarea.setAttribute('readonly', '')
+    textarea.style.position = 'fixed'
+    textarea.style.top = '-9999px'
+    textarea.style.left = '-9999px'
+    document.body.appendChild(textarea)
+    textarea.select()
+    const successful = document.execCommand('copy')
+    document.body.removeChild(textarea)
     if (!successful) {
-      log.warn("Copying to the clipboard via execCommand was rejected.");
+      log.warn('Copying to the clipboard via execCommand was rejected.')
     }
-    return successful;
+    return successful
   } catch (error) {
-    log.error("Copying to the clipboard failed:", error);
-    return false;
+    log.error('Copying to the clipboard failed:', error)
+    return false
   }
 }
 
 function readFavoriteNamespaces() {
   try {
     if (localStorage.favoriteNamespaces === undefined) {
-      return new Set([]);
+      return new Set([])
     }
-    return new Set(JSON.parse(localStorage.favoriteNamespaces));
+    return new Set(JSON.parse(localStorage.favoriteNamespaces))
   } catch (error) {
-    log.warn("Ignoring unreadable favorite namespaces in localStorage:", error);
-    return new Set([]);
+    log.warn('Ignoring unreadable favorite namespaces in localStorage:', error)
+    return new Set([])
   }
 }
 
 function isEnabled(value) {
-  if (typeof value === "boolean") {
-    return value;
+  if (typeof value === 'boolean') {
+    return value
   }
-  if (typeof value === "string") {
-    return ["true", "1", "yes", "on"].includes(value.toLowerCase());
+  if (typeof value === 'string') {
+    return ['true', '1', 'yes', 'on'].includes(value.toLowerCase())
   }
-  return false;
+  return false
 }
 
 function validDnsSubdomain(name) {
   if (!name) {
-    return;
+    return
   }
   // RFC 1123 subdomain: dot-separated labels of lower case alphanumerics
   // and '-', each starting and ending with an alphanumeric, 253 chars total.
-  var re = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/;
-  return name.length <= 253 && re.test(name);
+  var re = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/
+  return name.length <= 253 && re.test(name)
 }
 
 // Kubernetes namespaces must be DNS labels (RFC 1123), unlike secret names
 // which may be DNS subdomains.
 function validDnsLabel(name) {
-  return /^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$/.test(name);
+  return /^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$/.test(name)
 }
 
 const rules = {
   validNamespace: [
-    (value) => !!value || "Must not be empty",
+    (value) => !!value || 'Must not be empty',
+    (value) => !value || value.length <= 63 || 'Longer than 63 chars',
     (value) =>
-      !value || value.length <= 63 || "Longer than 63 chars",
-    (value) =>
-      !value || validDnsLabel(value) ||
-      "Must consist of lower case alphanumerics or '-', and start and end with an alphanumeric",
+      !value ||
+      validDnsLabel(value) ||
+      "Must consist of lower case alphanumerics or '-', and start and end with an alphanumeric"
   ],
   validDnsSubdomain: [
-    (value) => !value || value.length <= 253 || "Longer than 253 chars",
-    (value) => !!value || "Must not be empty",
+    (value) => !value || value.length <= 253 || 'Longer than 253 chars',
+    (value) => !!value || 'Must not be empty',
     (value) =>
       (!!value && /^[a-z0-9-.]*$/.test(value)) ||
-      "Invalid char. Must be one of lower chars, digits, dashes or dots.",
-    (value) =>
-      (!!value && /^[a-z0-9]/.test(value)) ||
-      "Must start with a lower char or digit",
-    (value) =>
-      (!!value && /[a-z0-9]$/.test(value)) ||
-      "Must end with a lower char or digit",
-    (value) => validDnsSubdomain(value) || "Not a valid DNS subdomain",
+      'Invalid char. Must be one of lower chars, digits, dashes or dots.',
+    (value) => (!!value && /^[a-z0-9]/.test(value)) || 'Must start with a lower char or digit',
+    (value) => (!!value && /[a-z0-9]$/.test(value)) || 'Must end with a lower char or digit',
+    (value) => validDnsSubdomain(value) || 'Not a valid DNS subdomain'
   ],
   // Outside the strict scope the secret name is not sealed into the secret.
   // It may stay empty, but a given name still has to be a valid one.
   optionalDnsSubdomain: [
-    (value) => !value || value.length <= 253 || "Longer than 253 chars",
+    (value) => !value || value.length <= 253 || 'Longer than 253 chars',
     (value) =>
-      !value || validDnsSubdomain(value) ||
-      "Must consist of lower case alphanumerics, '-' or '.', and start and end with an alphanumeric",
+      !value ||
+      validDnsSubdomain(value) ||
+      "Must consist of lower case alphanumerics, '-' or '.', and start and end with an alphanumeric"
   ],
   validSecretKey: [
-    (value) => !!value || "Must not be empty",
+    (value) => !!value || 'Must not be empty',
     (value) =>
       (!!value && /^[a-z0-9_.-]*$/i.test(value)) ||
-      "Invalid char. Must be one of lower chars, digits, dash, underscore or dot.",
+      'Invalid char. Must be one of lower chars, digits, dash, underscore or dot.'
   ],
   fileSize: [
     (files) =>
-      !files ||
-      !files.some((file) => file.size > 1048576) ||
-      "File size should be less than 1 MB!",
+      !files || !files.some((file) => file.size > 1048576) || 'File size should be less than 1 MB!'
   ]
 }
 
 const incompleteSecretData = computed(() =>
-  secrets.value
-    .some((e) =>
-      e.key === "" ||
-      (
-        e.value === "" &&
-        !(e.file instanceof Blob || e.file instanceof File)
-      )
+  secrets.value.some(
+    (e) => e.key === '' || (e.value === '' && !(e.file instanceof Blob || e.file instanceof File))
   )
 )
 
-const invalidNewNamespace = computed(() =>
-  newNamespace.value &&
-  ["strict", "namespace-wide"].includes(scope.value) &&
-  !validDnsLabel(namespaceName.value)
+const invalidNewNamespace = computed(
+  () =>
+    newNamespace.value &&
+    ['strict', 'namespace-wide'].includes(scope.value) &&
+    !validDnsLabel(namespaceName.value)
 )
 
 // Failing to list the cluster's namespaces only affects the dropdown, so it
 // must not block sealing for a manually entered namespace.
-const blockingError = computed(() =>
-  hasErrorMessage.value &&
-  !(newNamespace.value && errorSource.value === "namespaces")
+const blockingError = computed(
+  () => hasErrorMessage.value && !(newNamespace.value && errorSource.value === 'namespaces')
 )
 
 // A secret name is optional outside the strict scope, but a name that is not
 // a valid DNS subdomain would end up as broken YAML in the result.
-const invalidSecretName = computed(() =>
-  !!secretName.value && !validDnsSubdomain(secretName.value)
-)
+const invalidSecretName = computed(() => !!secretName.value && !validDnsSubdomain(secretName.value))
 
-const notReadyToEncode = computed(() =>
-  blockingError.value ||
-  incompleteSecretData.value ||
-  invalidNewNamespace.value ||
-  invalidSecretName.value ||
-  (scope.value === "strict" && (namespaceName.value === "" || secretName.value === "")) ||
-  (scope.value === "namespace-wide" && namespaceName.value === "")
-);
+const notReadyToEncode = computed(
+  () =>
+    blockingError.value ||
+    incompleteSecretData.value ||
+    invalidNewNamespace.value ||
+    invalidSecretName.value ||
+    (scope.value === 'strict' && (namespaceName.value === '' || secretName.value === '')) ||
+    (scope.value === 'namespace-wide' && namespaceName.value === '')
+)
 
 const hasFile = computed(() =>
-  secrets.value.map((e) => e.file instanceof Blob || e.file instanceof File))
-const hasValue = computed(() =>
-  secrets.value.map((e) => e.value !== "")
+  secrets.value.map((e) => e.file instanceof Blob || e.file instanceof File)
 )
-const renderedSecrets = computed(() =>
-  renderSecrets(sealedSecrets.value)
-)
+const hasValue = computed(() => secrets.value.map((e) => e.value !== ''))
+const renderedSecrets = computed(() => renderSecrets(sealedSecrets.value))
 const sealedSecretsAnnotations = computed(() => {
-  if (scope.value === "strict") {
-    return '{}';
+  if (scope.value === 'strict') {
+    return '{}'
   }
-  return `{ sealedsecrets.bitnami.com/${scope.value}: "true" }`;
+  return `{ sealedsecrets.bitnami.com/${scope.value}: "true" }`
 })
-
-
 
 // Helper method to update individual secret fields from child components
 function updateSecret({ index, field, value }) {
-  secrets.value[index][field] = value;
+  secrets.value[index][field] = value
 }
 
-function setErrorMessage(newErrorMessage, source = "") {
-  errorMessage.value = newErrorMessage;
-  errorSource.value = newErrorMessage ? source : "";
-  hasErrorMessage.value = !!newErrorMessage;
-  showErrorSnackbar.value = !!newErrorMessage;
+function setErrorMessage(newErrorMessage, source = '') {
+  errorMessage.value = newErrorMessage
+  errorSource.value = newErrorMessage ? source : ''
+  hasErrorMessage.value = !!newErrorMessage
+  showErrorSnackbar.value = !!newErrorMessage
 }
 
 async function fetchNamespacesData(config) {
   try {
-    namespaces.value = await fetchNamespaces(config);
+    namespaces.value = await fetchNamespaces(config)
   } catch (error) {
-    log.error("Failed to fetch namespaces:", error);
-    setErrorMessage(`Failed to fetch namespaces. Error Message: ${error.message}.`, "namespaces");
+    log.error('Failed to fetch namespaces:', error)
+    setErrorMessage(`Failed to fetch namespaces. Error Message: ${error.message}.`, 'namespaces')
   }
 }
-
-
 
 function toggleFavorite(namespace) {
   if (favoriteNamespaces.value.has(namespace)) {
-    favoriteNamespaces.value.delete(namespace);
+    favoriteNamespaces.value.delete(namespace)
   } else {
-    favoriteNamespaces.value.add(namespace);
+    favoriteNamespaces.value.add(namespace)
   }
-  localStorage.favoriteNamespaces = JSON.stringify([...favoriteNamespaces.value]);
+  localStorage.favoriteNamespaces = JSON.stringify([...favoriteNamespaces.value])
 }
 
 async function fetchDisplayName(config) {
-  displayName.value = config.display_name;
+  displayName.value = config.display_name
 }
 
 async function fetchEncodedSecrets() {
   try {
-    loading.value = true;
+    loading.value = true
     sealedSecrets.value = await fetchEncodedSecretsApi(await getConfig(), {
       secretName: secretName.value,
       namespaceName: namespaceName.value,
       scope: scope.value,
       secrets: secrets.value
-    });
+    })
     // Add a small delay to make the transition noticeable and smooth
-    await new Promise(resolve => setTimeout(resolve, 600));
-    displayCreateSealedSecretForm.value = false;
-    setErrorMessage("");
+    await new Promise((resolve) => setTimeout(resolve, 600))
+    displayCreateSealedSecretForm.value = false
+    setErrorMessage('')
   } catch (error) {
     // Only the error is logged -- never the submitted secrets.
-    log.error(`Failed to seal secret "${secretName.value}" in namespace "${namespaceName.value}":`, error);
-    setErrorMessage(`Failed to seal secrets. Error Message: ${error.message || error}.`);
+    log.error(
+      `Failed to seal secret "${secretName.value}" in namespace "${namespaceName.value}":`,
+      error
+    )
+    setErrorMessage(`Failed to seal secrets. Error Message: ${error.message || error}.`)
   } finally {
-    loading.value = false;
+    loading.value = false
   }
 }
 
 const renderSecrets = (sealedSecrets) => {
-  const dataEntries = sealedSecrets.map((element) =>
-    `    ${element["key"]}: ${element["value"]}`
-  );
-  return "\n" + dataEntries.join("\n");
+  const dataEntries = sealedSecrets.map((element) => `    ${element['key']}: ${element['value']}`)
+  return '\n' + dataEntries.join('\n')
 }
 
 async function copyRenderedSecrets() {
   // Access the nested ref through the SecretsResults component
-  const sealedSecretElement = secretsResultsRef.value?.sealedSecretCardRef?.$refs?.sealedSecretRef;
+  const sealedSecretElement = secretsResultsRef.value?.sealedSecretCardRef?.$refs?.sealedSecretRef
   if (!sealedSecretElement) {
-    log.error("Could not access sealed secret element");
-    return;
+    log.error('Could not access sealed secret element')
+    return
   }
-  const sealedSecretContent = sealedSecretElement.innerText.trim();
-  const copied = await copyToClipboard(sealedSecretContent);
+  const sealedSecretContent = sealedSecretElement.innerText.trim()
+  const copied = await copyToClipboard(sealedSecretContent)
   if (!copied) {
-    setErrorMessage("Failed to copy sealed secret to clipboard.");
-    return;
+    setErrorMessage('Failed to copy sealed secret to clipboard.')
+    return
   }
-  clipboardMessage.value = "Sealed secret copied to clipboard!";
-  clipboardSnackbar.value = true;
-  isCopiedMain.value = true;
+  clipboardMessage.value = 'Sealed secret copied to clipboard!'
+  clipboardSnackbar.value = true
+  isCopiedMain.value = true
   setTimeout(() => {
-    isCopiedMain.value = false;
-  }, 2000);
+    isCopiedMain.value = false
+  }, 2000)
 }
 
 async function copySealedSecret(counter) {
-  const copied = await copyToClipboard(sealedSecrets.value[counter].value);
+  const copied = await copyToClipboard(sealedSecrets.value[counter].value)
   if (!copied) {
-    setErrorMessage("Failed to copy secret value to clipboard.");
-    return;
+    setErrorMessage('Failed to copy secret value to clipboard.')
+    return
   }
-  clipboardMessage.value = `Secret key "${sealedSecrets.value[counter].key}" copied to clipboard!`;
-  clipboardSnackbar.value = true;
-  copiedIndividual.value[counter] = true;
+  clipboardMessage.value = `Secret key "${sealedSecrets.value[counter].key}" copied to clipboard!`
+  clipboardSnackbar.value = true
+  copiedIndividual.value[counter] = true
   setTimeout(() => {
-    copiedIndividual.value[counter] = false;
-  }, 2000);
+    copiedIndividual.value[counter] = false
+  }, 2000)
 }
 
 function removeSecret(counter) {
   if (secrets.value.length > 1) {
-    secrets.value.splice(counter, 1);
+    secrets.value.splice(counter, 1)
   } else {
-    secrets.value[0] = { key: "", value: "", file: [] }
+    secrets.value[0] = { key: '', value: '', file: [] }
   }
 }
 
 function removeAllSecrets() {
-  secrets.value = [{ key: "", value: "", file: [] }];
+  secrets.value = [{ key: '', value: '', file: [] }]
 }
 
 function resetSealedSecretImport() {
-  importMenuOpen.value = false;
-  availableSealedSecrets.value = [];
-  selectedSealedSecret.value = null;
+  importMenuOpen.value = false
+  availableSealedSecrets.value = []
+  selectedSealedSecret.value = null
 }
 
 async function loadSealedSecretsForNamespace() {
   if (!namespaceName.value || !sealedSecretImportFeatureEnabled.value) {
-    availableSealedSecrets.value = [];
-    selectedSealedSecret.value = null;
-    return;
+    availableSealedSecrets.value = []
+    selectedSealedSecret.value = null
+    return
   }
 
   try {
-    loadingSealedSecrets.value = true;
-    availableSealedSecrets.value = await fetchSealedSecrets(await getConfig(), namespaceName.value);
+    loadingSealedSecrets.value = true
+    availableSealedSecrets.value = await fetchSealedSecrets(await getConfig(), namespaceName.value)
   } catch (error) {
-    log.error(`Failed to fetch existing SealedSecrets in namespace "${namespaceName.value}":`, error);
-    setErrorMessage(`Failed to fetch existing SealedSecrets. Error Message: ${error.message}.`);
-    availableSealedSecrets.value = [];
-    selectedSealedSecret.value = null;
+    log.error(
+      `Failed to fetch existing SealedSecrets in namespace "${namespaceName.value}":`,
+      error
+    )
+    setErrorMessage(`Failed to fetch existing SealedSecrets. Error Message: ${error.message}.`)
+    availableSealedSecrets.value = []
+    selectedSealedSecret.value = null
   } finally {
-    loadingSealedSecrets.value = false;
+    loadingSealedSecrets.value = false
   }
 }
 
 // A value picked from the cluster list is not valid as free text and vice
 // versa, so start from an empty field whenever the mode changes.
 watch(newNamespace, () => {
-  namespaceName.value = "";
-});
+  namespaceName.value = ''
+})
 
 // The namespace is irrelevant for cluster-wide secrets.
 watch(scope, (newScope) => {
-  if (!["strict", "namespace-wide"].includes(newScope)) {
-    newNamespace.value = false;
+  if (!['strict', 'namespace-wide'].includes(newScope)) {
+    newNamespace.value = false
   }
-});
+})
 
 watch(namespaceName, () => {
-  confirmOverwriteDialog.value = false;
-  pendingNewSealedSecret.value = null;
-  availableSealedSecrets.value = [];
-  selectedSealedSecret.value = null;
-  importMenuOpen.value = false;
-});
+  confirmOverwriteDialog.value = false
+  pendingNewSealedSecret.value = null
+  availableSealedSecrets.value = []
+  selectedSealedSecret.value = null
+  importMenuOpen.value = false
+})
 
 async function onImportMenuOpen() {
   if (!availableSealedSecrets.value.length) {
-    await loadSealedSecretsForNamespace();
+    await loadSealedSecretsForNamespace()
   }
 }
 
 watch(selectedSealedSecret, (newSealedSecret) => {
   if (!newSealedSecret || !Array.isArray(newSealedSecret.keys)) {
-    return;
+    return
   }
   if (hasUserEnteredSecretData()) {
-    pendingNewSealedSecret.value = newSealedSecret;
-    confirmOverwriteDialog.value = true;
-    return;
+    pendingNewSealedSecret.value = newSealedSecret
+    confirmOverwriteDialog.value = true
+    return
   }
-  applySelectedSealedSecret(newSealedSecret);
-});
+  applySelectedSealedSecret(newSealedSecret)
+})
 
 function applySelectedSealedSecret(sealedSecret) {
-  const secretEntries = sealedSecret.keys.map((key) => ({ key, value: "", file: [] }));
-  secrets.value = secretEntries.length > 0 ? secretEntries : [{ key: "", value: "", file: [] }];
-  fileErrors.value = [];
+  const secretEntries = sealedSecret.keys.map((key) => ({ key, value: '', file: [] }))
+  secrets.value = secretEntries.length > 0 ? secretEntries : [{ key: '', value: '', file: [] }]
+  fileErrors.value = []
 }
 
 function confirmOverwrite() {
-  confirmOverwriteDialog.value = false;
+  confirmOverwriteDialog.value = false
   if (pendingNewSealedSecret.value) {
-    applySelectedSealedSecret(pendingNewSealedSecret.value);
-    pendingNewSealedSecret.value = null;
+    applySelectedSealedSecret(pendingNewSealedSecret.value)
+    pendingNewSealedSecret.value = null
   }
 }
 
 function cancelOverwrite() {
-  confirmOverwriteDialog.value = false;
-  pendingNewSealedSecret.value = null;
-  selectedSealedSecret.value = null;
+  confirmOverwriteDialog.value = false
+  pendingNewSealedSecret.value = null
+  selectedSealedSecret.value = null
 }
 
 async function getConfig() {
   if (!Object.keys(config.value).length) {
-    config.value = await fetchConfig();
+    config.value = await fetchConfig()
   }
-  return config.value;
+  return config.value
 }
 
 function hasUserEnteredSecretData() {
-  return secrets.value.some((entry) =>
-    entry.key !== "" ||
-    entry.value !== "" ||
-    (Array.isArray(entry.file) && entry.file.length > 0) ||
-    entry.file instanceof Blob ||
-    entry.file instanceof File
-  );
+  return secrets.value.some(
+    (entry) =>
+      entry.key !== '' ||
+      entry.value !== '' ||
+      (Array.isArray(entry.file) && entry.file.length > 0) ||
+      entry.file instanceof Blob ||
+      entry.file instanceof File
+  )
 }
 
 function validateFile(file, counter) {
-  const fileSizeRule = rules.fileSize[0];
-  const isValid = fileSizeRule([file]) === true;
+  const fileSizeRule = rules.fileSize[0]
+  const isValid = fileSizeRule([file]) === true
 
   if (!isValid) {
-    setErrorMessage("File size should be less than 1 MB!");
-    secrets.value[counter].file = []; // Clear the invalid file
-    fileErrors.value[counter] = "File size should be less than 1 MB!";
+    setErrorMessage('File size should be less than 1 MB!')
+    secrets.value[counter].file = [] // Clear the invalid file
+    fileErrors.value[counter] = 'File size should be less than 1 MB!'
   } else {
-    setErrorMessage("");
-    fileErrors.value[counter] = "";
+    setErrorMessage('')
+    fileErrors.value[counter] = ''
   }
 
   // Ensure the `secrets` array is updated to reflect the cleared state
-  secrets.value = [...secrets.value];
+  secrets.value = [...secrets.value]
 }
 </script>
 

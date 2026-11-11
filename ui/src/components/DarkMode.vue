@@ -17,22 +17,22 @@
 
 <script setup>
 import { useTheme } from 'vuetify'
-import { ref } from 'vue';
+import { ref } from 'vue'
 
 function isDarkModeEnabled(theme) {
-  let result = false;
+  let result = false
 
   if (localStorage.useDarkTheme) {
     result = localStorage.useDarkTheme === 'true'
   } else {
-    let isSystemDarkModeSet = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    let isSystemDarkModeSet = window.matchMedia('(prefers-color-scheme: dark)').matches
 
     if (isSystemDarkModeSet) {
-      result = true;
+      result = true
     }
   }
   theme.global.name.value = result ? 'dark' : 'light'
-  return result;
+  return result
 }
 
 const theme = useTheme()

@@ -1,15 +1,13 @@
 <template>
-  <v-card
-    class="modern-card secret-key-card"
-    elevation="1"
-    variant="outlined"
-  >
+  <v-card class="modern-card secret-key-card" elevation="1" variant="outlined">
     <v-card-title class="d-flex align-center px-4 py-3">
       <v-icon size="small" class="mr-2" color="primary">mdi-key-variant</v-icon>
       <span class="text-subtitle-1 font-weight-medium">{{ secretKey }}</span>
     </v-card-title>
     <template #text>
-      <pre class="overflow-auto result-code"><code class="overflow-auto">{{ secretValue }}</code></pre>
+      <pre
+        class="overflow-auto result-code"
+      ><code class="overflow-auto">{{ secretValue }}</code></pre>
     </template>
     <template #actions>
       <v-btn
@@ -22,7 +20,9 @@
         @click="$emit('copy')"
       >
         <v-icon>{{ isCopied ? 'mdi-check' : 'mdi-content-copy' }}</v-icon>
-        <v-tooltip activator="parent" location="bottom">{{ isCopied ? 'Copied!' : 'Copy value' }}</v-tooltip>
+        <v-tooltip activator="parent" location="bottom">{{
+          isCopied ? 'Copied!' : 'Copy value'
+        }}</v-tooltip>
       </v-btn>
     </template>
   </v-card>

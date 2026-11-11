@@ -9,13 +9,13 @@
   --gradient-success: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
   --gradient-warm: linear-gradient(135deg, #fd7e14 0%, #ffc107 100%);
   --gradient-cool: linear-gradient(135deg, #007bff 0%, #17a2b8 100%);
-  
+
   /* Glassmorphism - Minimal */
   --glass-bg: rgba(255, 255, 255, 0.05);
   --glass-bg-strong: rgba(255, 255, 255, 0.08);
   --glass-border: rgba(255, 255, 255, 0.1);
   --glass-shadow: 0 2px 8px 0 rgba(31, 38, 135, 0.15);
-  
+
   /* Shadows - Minimal */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
   --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.08);
@@ -23,19 +23,19 @@
   --shadow-xl: 0 8px 16px rgba(0, 0, 0, 0.12);
   --shadow-glow-primary: 0 4px 12px rgba(0, 123, 255, 0.2);
   --shadow-glow-secondary: 0 4px 12px rgba(253, 126, 20, 0.2);
-  
+
   /* Transitions */
   --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-base: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-  
+
   /* Border Radius */
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
   --radius-xl: 24px;
   --radius-full: 9999px;
-  
+
   /* Spacing Scale */
   --spacing-xs: 4px;
   --spacing-sm: 8px;
@@ -43,14 +43,14 @@
   --spacing-lg: 24px;
   --spacing-xl: 32px;
   --spacing-2xl: 48px;
-  
+
   /* Typography Scale */
-  --font-size-xs: 0.75rem;    /* 12px */
-  --font-size-sm: 0.875rem;   /* 14px */
-  --font-size-base: 1rem;     /* 16px */
-  --font-size-lg: 1.125rem;   /* 18px */
-  --font-size-xl: 1.25rem;    /* 20px */
-  --font-size-2xl: 1.5rem;    /* 24px */
+  --font-size-xs: 0.75rem; /* 12px */
+  --font-size-sm: 0.875rem; /* 14px */
+  --font-size-base: 1rem; /* 16px */
+  --font-size-lg: 1.125rem; /* 18px */
+  --font-size-xl: 1.25rem; /* 20px */
+  --font-size-2xl: 1.5rem; /* 24px */
 }
 
 /* Dark Mode Overrides - Minimal */
@@ -144,7 +144,9 @@
 }
 
 .hover-lift {
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
 .hover-lift:hover {
@@ -170,7 +172,8 @@
 
 /* Pulse Animation */
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
     transform: scale(1);
   }
@@ -271,8 +274,6 @@
   transform: translateY(0);
   box-shadow: 0 2px 8px rgba(var(--v-theme-primary), 0.25) !important;
 }
-
-
 
 /* Gradient Border */
 .gradient-border {
