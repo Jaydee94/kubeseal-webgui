@@ -1,8 +1,8 @@
 import logging
 
-from kubernetes import client, config
+from kubernetes import client
 
-from kubeseal_webgui_api.routers.kubernetes_utils import fix_incluster_bearer_token
+from kubeseal_webgui_api.routers.kubernetes_utils import ensure_incluster_config
 from kubeseal_webgui_api.routers.models import ExistingSealedSecret
 
 LOGGER = logging.getLogger("kubeseal-webgui")
@@ -10,8 +10,7 @@ LOGGER = logging.getLogger("kubeseal-webgui")
 
 def kubernetes_sealed_secret_resolver(namespace: str) -> list[ExistingSealedSecret]:
     """Retrieve SealedSecrets and their keys for a namespace from the cluster."""
-    config.load_incluster_config()
-    fix_incluster_bearer_token()
+    ensure_incluster_config()
     custom_objects_api = client.CustomObjectsApi()
 
     LOGGER.debug("Resolving in-cluster SealedSecrets for namespace '%s'", namespace)
@@ -22,14 +21,19 @@ def kubernetes_sealed_secret_resolver(namespace: str) -> list[ExistingSealedSecr
         plural="sealedsecrets",
     )
 
-    resolved_sealed_secrets: list[ExistingSealedSecret] = []
-    items = sealed_secret_list.get("items", [])
+    items = (
+        sealed_secret_list.get("items", [])
+        if isinstance(sealed_secret_list, dict)
+        else None
+    )
     if not isinstance(items, list):
         LOGGER.warning(
             "Unexpected SealedSecrets response payload type for namespace '%s'",
             namespace,
         )
-        return resolved_sealed_secrets
+        return []
+
+    resolved_sealed_secrets: list[ExistingSealedSecret] = []
 
     skipped = 0
     for sealed_secret in items:

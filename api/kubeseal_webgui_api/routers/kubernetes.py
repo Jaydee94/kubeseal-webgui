@@ -19,12 +19,19 @@ from kubeseal_webgui_api.routers.kubernetes_sealed_secret_resolver import (
 router = fastapi.APIRouter()
 LOGGER = logging.getLogger("kubeseal-webgui")
 
-if settings.mock_enabled:
-    namespace_resolver = mock_namespaces_resolver
-    sealed_secret_resolver = mock_sealed_secret_resolver
-else:
-    namespace_resolver = kubernetes_namespaces_resolver
-    sealed_secret_resolver = kubernetes_sealed_secret_resolver
+
+def namespace_resolver() -> list[str]:
+    """List the namespaces of the cluster, or made-up ones in mock mode."""
+    if settings.mock_enabled:
+        return mock_namespaces_resolver()
+    return kubernetes_namespaces_resolver()
+
+
+def sealed_secret_resolver(namespace: str) -> list[ExistingSealedSecret]:
+    """List the SealedSecrets of a namespace, or made-up ones in mock mode."""
+    if settings.mock_enabled:
+        return mock_sealed_secret_resolver(namespace)
+    return kubernetes_sealed_secret_resolver(namespace)
 
 
 @router.get("/namespaces", response_model=List[str])

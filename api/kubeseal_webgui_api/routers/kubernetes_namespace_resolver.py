@@ -1,27 +1,27 @@
 import logging
 
-from kubernetes import client, config
+from kubernetes import client
 
-from kubeseal_webgui_api.routers.kubernetes_utils import fix_incluster_bearer_token
+from kubeseal_webgui_api.routers.kubernetes_utils import ensure_incluster_config
 
 LOGGER = logging.getLogger("kubeseal-webgui")
 
 
 def kubernetes_namespaces_resolver() -> list[str]:
     """Retrieve a list of namespaces from current kubernetes cluster."""
-    config.load_incluster_config()
-    fix_incluster_bearer_token()
-    namespaces_list = []
+    ensure_incluster_config()
 
     LOGGER.debug("Resolving in-cluster Namespaces")
-    v1 = client.CoreV1Api()
-    namespaces = v1.list_namespace()
-    if isinstance(namespaces, client.V1NamespaceList) and namespaces.items:
-        for ns in namespaces.items:
-            namespaces_list.append(ns.metadata.name)
-    else:
+    namespaces = client.CoreV1Api().list_namespace()
+    if not isinstance(namespaces, client.V1NamespaceList) or not namespaces.items:
         LOGGER.warning("No valid namespace list available via %s", namespaces)
+        return []
 
-    LOGGER.info("Resolved %d in-cluster Namespaces", len(namespaces_list))
-    LOGGER.debug("Namespaces list %s", namespaces_list)
-    return namespaces_list
+    names = [
+        namespace.metadata.name
+        for namespace in namespaces.items
+        if namespace.metadata is not None and namespace.metadata.name
+    ]
+    LOGGER.info("Resolved %d in-cluster Namespaces", len(names))
+    LOGGER.debug("Namespaces list %s", names)
+    return names
