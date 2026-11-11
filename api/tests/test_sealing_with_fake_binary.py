@@ -49,7 +49,7 @@ def fake_kubeseal(tmp_path: Path, monkeypatch):
     return install
 
 
-def post_secret(entry: dict, **overrides):
+def post_secret(entry: dict, **overrides: str):
     return client.post(
         "/secrets",
         json={
@@ -112,9 +112,7 @@ def test_kubeseal_is_called_with_cert_scope_namespace_and_name(fake_kubeseal):
         ("cluster-wide", ["--scope", "cluster-wide"]),
     ],
 )
-def test_wider_scopes_omit_name_and_namespace(
-    fake_kubeseal, scope, expected_arguments
-):
+def test_wider_scopes_omit_name_and_namespace(fake_kubeseal, scope, expected_arguments):
     work_dir = fake_kubeseal("echo AgSealed")
 
     response = post_secret(

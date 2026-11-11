@@ -1,6 +1,5 @@
 import itertools
 import random
-from typing import List
 
 from kubeseal_webgui_api.app_config import settings
 
@@ -76,7 +75,7 @@ nouns = [
 ]
 
 
-def mock_namespaces_resolver() -> List[str]:
+def mock_namespaces_resolver() -> list[str]:
     count = settings.mock_namespace_count
     return sorted(
         {

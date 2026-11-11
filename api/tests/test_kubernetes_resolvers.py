@@ -1,5 +1,6 @@
 import datetime
 import logging
+from collections.abc import Iterator
 from types import SimpleNamespace
 
 import pytest
@@ -25,7 +26,7 @@ http_client = TestClient(app)
 
 
 @pytest.fixture(autouse=True)
-def _reset_cluster_config(monkeypatch):
+def _reset_cluster_config(monkeypatch) -> Iterator[None]:
     monkeypatch.setattr(kubernetes_utils, "_config_loaded", False)
     saved_default = client.Configuration._default
     client.Configuration.set_default(None)
@@ -114,7 +115,7 @@ def test_rotated_service_account_token_is_picked_up_after_one_load(
         skew = datetime.timedelta(0)
 
         @classmethod
-        def now(cls, tz=None):
+        def now(cls, tz=None) -> datetime.datetime:
             return super().now(tz) + cls.skew
 
     monkeypatch.setattr(
@@ -173,9 +174,7 @@ def test_namespace_resolver_skips_namespaces_without_a_name(monkeypatch):
             items=[namespace("default"), client.V1Namespace(), namespace(None)]
         ),
     )
-    assert kubernetes_namespace_resolver.kubernetes_namespaces_resolver() == [
-        "default"
-    ]
+    assert kubernetes_namespace_resolver.kubernetes_namespaces_resolver() == ["default"]
 
 
 @pytest.mark.parametrize("response", [None, {}, client.V1NamespaceList(items=[])])
@@ -191,7 +190,7 @@ def test_namespace_resolver_warns_about_an_unusable_response(
 def patch_custom_objects_api(monkeypatch, response) -> list[dict]:
     requests: list[dict] = []
 
-    def list_namespaced_custom_object(**kwargs):
+    def list_namespaced_custom_object(**kwargs: str) -> object:
         requests.append(kwargs)
         return response
 
@@ -293,7 +292,9 @@ def test_without_mock_mode_the_cluster_is_asked(monkeypatch, original_resolvers)
     ]
 
 
-def test_outside_a_cluster_the_request_fails_with_a_500(monkeypatch, original_resolvers):
+def test_outside_a_cluster_the_request_fails_with_a_500(
+    monkeypatch, original_resolvers
+):
     monkeypatch.setattr(settings, "mock_enabled", False)
     monkeypatch.delenv("KUBERNETES_SERVICE_HOST", raising=False)
 

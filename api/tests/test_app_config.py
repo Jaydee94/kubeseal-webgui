@@ -1,6 +1,7 @@
 import os
 import subprocess
 import sys
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -29,7 +30,7 @@ def clean_env(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
-def _fresh_version_cache():
+def _fresh_version_cache() -> Iterator[None]:
     app_config._detect_kubeseal_version.cache_clear()
     yield
     app_config._detect_kubeseal_version.cache_clear()

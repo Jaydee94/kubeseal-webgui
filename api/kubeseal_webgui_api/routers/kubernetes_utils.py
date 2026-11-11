@@ -15,7 +15,7 @@ def ensure_incluster_config() -> None:
     `fix_incluster_bearer_token` only refreshes the token under the old key,
     so for such a client the configuration is loaded again on every call.
     """
-    global _config_loaded  # noqa: PLW0603 a process-wide "loaded" flag
+    global _config_loaded
     with _load_lock:
         if _config_loaded:
             return

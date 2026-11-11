@@ -2,9 +2,10 @@ import logging
 
 from kubernetes import client
 
+from kubeseal_webgui_api.logging_utils import LOGGER_NAME
 from kubeseal_webgui_api.routers.kubernetes_utils import ensure_incluster_config
 
-LOGGER = logging.getLogger("kubeseal-webgui")
+LOGGER = logging.getLogger(LOGGER_NAME)
 
 
 def kubernetes_namespaces_resolver() -> list[str]:

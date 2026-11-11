@@ -1,16 +1,17 @@
 import base64
 import logging
 import re
-import subprocess  # noqa: S404 the binary has to be configured by an admin
+import subprocess
 import time
 
 from fastapi import APIRouter, HTTPException
 
 from kubeseal_webgui_api.app_config import settings
+from kubeseal_webgui_api.logging_utils import LOGGER_NAME
 from kubeseal_webgui_api.routers.models import Data, KeyValuePair, Scope, Secret
 
 router = APIRouter()
-LOGGER = logging.getLogger("kubeseal-webgui")
+LOGGER = logging.getLogger(LOGGER_NAME)
 
 
 @router.post("/secrets", response_model=list[KeyValuePair])
@@ -134,7 +135,7 @@ def decode_cleartext(entry: Secret) -> bytes:
 def pipe_through_kubeseal(command: list[str], cleartext: bytes) -> str:
     """Pipe the cleartext through kubeseal and return the sealed value."""
     try:
-        completed = subprocess.run(  # noqa: S603 the command is built from checked input
+        completed = subprocess.run(  # noqa: S603 built from checked input
             command,
             input=cleartext,
             capture_output=True,

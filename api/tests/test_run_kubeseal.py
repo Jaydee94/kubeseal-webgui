@@ -198,8 +198,8 @@ def test_decode_base64_string(base64_input, expected_output):
     ("base64_input", "expected_output"),
     [
         ("YWJjZGVm", b"abcdef"),
-        ("w6TDtsO8", "äöü".encode("utf-8")),
-        ("LV8jIT8kwqc=", "-_#!?$§".encode("utf-8")),
+        ("w6TDtsO8", "äöü".encode()),
+        ("LV8jIT8kwqc=", "-_#!?$§".encode()),
     ],
 )
 def test_decode_base64_bytearray(base64_input, expected_output):
@@ -216,8 +216,12 @@ def test_decode_base64_bytearray(base64_input, expected_output):
 
 def test_build_kubeseal_command_needs_no_existing_namespace(monkeypatch):
     # given a namespace that does not exist in any cluster
-    monkeypatch.setattr("kubeseal_webgui_api.app_config.settings.kubeseal_binary", "kubeseal")
-    monkeypatch.setattr("kubeseal_webgui_api.app_config.settings.kubeseal_cert", "/cert.pem")
+    monkeypatch.setattr(
+        "kubeseal_webgui_api.app_config.settings.kubeseal_binary", "kubeseal"
+    )
+    monkeypatch.setattr(
+        "kubeseal_webgui_api.app_config.settings.kubeseal_cert", "/cert.pem"
+    )
     # when the kubeseal command is constructed
     # then it only uses the offline certificate and the given names
     cmd = build_kubeseal_command("not-created-yet", "my-secret", Scope.STRICT)

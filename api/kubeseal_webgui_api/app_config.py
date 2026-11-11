@@ -7,12 +7,14 @@ that needs it is requested.
 
 import functools
 import logging
-import subprocess  # noqa: S404 the binary has to be configured by an admin
+import subprocess
 from pathlib import Path
 
 from pydantic_settings import BaseSettings
 
-LOGGER = logging.getLogger("kubeseal-webgui")
+from kubeseal_webgui_api.logging_utils import LOGGER_NAME
+
+LOGGER = logging.getLogger(LOGGER_NAME)
 
 MOCK_KUBESEAL_VERSION = "0.1.0"
 

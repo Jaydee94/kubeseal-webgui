@@ -2,10 +2,11 @@ import logging
 
 from kubernetes import client
 
+from kubeseal_webgui_api.logging_utils import LOGGER_NAME
 from kubeseal_webgui_api.routers.kubernetes_utils import ensure_incluster_config
 from kubeseal_webgui_api.routers.models import ExistingSealedSecret
 
-LOGGER = logging.getLogger("kubeseal-webgui")
+LOGGER = logging.getLogger(LOGGER_NAME)
 
 
 def kubernetes_sealed_secret_resolver(namespace: str) -> list[ExistingSealedSecret]:

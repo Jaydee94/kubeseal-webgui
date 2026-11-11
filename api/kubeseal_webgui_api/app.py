@@ -1,5 +1,5 @@
-from contextlib import asynccontextmanager
 import logging
+from contextlib import asynccontextmanager
 
 import fastapi
 from fastapi.exception_handlers import request_validation_exception_handler
@@ -8,10 +8,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from .app_config import fetch_sealed_secrets_cert, get_kubeseal_version, settings
-from .logging_utils import REQUEST_ID_HEADER, RequestIdMiddleware
+from .logging_utils import LOGGER_NAME, REQUEST_ID_HEADER, RequestIdMiddleware
 from .routers import config, kubernetes, kubeseal
 
-LOGGER = logging.getLogger("kubeseal-webgui")
+LOGGER = logging.getLogger(LOGGER_NAME)
 
 
 @asynccontextmanager
