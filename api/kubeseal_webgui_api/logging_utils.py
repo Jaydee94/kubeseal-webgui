@@ -61,7 +61,11 @@ class RequestIdMiddleware:
         await self.app(scope, receive, send_with_request_id)
 
 
-class RequestIdFilter(logging.Filter):
+# The two filters below are flagged by the "configuring loggers is security
+# sensitive" audit rule. Reviewed: they only add a field to a record or drop
+# probe lines, and are wired up from the static logging config, never from
+# request data.
+class RequestIdFilter(logging.Filter):  # skipcq: PY-A6006
     """Expose the current request id to formatters as ``%(request_id)s``."""
 
     def filter(self, record: logging.LogRecord) -> bool:
@@ -69,7 +73,7 @@ class RequestIdFilter(logging.Filter):
         return True
 
 
-class HealthCheckAccessFilter(logging.Filter):
+class HealthCheckAccessFilter(logging.Filter):  # skipcq: PY-A6006
     """Drop access-log records of successful ``GET /`` health probes.
 
     The kubelet probes the API every few seconds; those lines carry no

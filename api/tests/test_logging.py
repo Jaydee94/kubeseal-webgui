@@ -109,7 +109,8 @@ def test_logging_config_is_loadable():
     config = yaml.safe_load(config_file.read_text())
     saved = logging.getLogger().handlers[:], logging.getLogger().level
     try:
-        logging.config.dictConfig(config)
+        # Loading the shipped config is the point of this test.
+        logging.config.dictConfig(config)  # skipcq: PY-A6006
     finally:
         root = logging.getLogger()
         for handler in root.handlers[:]:

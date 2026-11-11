@@ -59,7 +59,8 @@ def loggable_reason(error: Exception) -> str:
     """Describe a rejected request without quoting any part of a secret value."""
     # Encoding errors name the offending byte or character of the value.
     if isinstance(error, UnicodeError):
-        return f"a secret value is not valid base64-encoded UTF-8 ({type(error).__name__})"
+        error_type = type(error).__name__
+        return f"a secret value is not valid base64-encoded UTF-8 ({error_type})"
     # Validation messages can quote client input; escape line breaks and other
     # control characters so it cannot forge additional log lines.
     return str(error).encode("unicode_escape").decode("ascii")
