@@ -5,3 +5,7 @@
 !api/config
 !api/kubeseal_webgui_api
 !ui/*
+# Never send host build output into the image build: a host (e.g. macOS)
+# node_modules would overwrite the one installed inside the build stage.
+ui/node_modules
+ui/dist
