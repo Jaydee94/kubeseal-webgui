@@ -112,14 +112,10 @@
 
       <SecretsResults
         v-else
-        ref="secretsResultsRef"
         :sealed-secrets="sealedSecrets"
         :manifest="sealedSecretYaml"
-        :clipboard-available="clipboardAvailable"
-        :copied-individual="copiedIndividual"
-        :is-copied-main="isCopiedMain"
-        @copy-main="copyRenderedSecrets"
-        @copy-individual="copySealedSecret"
+        @copied="showClipboardMessage"
+        @copy-failed="setErrorMessage"
         @clear="resetForm"
         @edit="displayCreateSealedSecretForm = true"
       />
@@ -163,7 +159,6 @@ import { useSealedSecretImport } from '@/composables/useSealedSecretImport'
 import { useSecrets } from '@/composables/useSecrets'
 import {
   CLIPBOARD_SNACKBAR_TIMEOUT_MS,
-  COPIED_FEEDBACK_MS,
   DEFAULT_SCOPE,
   ERROR_SNACKBAR_TIMEOUT_MS,
   FILE_TOO_LARGE_MESSAGE,
@@ -171,7 +166,6 @@ import {
   scopeNeedsName,
   scopeNeedsNamespace
 } from '@/constants'
-import { copyToClipboard, isClipboardSupported } from '@/utils/clipboard'
 import { createLogger } from '@/utils/logger'
 import { renderSealedSecretYaml } from '@/utils/sealedSecretYaml'
 import { createSecretEntry, isEntryBlank, isEntryComplete } from '@/utils/secretEntry'
@@ -207,18 +201,14 @@ const secrets = ref([createSecretEntry()])
 const loading = ref(false)
 const displayCreateSealedSecretForm = ref(true)
 const sealedSecrets = ref([])
-const secretsResultsRef = ref()
 
 // Feedback
 const errorMessage = ref('')
 const hasErrorMessage = ref(false)
 const errorSource = ref('')
 const showErrorSnackbar = ref(false)
-const clipboardAvailable = isClipboardSupported()
 const clipboardSnackbar = ref(false)
 const clipboardMessage = ref('')
-const isCopiedMain = ref(false)
-const copiedIndividual = ref({})
 
 const {
   importMenuOpen,
@@ -342,6 +332,11 @@ function setErrorMessage(newErrorMessage, source = '') {
   showErrorSnackbar.value = !!newErrorMessage
 }
 
+function showClipboardMessage(message) {
+  clipboardMessage.value = message
+  clipboardSnackbar.value = true
+}
+
 function resetForm() {
   displayCreateSealedSecretForm.value = true
   secretName.value = ''
@@ -420,40 +415,5 @@ async function fetchEncodedSecrets() {
   } finally {
     loading.value = false
   }
-}
-
-async function copyRenderedSecrets() {
-  // Access the nested ref through the SecretsResults component
-  const sealedSecretElement = secretsResultsRef.value?.sealedSecretCardRef?.$refs?.sealedSecretRef
-  if (!sealedSecretElement) {
-    log.error('Could not access sealed secret element')
-    return
-  }
-  const sealedSecretContent = sealedSecretElement.innerText.trim()
-  const copied = await copyToClipboard(sealedSecretContent)
-  if (!copied) {
-    setErrorMessage('Failed to copy sealed secret to clipboard.')
-    return
-  }
-  clipboardMessage.value = 'Sealed secret copied to clipboard!'
-  clipboardSnackbar.value = true
-  isCopiedMain.value = true
-  setTimeout(() => {
-    isCopiedMain.value = false
-  }, COPIED_FEEDBACK_MS)
-}
-
-async function copySealedSecret(counter) {
-  const copied = await copyToClipboard(sealedSecrets.value[counter].value)
-  if (!copied) {
-    setErrorMessage('Failed to copy secret value to clipboard.')
-    return
-  }
-  clipboardMessage.value = `Secret key "${sealedSecrets.value[counter].key}" copied to clipboard!`
-  clipboardSnackbar.value = true
-  copiedIndividual.value[counter] = true
-  setTimeout(() => {
-    copiedIndividual.value[counter] = false
-  }, COPIED_FEEDBACK_MS)
 }
 </script>

@@ -9,50 +9,24 @@
     <template #text>
       <pre
         class="overflow-auto result-code"
-      ><code id="sealed-secret-result" ref="sealedSecretRef" class="overflow-auto">{{ manifest }}</code></pre>
+      ><code id="sealed-secret-result" class="overflow-auto">{{ manifest }}</code></pre>
     </template>
     <template #actions>
-      <v-btn
-        v-if="clipboardAvailable"
-        :variant="isCopied ? 'flat' : 'text'"
-        :color="isCopied ? 'success' : 'primary'"
-        :icon="isCopied ? 'mdi-check' : 'mdi-content-copy'"
-        size="small"
-        class="copy-btn"
-        @click="$emit('copy')"
-      >
-        <v-icon>{{ isCopied ? 'mdi-check' : 'mdi-content-copy' }}</v-icon>
-        <v-tooltip activator="parent" location="bottom">{{
-          isCopied ? 'Copied!' : 'Copy to clipboard'
-        }}</v-tooltip>
-      </v-btn>
+      <CopyButton :text="manifest" @copied="$emit('copied')" @copy-failed="$emit('copy-failed')" />
     </template>
   </v-card>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import CopyButton from './CopyButton.vue'
 
 defineProps({
   // The complete SealedSecret manifest as YAML text.
   manifest: {
     type: String,
     required: true
-  },
-  isCopied: {
-    type: Boolean,
-    default: false
-  },
-  clipboardAvailable: {
-    type: Boolean,
-    default: true
   }
 })
 
-defineEmits(['copy'])
-
-const sealedSecretRef = ref(null)
-
-// Expose ref for parent component to access
-defineExpose({ sealedSecretRef })
+defineEmits(['copied', 'copy-failed'])
 </script>

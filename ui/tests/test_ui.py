@@ -177,6 +177,47 @@ def test_clear_on_result_view_returns_to_an_empty_form(app_page: Page):
     expect(page.locator('button:has-text("Encrypt")')).to_be_disabled()
 
 
+def test_copy_buttons_copy_the_displayed_text(app_page: Page):
+    page = app_page
+    page.context.grant_permissions(["clipboard-read", "clipboard-write"])
+    SealingApi(page)
+    seal_one_value(page)
+    displayed_yaml = sealed_secret_yaml(page)
+
+    copy_manifest = page.locator(".result-card .copy-btn")
+    copy_manifest.click()
+
+    expect(page.locator(".v-snackbar").get_by_text("Sealed secret copied to clipboard!")).to_be_visible()
+    assert page.evaluate("navigator.clipboard.readText()") == displayed_yaml
+    # the button confirms the copy for a moment, then offers it again
+    expect(copy_manifest.locator(".mdi-check")).to_have_count(1)
+    expect(copy_manifest.locator(".mdi-content-copy")).to_have_count(1, timeout=5000)
+
+    page.locator(".secret-key-card .copy-btn").click()
+
+    expect(
+        page.locator(".v-snackbar").get_by_text(f'Secret key "{SECRET_KEY}" copied to clipboard!')
+    ).to_be_visible()
+    assert page.evaluate("navigator.clipboard.readText()") == SEALED_VALUE
+
+
+def test_copy_works_without_the_async_clipboard_api(page: Page):
+    # served over plain HTTP the browser has no navigator.clipboard
+    page.add_init_script(
+        "Object.defineProperty(Navigator.prototype, 'clipboard', { get: () => undefined })"
+    )
+    page.goto("/")
+    SealingApi(page)
+    seal_one_value(page)
+    assert page.evaluate("navigator.clipboard === undefined")
+
+    copy_manifest = page.locator(".result-card .copy-btn")
+    expect(copy_manifest).to_be_visible()
+    copy_manifest.click()
+
+    expect(page.locator(".v-snackbar").get_by_text("Sealed secret copied to clipboard!")).to_be_visible()
+
+
 def test_edit_on_result_view_returns_to_the_filled_form(app_page: Page):
     page = app_page
     SealingApi(page)

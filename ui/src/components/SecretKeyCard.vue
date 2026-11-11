@@ -10,43 +10,30 @@
       ><code class="overflow-auto">{{ secretValue }}</code></pre>
     </template>
     <template #actions>
-      <v-btn
-        v-if="clipboardAvailable"
-        :variant="isCopied ? 'flat' : 'text'"
-        :color="isCopied ? 'success' : 'primary'"
-        :icon="isCopied ? 'mdi-check' : 'mdi-content-copy'"
-        size="small"
-        class="copy-btn"
-        @click="$emit('copy')"
-      >
-        <v-icon>{{ isCopied ? 'mdi-check' : 'mdi-content-copy' }}</v-icon>
-        <v-tooltip activator="parent" location="bottom">{{
-          isCopied ? 'Copied!' : 'Copy value'
-        }}</v-tooltip>
-      </v-btn>
+      <CopyButton
+        :text="secretValue"
+        label="Copy value"
+        @copied="$emit('copied')"
+        @copy-failed="$emit('copy-failed')"
+      />
     </template>
   </v-card>
 </template>
 
 <script setup>
+import CopyButton from './CopyButton.vue'
+
 defineProps({
   secretKey: {
     type: String,
     required: true
   },
+  // The sealed value of the key.
   secretValue: {
     type: String,
     required: true
-  },
-  isCopied: {
-    type: Boolean,
-    default: false
-  },
-  clipboardAvailable: {
-    type: Boolean,
-    default: true
   }
 })
 
-defineEmits(['copy'])
+defineEmits(['copied', 'copy-failed'])
 </script>
