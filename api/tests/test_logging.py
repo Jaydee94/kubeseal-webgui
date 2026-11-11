@@ -1,7 +1,6 @@
 import json
 import logging
 import logging.config
-import sys
 from pathlib import Path
 
 import pytest
@@ -95,10 +94,8 @@ def test_json_formatter_access_record():
 
 
 def test_json_formatter_includes_exception():
-    try:
-        raise RuntimeError("boom")
-    except RuntimeError:
-        exc_info = sys.exc_info()
+    error = RuntimeError("boom")
+    exc_info = (RuntimeError, error, error.__traceback__)
     record = logging.LogRecord(
         "kubeseal-webgui", logging.ERROR, __file__, 1, "failed", None, exc_info
     )
