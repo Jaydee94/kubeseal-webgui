@@ -22,7 +22,6 @@
             v-model:scope="scope"
             v-model:new-namespace="newNamespace"
             :namespaces="namespaces"
-            :scopes="scopes"
             :rules="rules"
             :secret-name-error="secretNameError"
             :favorite-namespaces="favoriteNamespaces"
@@ -30,16 +29,13 @@
           />
 
           <SecretsList
-            :secrets="secrets"
-            :has-value="hasValue"
-            :has-file="hasFile"
+            :entries="secrets"
             :rules="rules"
-            :file-errors="fileErrors"
-            @update:secrets="updateSecret"
-            @add-secret="secrets.push({ key: '', value: '', file: [] })"
-            @remove-secret="removeSecret"
-            @remove-all="removeAllSecrets"
-            @file-change="validateFile"
+            @update-entry="updateEntry"
+            @select-file="selectFile"
+            @add-entry="secrets.push(createSecretEntry())"
+            @remove-entry="removeEntry"
+            @remove-all="removeAllEntries"
           >
             <template
               v-if="sealedSecretImportFeatureEnabled && namespaceName && !newNamespace"
@@ -150,11 +146,11 @@
     </v-dialog>
 
     <!-- Snackbars -->
-    <v-snackbar v-model="showErrorSnackbar" color="red" timeout="5000">
+    <v-snackbar v-model="showErrorSnackbar" color="red" :timeout="ERROR_SNACKBAR_TIMEOUT_MS">
       <v-icon>mdi-alert-circle</v-icon>
       {{ errorMessage }}
     </v-snackbar>
-    <v-snackbar v-model="clipboardSnackbar" color="green" timeout="3000">
+    <v-snackbar v-model="clipboardSnackbar" color="green" :timeout="CLIPBOARD_SNACKBAR_TIMEOUT_MS">
       <v-icon>mdi-check-circle</v-icon>
       {{ clipboardMessage }}
     </v-snackbar>
@@ -169,6 +165,19 @@ import SecretsResults from './SecretsResults.vue'
 import { useConfig } from '@/composables/useConfig'
 import { createLogger } from '@/utils/logger'
 import { useSecrets } from '@/composables/useSecrets'
+import {
+  CLIPBOARD_SNACKBAR_TIMEOUT_MS,
+  COPIED_FEEDBACK_MS,
+  DEFAULT_SCOPE,
+  ERROR_SNACKBAR_TIMEOUT_MS,
+  FILE_TOO_LARGE_MESSAGE,
+  MAX_FILE_SIZE_BYTES,
+  POST_SEAL_DELAY_MS,
+  SCOPE_STRICT,
+  scopeNeedsName,
+  scopeNeedsNamespace
+} from '@/constants'
+import { createSecretEntry, isEntryBlank, isEntryComplete } from '@/utils/secretEntry'
 
 defineOptions({
   name: 'SecretsManager'
@@ -184,7 +193,6 @@ const {
 
 const config = ref({})
 const namespaces = ref([])
-const scopes = ref(['strict', 'cluster-wide', 'namespace-wide'])
 const errorMessage = ref('')
 const hasErrorMessage = ref(false)
 const errorSource = ref('')
@@ -193,9 +201,9 @@ const displayCreateSealedSecretForm = ref(true)
 const loading = ref(false)
 const secretName = ref('')
 const namespaceName = ref('')
-const scope = ref('strict')
+const scope = ref(DEFAULT_SCOPE)
 const newNamespace = ref(false)
-const secrets = ref([{ key: '', value: '', file: [] }])
+const secrets = ref([createSecretEntry()])
 const sealedSecrets = ref([])
 const secretsResultsRef = ref()
 const clipboardAvailable = ref(false)
@@ -205,7 +213,6 @@ const clipboardSnackbar = ref(false)
 const clipboardMessage = ref('')
 const isCopiedMain = ref(false)
 const copiedIndividual = ref({})
-const fileErrors = ref([])
 const sealedSecretImportFeatureEnabled = ref(false)
 const importMenuOpen = ref(false)
 const availableSealedSecrets = ref([])
@@ -215,7 +222,7 @@ const confirmOverwriteDialog = ref(false)
 const pendingNewSealedSecret = ref(null)
 const secretNameError = computed(() => {
   // The name is only sealed into the secret for the strict scope.
-  if (scope.value === 'strict' && !secretName.value) return 'Secret name is required.'
+  if (scopeNeedsName(scope.value) && !secretName.value) return 'Secret name is required.'
   return ''
 })
 
@@ -224,8 +231,8 @@ const resetForm = () => {
   secretName.value = ''
   namespaceName.value = ''
   newNamespace.value = false
-  scope.value = 'strict'
-  secrets.value = [{ key: '', value: '', file: [] }]
+  scope.value = DEFAULT_SCOPE
+  secrets.value = [createSecretEntry()]
   sealedSecrets.value = []
   resetSealedSecretImport()
   hasErrorMessage.value = false
@@ -373,23 +380,19 @@ const rules = {
       (!!value && /^[a-z0-9_.-]*$/i.test(value)) ||
       'Invalid char. Must be one of lower chars, digits, dash, underscore or dot.'
   ],
-  fileSize: [
-    (files) =>
-      !files || !files.some((file) => file.size > 1048576) || 'File size should be less than 1 MB!'
-  ]
+  // A single-file input validates one File, a multi-file input an array.
+  fileSize: [(files) => !files || ![files].flat().some(isFileTooLarge) || FILE_TOO_LARGE_MESSAGE]
 }
 
-const incompleteSecretData = computed(() =>
-  secrets.value.some(
-    (e) => e.key === '' || (e.value === '' && !(e.file instanceof Blob || e.file instanceof File))
-  )
-)
+function isFileTooLarge(file) {
+  return file.size > MAX_FILE_SIZE_BYTES
+}
+
+const incompleteSecretData = computed(() => secrets.value.some((entry) => !isEntryComplete(entry)))
 
 const invalidNewNamespace = computed(
   () =>
-    newNamespace.value &&
-    ['strict', 'namespace-wide'].includes(scope.value) &&
-    !validDnsLabel(namespaceName.value)
+    newNamespace.value && scopeNeedsNamespace(scope.value) && !validDnsLabel(namespaceName.value)
 )
 
 // Failing to list the cluster's namespaces only affects the dropdown, so it
@@ -408,25 +411,43 @@ const notReadyToEncode = computed(
     incompleteSecretData.value ||
     invalidNewNamespace.value ||
     invalidSecretName.value ||
-    (scope.value === 'strict' && (namespaceName.value === '' || secretName.value === '')) ||
-    (scope.value === 'namespace-wide' && namespaceName.value === '')
+    (scopeNeedsNamespace(scope.value) && namespaceName.value === '') ||
+    (scopeNeedsName(scope.value) && secretName.value === '')
 )
 
-const hasFile = computed(() =>
-  secrets.value.map((e) => e.file instanceof Blob || e.file instanceof File)
-)
-const hasValue = computed(() => secrets.value.map((e) => e.value !== ''))
 const renderedSecrets = computed(() => renderSecrets(sealedSecrets.value))
 const sealedSecretsAnnotations = computed(() => {
-  if (scope.value === 'strict') {
+  if (scope.value === SCOPE_STRICT) {
     return '{}'
   }
   return `{ sealedsecrets.bitnami.com/${scope.value}: "true" }`
 })
 
-// Helper method to update individual secret fields from child components
-function updateSecret({ index, field, value }) {
-  secrets.value[index][field] = value
+function findEntry(id) {
+  return secrets.value.find((entry) => entry.id === id)
+}
+
+function updateEntry(id, changes) {
+  Object.assign(findEntry(id), changes)
+}
+
+// A file above the size limit is rejected right away instead of being kept
+// in the form with an error.
+function selectFile(id, file) {
+  const entry = findEntry(id)
+  if (!file) {
+    entry.file = null
+    return
+  }
+  if (isFileTooLarge(file)) {
+    entry.file = null
+    entry.fileError = FILE_TOO_LARGE_MESSAGE
+    setErrorMessage(FILE_TOO_LARGE_MESSAGE)
+    return
+  }
+  entry.file = file
+  entry.fileError = ''
+  setErrorMessage('')
 }
 
 function setErrorMessage(newErrorMessage, source = '') {
@@ -467,8 +488,7 @@ async function fetchEncodedSecrets() {
       scope: scope.value,
       secrets: secrets.value
     })
-    // Add a small delay to make the transition noticeable and smooth
-    await new Promise((resolve) => setTimeout(resolve, 600))
+    await new Promise((resolve) => setTimeout(resolve, POST_SEAL_DELAY_MS))
     displayCreateSealedSecretForm.value = false
     setErrorMessage('')
   } catch (error) {
@@ -506,7 +526,7 @@ async function copyRenderedSecrets() {
   isCopiedMain.value = true
   setTimeout(() => {
     isCopiedMain.value = false
-  }, 2000)
+  }, COPIED_FEEDBACK_MS)
 }
 
 async function copySealedSecret(counter) {
@@ -520,19 +540,17 @@ async function copySealedSecret(counter) {
   copiedIndividual.value[counter] = true
   setTimeout(() => {
     copiedIndividual.value[counter] = false
-  }, 2000)
+  }, COPIED_FEEDBACK_MS)
 }
 
-function removeSecret(counter) {
-  if (secrets.value.length > 1) {
-    secrets.value.splice(counter, 1)
-  } else {
-    secrets.value[0] = { key: '', value: '', file: [] }
-  }
+// The list never becomes empty: removing the only row leaves a blank one.
+function removeEntry(id) {
+  const remaining = secrets.value.filter((entry) => entry.id !== id)
+  secrets.value = remaining.length > 0 ? remaining : [createSecretEntry()]
 }
 
-function removeAllSecrets() {
-  secrets.value = [{ key: '', value: '', file: [] }]
+function removeAllEntries() {
+  secrets.value = [createSecretEntry()]
 }
 
 function resetSealedSecretImport() {
@@ -572,7 +590,7 @@ watch(newNamespace, () => {
 
 // The namespace is irrelevant for cluster-wide secrets.
 watch(scope, (newScope) => {
-  if (!['strict', 'namespace-wide'].includes(newScope)) {
+  if (!scopeNeedsNamespace(newScope)) {
     newNamespace.value = false
   }
 })
@@ -604,9 +622,8 @@ watch(selectedSealedSecret, (newSealedSecret) => {
 })
 
 function applySelectedSealedSecret(sealedSecret) {
-  const secretEntries = sealedSecret.keys.map((key) => ({ key, value: '', file: [] }))
-  secrets.value = secretEntries.length > 0 ? secretEntries : [{ key: '', value: '', file: [] }]
-  fileErrors.value = []
+  const entries = sealedSecret.keys.map((key) => createSecretEntry({ key }))
+  secrets.value = entries.length > 0 ? entries : [createSecretEntry()]
 }
 
 function confirmOverwrite() {
@@ -631,30 +648,6 @@ async function getConfig() {
 }
 
 function hasUserEnteredSecretData() {
-  return secrets.value.some(
-    (entry) =>
-      entry.key !== '' ||
-      entry.value !== '' ||
-      (Array.isArray(entry.file) && entry.file.length > 0) ||
-      entry.file instanceof Blob ||
-      entry.file instanceof File
-  )
-}
-
-function validateFile(file, counter) {
-  const fileSizeRule = rules.fileSize[0]
-  const isValid = fileSizeRule([file]) === true
-
-  if (!isValid) {
-    setErrorMessage('File size should be less than 1 MB!')
-    secrets.value[counter].file = [] // Clear the invalid file
-    fileErrors.value[counter] = 'File size should be less than 1 MB!'
-  } else {
-    setErrorMessage('')
-    fileErrors.value[counter] = ''
-  }
-
-  // Ensure the `secrets` array is updated to reflect the cleared state
-  secrets.value = [...secrets.value]
+  return secrets.value.some((entry) => !isEntryBlank(entry))
 }
 </script>

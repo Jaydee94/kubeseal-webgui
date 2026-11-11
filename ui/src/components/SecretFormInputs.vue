@@ -4,7 +4,7 @@
       <v-col cols="12" sm="6">
         <v-select
           :model-value="scope"
-          :items="scopes"
+          :items="SCOPES"
           label="Scope"
           variant="outlined"
           class="modern-input"
@@ -41,7 +41,7 @@
           class="modern-input"
           color="primary"
           :rules="rules.validNamespace"
-          :disabled="['strict', 'namespace-wide'].indexOf(scope) === -1"
+          :disabled="!namespaceNeeded"
           hide-details="auto"
           @update:model-value="$emit('update:namespaceName', $event ?? '')"
         >
@@ -74,7 +74,7 @@
           variant="outlined"
           class="modern-input"
           color="primary"
-          :disabled="['strict', 'namespace-wide'].indexOf(scope) === -1"
+          :disabled="!namespaceNeeded"
           @update:model-value="$emit('update:namespaceName', $event)"
         >
           <template #item="{ props: itemProps, item }">
@@ -118,7 +118,7 @@
           color="primary"
           class="mt-1"
           hide-details
-          :disabled="['strict', 'namespace-wide'].indexOf(scope) === -1"
+          :disabled="!namespaceNeeded"
           @update:model-value="$emit('update:newNamespace', !!$event)"
         />
       </v-col>
@@ -170,6 +170,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import { SCOPES, scopeNeedsName, scopeNeedsNamespace } from '@/constants'
 
 const props = defineProps({
   namespaceName: {
@@ -185,10 +186,6 @@ const props = defineProps({
     required: true
   },
   namespaces: {
-    type: Array,
-    required: true
-  },
-  scopes: {
     type: Array,
     required: true
   },
@@ -226,7 +223,10 @@ const sortedNamespaces = computed(() => {
 })
 
 // Only the strict scope seals the secret for one specific name.
-const secretNameRequired = computed(() => props.scope === 'strict')
+const secretNameRequired = computed(() => scopeNeedsName(props.scope))
+
+// The namespace is irrelevant for cluster-wide secrets.
+const namespaceNeeded = computed(() => scopeNeedsNamespace(props.scope))
 
 const lastFavoriteNamespace = computed(() => {
   const favorites = props.namespaces.filter((ns) => props.favoriteNamespaces.has(ns))

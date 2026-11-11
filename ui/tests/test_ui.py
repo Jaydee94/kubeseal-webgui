@@ -156,8 +156,8 @@ def test_failed_sealing_keeps_the_form_and_shows_the_error(app_page: Page):
     # the form with everything the user entered is still there
     expect(page.locator("#sealed-secret-result")).to_have_count(0)
     expect(page.locator("#secretName")).to_have_value(SECRET_NAME)
-    expect(page.locator("textarea#secretKey")).to_have_value(SECRET_KEY)
-    expect(page.locator("textarea#secretValue")).to_have_value(SECRET_VALUE)
+    expect(page.locator("textarea#secretKey-0")).to_have_value(SECRET_KEY)
+    expect(page.locator("textarea#secretValue-0")).to_have_value(SECRET_VALUE)
 
 
 def test_clear_on_result_view_returns_to_an_empty_form(app_page: Page):
@@ -169,8 +169,8 @@ def test_clear_on_result_view_returns_to_an_empty_form(app_page: Page):
 
     expect(page.locator("#sealed-secret-result")).to_have_count(0)
     expect(page.locator("#secretName")).to_have_value("")
-    expect(page.locator("textarea#secretKey")).to_have_value("")
-    expect(page.locator("textarea#secretValue")).to_have_value("")
+    expect(page.locator("textarea#secretKey-0")).to_have_value("")
+    expect(page.locator("textarea#secretValue-0")).to_have_value("")
     # Vuetify keeps an (empty) selection element for the empty string
     expect(page.locator(".v-autocomplete__selection-text")).to_have_text("")
     expect(page.locator("input#namespaceSelection")).to_have_value("")
@@ -186,15 +186,70 @@ def test_edit_on_result_view_returns_to_the_filled_form(app_page: Page):
 
     expect(page.locator("#sealed-secret-result")).to_have_count(0)
     expect(page.locator("#secretName")).to_have_value(SECRET_NAME)
-    expect(page.locator("textarea#secretKey")).to_have_value(SECRET_KEY)
-    expect(page.locator("textarea#secretValue")).to_have_value(SECRET_VALUE)
+    expect(page.locator("textarea#secretKey-0")).to_have_value(SECRET_KEY)
+    expect(page.locator("textarea#secretValue-0")).to_have_value(SECRET_VALUE)
     expect(page.locator(".v-autocomplete__selection-text")).to_have_text(namespace)
     expect(page.locator('button:has-text("Encrypt")')).to_be_enabled()
 
 
+def test_removing_a_row_keeps_the_other_rows_intact(app_page: Page):
+    page = app_page
+    add_button = page.get_by_role("button", name="Add key-value pair")
+    add_button.click()
+    add_button.click()
+    expect(page.locator("textarea[id^='secretKey-']")).to_have_count(3)
+    assert duplicate_ids(page) == []
+
+    page.fill("textarea#secretKey-0", "first-key")
+    page.fill("textarea#secretValue-0", "first value")
+    # the middle row has been edited and shows a validation error
+    page.fill("textarea#secretKey-1", "second-key")
+    page.fill("textarea#secretKey-1", "")
+    expect(page.locator(".v-row:has(#secretKey-1) .v-input--error")).to_have_count(1)
+    # the key of the last row has not been touched yet
+    page.fill("textarea#secretValue-2", "third value")
+    expect(page.locator(".v-row:has(#secretKey-2) .v-input--error")).to_have_count(0)
+
+    # remove the middle row with its delete icon
+    page.locator(".v-row:has(#secretKey-1) .mdi-delete").click()
+
+    expect(page.locator("textarea[id^='secretKey-']")).to_have_count(2)
+    expect(page.locator("textarea#secretKey-0")).to_have_value("first-key")
+    expect(page.locator("textarea#secretValue-0")).to_have_value("first value")
+    expect(page.locator("textarea#secretKey-1")).to_have_value("")
+    expect(page.locator("textarea#secretValue-1")).to_have_value("third value")
+    # the error went away with the removed row instead of moving to its neighbour
+    expect(page.locator(".v-row:has(#secretKey-1) .v-input--error")).to_have_count(0)
+    assert duplicate_ids(page) == []
+
+
+def test_removing_the_only_row_leaves_a_blank_row(app_page: Page):
+    page = app_page
+    add_secret_key_value(page)
+
+    page.locator(".v-row:has(#secretKey-0) .mdi-delete").click()
+
+    expect(page.locator("textarea[id^='secretKey-']")).to_have_count(1)
+    expect(page.locator("textarea#secretKey-0")).to_have_value("")
+    expect(page.locator("textarea#secretValue-0")).to_have_value("")
+
+
+def test_remove_all_leaves_one_blank_row(app_page: Page):
+    page = app_page
+    add_secret_key_value(page)
+    page.get_by_role("button", name="Add key-value pair").click()
+    page.fill("textarea#secretKey-1", "another-key")
+
+    page.get_by_role("button", name="Remove All").click()
+
+    expect(page.locator("textarea[id^='secretKey-']")).to_have_count(1)
+    expect(page.locator("textarea#secretKey-0")).to_have_value("")
+    expect(page.locator("textarea#secretValue-0")).to_have_value("")
+
+
 def test_secret_form_with_invalid_file(app_page: Page, tmp_path):
     page = app_page
-    file_input = page.locator('input[type="file"]#fileInput')
+    file_input = page.locator('input[type="file"]#fileInput-0')
     # Try to upload a file above the 1 MB limit
     invalid_file = tmp_path / "large_test_file.txt"
     invalid_file.write_text("X" * (10 * ONE_MEBIBYTE))
@@ -205,6 +260,26 @@ def test_secret_form_with_invalid_file(app_page: Page, tmp_path):
         "File size should be less than 1 MB!"
     )
     expect(snackbar_message).to_be_visible()
+
+    # the rejected file is not kept, the reason is shown at the input
+    row = page.locator(".v-row:has(#fileInput-0)")
+    expect(row.locator(".v-file-input .v-messages")).to_have_text(
+        "File size should be less than 1 MB!"
+    )
+    expect(row.locator(".v-file-input .v-field__input")).not_to_contain_text(
+        "large_test_file.txt"
+    )
+    expect(page.locator("textarea#secretValue-0")).to_be_enabled()
+
+    # a file within the limit is accepted and clears the error
+    valid_file = tmp_path / "small_test_file.txt"
+    valid_file.write_text(FILE_CONTENT)
+    file_input.set_input_files(valid_file)
+    expect(row.locator(".v-file-input .v-field__input")).to_contain_text(
+        "small_test_file.txt"
+    )
+    expect(row.locator(".v-file-input .v-messages")).to_have_text("")
+    expect(page.locator("textarea#secretValue-0")).to_be_disabled()
 
 
 def test_secret_form_with_new_namespace(app_page: Page):
@@ -271,6 +346,13 @@ def sealed_secret_yaml(page: Page) -> str:
     return text
 
 
+def duplicate_ids(page: Page) -> list[str]:
+    return page.evaluate("""() => {
+        const ids = [...document.querySelectorAll('[id]')].map((element) => element.id)
+        return [...new Set(ids.filter((id, index) => ids.indexOf(id) !== index))]
+    }""")
+
+
 def seal_one_value(page: Page) -> str:
     """Fill the form with one key/value pair, seal it, return the namespace."""
     namespace = namespace_select(page)
@@ -324,24 +406,24 @@ def select_scope(page: Page, scope: str):
 
 
 def add_secret_key_value(page: Page):
-    page.wait_for_selector("textarea#secretKey")
-    page.fill("textarea#secretKey", SECRET_KEY)
-    assert page.locator("textarea#secretKey").input_value() == SECRET_KEY
-    page.wait_for_selector("textarea#secretValue")
-    page.fill("textarea#secretValue", SECRET_VALUE)
-    assert page.locator("textarea#secretValue").input_value() == SECRET_VALUE
-    file_input = page.locator('input[type="file"]#fileInput')
+    page.wait_for_selector("textarea#secretKey-0")
+    page.fill("textarea#secretKey-0", SECRET_KEY)
+    assert page.locator("textarea#secretKey-0").input_value() == SECRET_KEY
+    page.wait_for_selector("textarea#secretValue-0")
+    page.fill("textarea#secretValue-0", SECRET_VALUE)
+    assert page.locator("textarea#secretValue-0").input_value() == SECRET_VALUE
+    file_input = page.locator('input[type="file"]#fileInput-0')
     assert (
         not file_input.is_enabled()
     ), "File input should be disabled when value is filled"
 
 
 def add_secret_key_file(page: Page, tmp_path):
-    page.wait_for_selector("textarea#secretKey")
-    page.fill("textarea#secretKey", SECRET_KEY)
-    assert page.locator("textarea#secretKey").input_value() == SECRET_KEY
+    page.wait_for_selector("textarea#secretKey-0")
+    page.fill("textarea#secretKey-0", SECRET_KEY)
+    assert page.locator("textarea#secretKey-0").input_value() == SECRET_KEY
 
-    file_input = page.locator('input[type="file"]#fileInput')
+    file_input = page.locator('input[type="file"]#fileInput-0')
     assert file_input.is_visible()
     test_file = tmp_path / "test_file.txt"
     test_file.write_text(FILE_CONTENT)

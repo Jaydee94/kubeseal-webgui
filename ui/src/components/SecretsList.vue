@@ -37,18 +37,15 @@
     </div>
 
     <SecretInput
-      v-for="(secret, counter) in secrets"
-      :key="counter"
-      :secret="secret"
-      :has-value="hasValue[counter]"
-      :has-file="hasFile[counter]"
+      v-for="(entry, index) in entries"
+      :key="entry.id"
+      :entry="entry"
+      :index="index"
       :rules="rules"
-      :file-error="fileErrors[counter]"
-      @update:key="updateSecret(counter, 'key', $event)"
-      @update:value="updateSecret(counter, 'value', $event)"
-      @update:file="updateSecret(counter, 'file', $event)"
-      @remove="$emit('remove-secret', counter)"
-      @file-change="$emit('file-change', secret.file, counter)"
+      @update:key="$emit('update-entry', entry.id, { key: $event })"
+      @update:value="$emit('update-entry', entry.id, { value: $event })"
+      @update:file="$emit('select-file', entry.id, $event)"
+      @remove="$emit('remove-entry', entry.id)"
     />
 
     <v-row>
@@ -60,7 +57,7 @@
           prepend-icon="mdi-plus"
           color="primary"
           class="mb-4"
-          @click="$emit('add-secret')"
+          @click="$emit('add-entry')"
         >
           Add key-value pair
         </v-btn>
@@ -73,37 +70,15 @@
 import SecretInput from './SecretInput.vue'
 
 defineProps({
-  secrets: {
-    type: Array,
-    required: true
-  },
-  hasValue: {
-    type: Array,
-    required: true
-  },
-  hasFile: {
+  entries: {
     type: Array,
     required: true
   },
   rules: {
     type: Object,
     required: true
-  },
-  fileErrors: {
-    type: Array,
-    required: true
   }
 })
 
-const emit = defineEmits([
-  'update:secrets',
-  'add-secret',
-  'remove-secret',
-  'remove-all',
-  'file-change'
-])
-
-function updateSecret(index, field, value) {
-  emit('update:secrets', { index, field, value })
-}
+defineEmits(['update-entry', 'select-file', 'add-entry', 'remove-entry', 'remove-all'])
 </script>
