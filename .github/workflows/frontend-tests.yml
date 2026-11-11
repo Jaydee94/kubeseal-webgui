@@ -25,13 +25,13 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd api
-          pip install .
-          pip install pytest-rerunfailures
+          # playwright/pytest-playwright are dev-only dependencies of the API
+          # package (they must not end up in the API container image), so
+          # they are installed explicitly here.
+          pip install playwright pytest-playwright pytest-rerunfailures
 
       - name: Install Playwright Browsers
         run: |
-          cd api
           playwright install --with-deps chromium
       
       - name: Start Vue.js Development Server
