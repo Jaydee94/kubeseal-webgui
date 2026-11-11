@@ -58,7 +58,9 @@ def fake_loader(monkeypatch, token_key: str) -> list[int]:
 
 def current_token() -> str:
     settings_for_auth = client.Configuration.get_default_copy().auth_settings()
-    return settings_for_auth["BearerToken"]["value"]
+    token = settings_for_auth["BearerToken"]["value"]
+    assert token is not None
+    return token
 
 
 def test_cluster_config_is_loaded_once(monkeypatch):
@@ -111,12 +113,14 @@ def test_rotated_service_account_token_is_picked_up_after_one_load(
     monkeypatch.setenv("KUBERNETES_SERVICE_HOST", "10.0.0.1")
     monkeypatch.setenv("KUBERNETES_SERVICE_PORT", "443")
 
-    class Clock(datetime.datetime):
+    class Clock:
+        """Stands in for `datetime.datetime` in the client's token loader."""
+
         skew = datetime.timedelta(0)
 
         @classmethod
-        def now(cls, tz=None) -> datetime.datetime:
-            return super().now(tz) + cls.skew
+        def now(cls) -> datetime.datetime:
+            return datetime.datetime.now() + cls.skew  # noqa: DTZ005 like the client
 
     monkeypatch.setattr(
         incluster_config,
