@@ -171,6 +171,7 @@
 <script setup>
 import { computed } from 'vue'
 import { SCOPES, scopeNeedsName, scopeNeedsNamespace } from '@/constants'
+import { rules } from '@/utils/validation'
 
 const props = defineProps({
   namespaceName: {
@@ -187,10 +188,6 @@ const props = defineProps({
   },
   namespaces: {
     type: Array,
-    required: true
-  },
-  rules: {
-    type: Object,
     required: true
   },
   secretNameError: {

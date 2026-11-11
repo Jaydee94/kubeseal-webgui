@@ -7,18 +7,9 @@
       </div>
     </v-card-title>
     <template #text>
-      <pre class="overflow-auto result-code"><code
-        id="sealed-secret-result"
-        ref="sealedSecretRef"
-        class="overflow-auto"
-      >apiVersion: bitnami.com/v1alpha1
-kind: SealedSecret
-metadata:
-  name: {{ secretName ? secretName : "# no secret name given" }}
-  namespace: {{ namespaceName ? namespaceName : "# no namespace name given" }}
-  annotations: {{ sealedSecretsAnnotations }}
-spec:
-  encryptedData: {{ renderedSecrets }}</code></pre>
+      <pre
+        class="overflow-auto result-code"
+      ><code id="sealed-secret-result" ref="sealedSecretRef" class="overflow-auto">{{ manifest }}</code></pre>
     </template>
     <template #actions>
       <v-btn
@@ -43,19 +34,8 @@ spec:
 import { ref } from 'vue'
 
 defineProps({
-  secretName: {
-    type: String,
-    default: ''
-  },
-  namespaceName: {
-    type: String,
-    default: ''
-  },
-  sealedSecretsAnnotations: {
-    type: String,
-    required: true
-  },
-  renderedSecrets: {
+  // The complete SealedSecret manifest as YAML text.
+  manifest: {
     type: String,
     required: true
   },

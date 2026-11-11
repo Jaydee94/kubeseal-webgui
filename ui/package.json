@@ -11,8 +11,9 @@
     "preview": "vite preview",
     "lint": "eslint . --fix",
     "lint:check": "eslint .",
-    "format": "prettier --write src/",
-    "format:check": "prettier --check src/"
+    "format": "prettier --write src/ tests/unit/",
+    "format:check": "prettier --check src/ tests/unit/",
+    "test": "vitest run"
   },
   "dependencies": {
     "@fontsource/roboto": "^5.3.0",
@@ -31,6 +32,7 @@
     "prettier": "^3.8.3",
     "vite": "^8.0.13",
     "vite-plugin-vuetify": "^2.1.3",
+    "vitest": "^5.1.0",
     "vue-eslint-parser": "^10.4.0"
   }
 }

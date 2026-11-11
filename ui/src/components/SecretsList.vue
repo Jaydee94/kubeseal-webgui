@@ -41,7 +41,6 @@
       :key="entry.id"
       :entry="entry"
       :index="index"
-      :rules="rules"
       @update:key="$emit('update-entry', entry.id, { key: $event })"
       @update:value="$emit('update-entry', entry.id, { value: $event })"
       @update:file="$emit('select-file', entry.id, $event)"
@@ -72,10 +71,6 @@ import SecretInput from './SecretInput.vue'
 defineProps({
   entries: {
     type: Array,
-    required: true
-  },
-  rules: {
-    type: Object,
     required: true
   }
 })

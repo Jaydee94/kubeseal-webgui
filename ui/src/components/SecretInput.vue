@@ -55,6 +55,7 @@
 <script setup>
 import { computed } from 'vue'
 import { entryHasFile, entryHasValue } from '@/utils/secretEntry'
+import { rules } from '@/utils/validation'
 
 const props = defineProps({
   entry: {
@@ -64,10 +65,6 @@ const props = defineProps({
   // Position in the list, only used to give the inputs unique ids.
   index: {
     type: Number,
-    required: true
-  },
-  rules: {
-    type: Object,
     required: true
   }
 })

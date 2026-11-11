@@ -25,5 +25,10 @@ export default defineConfig({
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
     }
+  },
+  test: {
+    // Unit tests; tests/test_ui.py holds the Playwright E2E tests.
+    include: ['tests/unit/**/*.test.js'],
+    environment: 'node'
   }
 })

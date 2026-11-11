@@ -22,7 +22,6 @@
             v-model:scope="scope"
             v-model:new-namespace="newNamespace"
             :namespaces="namespaces"
-            :rules="rules"
             :secret-name-error="secretNameError"
             :favorite-namespaces="favoriteNamespaces"
             @toggle-favorite="toggleFavorite"
@@ -30,7 +29,6 @@
 
           <SecretsList
             :entries="secrets"
-            :rules="rules"
             @update-entry="updateEntry"
             @select-file="selectFile"
             @add-entry="secrets.push(createSecretEntry())"
@@ -116,10 +114,7 @@
         v-else
         ref="secretsResultsRef"
         :sealed-secrets="sealedSecrets"
-        :secret-name="secretName"
-        :namespace-name="namespaceName"
-        :sealed-secrets-annotations="sealedSecretsAnnotations"
-        :rendered-secrets="renderedSecrets"
+        :manifest="sealedSecretYaml"
         :clipboard-available="clipboardAvailable"
         :copied-individual="copiedIndividual"
         :is-copied-main="isCopiedMain"
@@ -158,12 +153,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onBeforeMount, onMounted, watch } from 'vue'
+import { ref, computed, onBeforeMount, watch } from 'vue'
 import SecretFormInputs from './SecretFormInputs.vue'
 import SecretsList from './SecretsList.vue'
 import SecretsResults from './SecretsResults.vue'
 import { useConfig } from '@/composables/useConfig'
-import { createLogger } from '@/utils/logger'
+import { useFavoriteNamespaces } from '@/composables/useFavoriteNamespaces'
+import { useSealedSecretImport } from '@/composables/useSealedSecretImport'
 import { useSecrets } from '@/composables/useSecrets'
 import {
   CLIPBOARD_SNACKBAR_TIMEOUT_MS,
@@ -171,74 +167,118 @@ import {
   DEFAULT_SCOPE,
   ERROR_SNACKBAR_TIMEOUT_MS,
   FILE_TOO_LARGE_MESSAGE,
-  MAX_FILE_SIZE_BYTES,
   POST_SEAL_DELAY_MS,
-  SCOPE_STRICT,
   scopeNeedsName,
   scopeNeedsNamespace
 } from '@/constants'
+import { copyToClipboard, isClipboardSupported } from '@/utils/clipboard'
+import { createLogger } from '@/utils/logger'
+import { renderSealedSecretYaml } from '@/utils/sealedSecretYaml'
 import { createSecretEntry, isEntryBlank, isEntryComplete } from '@/utils/secretEntry'
+import { isDnsLabel, isDnsSubdomain, isFileTooLarge } from '@/utils/validation'
 
 defineOptions({
   name: 'SecretsManager'
 })
 
-const { fetchConfig } = useConfig()
 const log = createLogger('Secrets')
+const { fetchConfig } = useConfig()
 const {
   fetchNamespaces,
   fetchSealedSecrets,
   fetchEncodedSecrets: fetchEncodedSecretsApi
 } = useSecrets()
+const { favoriteNamespaces, toggleFavorite } = useFavoriteNamespaces()
 
+// Configuration and data loaded from the server
 const config = ref({})
-const namespaces = ref([])
-const errorMessage = ref('')
-const hasErrorMessage = ref(false)
-const errorSource = ref('')
 const displayName = ref('')
-const displayCreateSealedSecretForm = ref(true)
-const loading = ref(false)
+const sealedSecretImportFeatureEnabled = ref(false)
+const namespaces = ref([])
+
+// The form
 const secretName = ref('')
 const namespaceName = ref('')
 const scope = ref(DEFAULT_SCOPE)
 const newNamespace = ref(false)
 const secrets = ref([createSecretEntry()])
+
+// Sealing and its result
+const loading = ref(false)
+const displayCreateSealedSecretForm = ref(true)
 const sealedSecrets = ref([])
 const secretsResultsRef = ref()
-const clipboardAvailable = ref(false)
-const favoriteNamespaces = ref(readFavoriteNamespaces())
+
+// Feedback
+const errorMessage = ref('')
+const hasErrorMessage = ref(false)
+const errorSource = ref('')
 const showErrorSnackbar = ref(false)
+const clipboardAvailable = isClipboardSupported()
 const clipboardSnackbar = ref(false)
 const clipboardMessage = ref('')
 const isCopiedMain = ref(false)
 const copiedIndividual = ref({})
-const sealedSecretImportFeatureEnabled = ref(false)
-const importMenuOpen = ref(false)
-const availableSealedSecrets = ref([])
-const selectedSealedSecret = ref(null)
-const loadingSealedSecrets = ref(false)
-const confirmOverwriteDialog = ref(false)
-const pendingNewSealedSecret = ref(null)
+
+const {
+  importMenuOpen,
+  availableSealedSecrets,
+  selectedSealedSecret,
+  loadingSealedSecrets,
+  confirmOverwriteDialog,
+  onImportMenuOpen,
+  confirmOverwrite,
+  cancelOverwrite,
+  resetSealedSecretImport
+} = useSealedSecretImport({
+  namespaceName,
+  enabled: sealedSecretImportFeatureEnabled,
+  fetchSealedSecrets: async (namespace) => fetchSealedSecrets(await getConfig(), namespace),
+  hasUserEnteredData: () => secrets.value.some((entry) => !isEntryBlank(entry)),
+  applyKeys: replaceEntriesWithKeys,
+  onError: setErrorMessage
+})
+
 const secretNameError = computed(() => {
   // The name is only sealed into the secret for the strict scope.
   if (scopeNeedsName(scope.value) && !secretName.value) return 'Secret name is required.'
   return ''
 })
 
-const resetForm = () => {
-  displayCreateSealedSecretForm.value = true
-  secretName.value = ''
-  namespaceName.value = ''
-  newNamespace.value = false
-  scope.value = DEFAULT_SCOPE
-  secrets.value = [createSecretEntry()]
-  sealedSecrets.value = []
-  resetSealedSecretImport()
-  hasErrorMessage.value = false
-  errorSource.value = ''
-  errorMessage.value = ''
-}
+const incompleteSecretData = computed(() => secrets.value.some((entry) => !isEntryComplete(entry)))
+
+const invalidNewNamespace = computed(
+  () => newNamespace.value && scopeNeedsNamespace(scope.value) && !isDnsLabel(namespaceName.value)
+)
+
+// Failing to list the cluster's namespaces only affects the dropdown, so it
+// must not block sealing for a manually entered namespace.
+const blockingError = computed(
+  () => hasErrorMessage.value && !(newNamespace.value && errorSource.value === 'namespaces')
+)
+
+// A secret name is optional outside the strict scope, but a name that is not
+// a valid DNS subdomain would end up as broken YAML in the result.
+const invalidSecretName = computed(() => !!secretName.value && !isDnsSubdomain(secretName.value))
+
+const notReadyToEncode = computed(
+  () =>
+    blockingError.value ||
+    incompleteSecretData.value ||
+    invalidNewNamespace.value ||
+    invalidSecretName.value ||
+    (scopeNeedsNamespace(scope.value) && namespaceName.value === '') ||
+    (scopeNeedsName(scope.value) && secretName.value === '')
+)
+
+const sealedSecretYaml = computed(() =>
+  renderSealedSecretYaml({
+    name: secretName.value,
+    namespace: namespaceName.value,
+    scope: scope.value,
+    entries: sealedSecrets.value
+  })
+)
 
 onBeforeMount(async () => {
   try {
@@ -252,74 +292,23 @@ onBeforeMount(async () => {
     config.value.enable_existing_sealed_secret_loading
   )
   await fetchNamespacesData(config.value)
-  await fetchDisplayName(config.value)
+  displayName.value = config.value.display_name
 })
 
-onMounted(() => {
-  // Copy is considered available when either the async Clipboard API is
-  // present (secure contexts / HTTPS / localhost) or the legacy
-  // execCommand fallback can be used. The latter ensures the copy buttons
-  // remain visible when the app is served over plain HTTP, where
-  // navigator.clipboard is undefined.
-  clipboardAvailable.value = isClipboardSupported()
-  setErrorMessage('')
+// A value picked from the cluster list is not valid as free text and vice
+// versa, so start from an empty field whenever the mode changes.
+watch(newNamespace, () => {
+  namespaceName.value = ''
 })
 
-function isClipboardSupported() {
-  if (navigator && navigator.clipboard) {
-    return true
+// The namespace is irrelevant for cluster-wide secrets.
+watch(scope, (newScope) => {
+  if (!scopeNeedsNamespace(newScope)) {
+    newNamespace.value = false
   }
-  return typeof document !== 'undefined' && typeof document.execCommand === 'function'
-}
+})
 
-async function copyToClipboard(text) {
-  // Prefer the modern asynchronous Clipboard API when available in a
-  // secure context.
-  if (navigator && navigator.clipboard && window.isSecureContext) {
-    try {
-      await navigator.clipboard.writeText(text)
-      return true
-    } catch (error) {
-      log.warn('Clipboard API failed, falling back to execCommand:', error)
-      // Fall through to the legacy fallback below.
-    }
-  }
-
-  // Fallback for non-secure contexts (e.g. served over plain HTTP) where
-  // navigator.clipboard is unavailable.
-  try {
-    const textarea = document.createElement('textarea')
-    textarea.value = text
-    textarea.setAttribute('readonly', '')
-    textarea.style.position = 'fixed'
-    textarea.style.top = '-9999px'
-    textarea.style.left = '-9999px'
-    document.body.appendChild(textarea)
-    textarea.select()
-    const successful = document.execCommand('copy')
-    document.body.removeChild(textarea)
-    if (!successful) {
-      log.warn('Copying to the clipboard via execCommand was rejected.')
-    }
-    return successful
-  } catch (error) {
-    log.error('Copying to the clipboard failed:', error)
-    return false
-  }
-}
-
-function readFavoriteNamespaces() {
-  try {
-    if (localStorage.favoriteNamespaces === undefined) {
-      return new Set([])
-    }
-    return new Set(JSON.parse(localStorage.favoriteNamespaces))
-  } catch (error) {
-    log.warn('Ignoring unreadable favorite namespaces in localStorage:', error)
-    return new Set([])
-  }
-}
-
+// The Helm-rendered config.json may contain the flag as boolean or string.
 function isEnabled(value) {
   if (typeof value === 'boolean') {
     return value
@@ -330,98 +319,42 @@ function isEnabled(value) {
   return false
 }
 
-function validDnsSubdomain(name) {
-  if (!name) {
-    return
+async function getConfig() {
+  if (!Object.keys(config.value).length) {
+    config.value = await fetchConfig()
   }
-  // RFC 1123 subdomain: dot-separated labels of lower case alphanumerics
-  // and '-', each starting and ending with an alphanumeric, 253 chars total.
-  var re = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/
-  return name.length <= 253 && re.test(name)
+  return config.value
 }
 
-// Kubernetes namespaces must be DNS labels (RFC 1123), unlike secret names
-// which may be DNS subdomains.
-function validDnsLabel(name) {
-  return /^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$/.test(name)
-}
-
-const rules = {
-  validNamespace: [
-    (value) => !!value || 'Must not be empty',
-    (value) => !value || value.length <= 63 || 'Longer than 63 chars',
-    (value) =>
-      !value ||
-      validDnsLabel(value) ||
-      "Must consist of lower case alphanumerics or '-', and start and end with an alphanumeric"
-  ],
-  validDnsSubdomain: [
-    (value) => !value || value.length <= 253 || 'Longer than 253 chars',
-    (value) => !!value || 'Must not be empty',
-    (value) =>
-      (!!value && /^[a-z0-9-.]*$/.test(value)) ||
-      'Invalid char. Must be one of lower chars, digits, dashes or dots.',
-    (value) => (!!value && /^[a-z0-9]/.test(value)) || 'Must start with a lower char or digit',
-    (value) => (!!value && /[a-z0-9]$/.test(value)) || 'Must end with a lower char or digit',
-    (value) => validDnsSubdomain(value) || 'Not a valid DNS subdomain'
-  ],
-  // Outside the strict scope the secret name is not sealed into the secret.
-  // It may stay empty, but a given name still has to be a valid one.
-  optionalDnsSubdomain: [
-    (value) => !value || value.length <= 253 || 'Longer than 253 chars',
-    (value) =>
-      !value ||
-      validDnsSubdomain(value) ||
-      "Must consist of lower case alphanumerics, '-' or '.', and start and end with an alphanumeric"
-  ],
-  validSecretKey: [
-    (value) => !!value || 'Must not be empty',
-    (value) =>
-      (!!value && /^[a-z0-9_.-]*$/i.test(value)) ||
-      'Invalid char. Must be one of lower chars, digits, dash, underscore or dot.'
-  ],
-  // A single-file input validates one File, a multi-file input an array.
-  fileSize: [(files) => !files || ![files].flat().some(isFileTooLarge) || FILE_TOO_LARGE_MESSAGE]
-}
-
-function isFileTooLarge(file) {
-  return file.size > MAX_FILE_SIZE_BYTES
-}
-
-const incompleteSecretData = computed(() => secrets.value.some((entry) => !isEntryComplete(entry)))
-
-const invalidNewNamespace = computed(
-  () =>
-    newNamespace.value && scopeNeedsNamespace(scope.value) && !validDnsLabel(namespaceName.value)
-)
-
-// Failing to list the cluster's namespaces only affects the dropdown, so it
-// must not block sealing for a manually entered namespace.
-const blockingError = computed(
-  () => hasErrorMessage.value && !(newNamespace.value && errorSource.value === 'namespaces')
-)
-
-// A secret name is optional outside the strict scope, but a name that is not
-// a valid DNS subdomain would end up as broken YAML in the result.
-const invalidSecretName = computed(() => !!secretName.value && !validDnsSubdomain(secretName.value))
-
-const notReadyToEncode = computed(
-  () =>
-    blockingError.value ||
-    incompleteSecretData.value ||
-    invalidNewNamespace.value ||
-    invalidSecretName.value ||
-    (scopeNeedsNamespace(scope.value) && namespaceName.value === '') ||
-    (scopeNeedsName(scope.value) && secretName.value === '')
-)
-
-const renderedSecrets = computed(() => renderSecrets(sealedSecrets.value))
-const sealedSecretsAnnotations = computed(() => {
-  if (scope.value === SCOPE_STRICT) {
-    return '{}'
+async function fetchNamespacesData(config) {
+  try {
+    namespaces.value = await fetchNamespaces(config)
+  } catch (error) {
+    log.error('Failed to fetch namespaces:', error)
+    setErrorMessage(`Failed to fetch namespaces. Error Message: ${error.message}.`, 'namespaces')
   }
-  return `{ sealedsecrets.bitnami.com/${scope.value}: "true" }`
-})
+}
+
+function setErrorMessage(newErrorMessage, source = '') {
+  errorMessage.value = newErrorMessage
+  errorSource.value = newErrorMessage ? source : ''
+  hasErrorMessage.value = !!newErrorMessage
+  showErrorSnackbar.value = !!newErrorMessage
+}
+
+function resetForm() {
+  displayCreateSealedSecretForm.value = true
+  secretName.value = ''
+  namespaceName.value = ''
+  newNamespace.value = false
+  scope.value = DEFAULT_SCOPE
+  secrets.value = [createSecretEntry()]
+  sealedSecrets.value = []
+  resetSealedSecretImport()
+  hasErrorMessage.value = false
+  errorSource.value = ''
+  errorMessage.value = ''
+}
 
 function findEntry(id) {
   return secrets.value.find((entry) => entry.id === id)
@@ -450,33 +383,19 @@ function selectFile(id, file) {
   setErrorMessage('')
 }
 
-function setErrorMessage(newErrorMessage, source = '') {
-  errorMessage.value = newErrorMessage
-  errorSource.value = newErrorMessage ? source : ''
-  hasErrorMessage.value = !!newErrorMessage
-  showErrorSnackbar.value = !!newErrorMessage
+// The list never becomes empty: removing the only row leaves a blank one.
+function removeEntry(id) {
+  const remaining = secrets.value.filter((entry) => entry.id !== id)
+  secrets.value = remaining.length > 0 ? remaining : [createSecretEntry()]
 }
 
-async function fetchNamespacesData(config) {
-  try {
-    namespaces.value = await fetchNamespaces(config)
-  } catch (error) {
-    log.error('Failed to fetch namespaces:', error)
-    setErrorMessage(`Failed to fetch namespaces. Error Message: ${error.message}.`, 'namespaces')
-  }
+function removeAllEntries() {
+  secrets.value = [createSecretEntry()]
 }
 
-function toggleFavorite(namespace) {
-  if (favoriteNamespaces.value.has(namespace)) {
-    favoriteNamespaces.value.delete(namespace)
-  } else {
-    favoriteNamespaces.value.add(namespace)
-  }
-  localStorage.favoriteNamespaces = JSON.stringify([...favoriteNamespaces.value])
-}
-
-async function fetchDisplayName(config) {
-  displayName.value = config.display_name
+function replaceEntriesWithKeys(keys) {
+  const entries = keys.map((key) => createSecretEntry({ key }))
+  secrets.value = entries.length > 0 ? entries : [createSecretEntry()]
 }
 
 async function fetchEncodedSecrets() {
@@ -501,11 +420,6 @@ async function fetchEncodedSecrets() {
   } finally {
     loading.value = false
   }
-}
-
-const renderSecrets = (sealedSecrets) => {
-  const dataEntries = sealedSecrets.map((element) => `    ${element['key']}: ${element['value']}`)
-  return '\n' + dataEntries.join('\n')
 }
 
 async function copyRenderedSecrets() {
@@ -541,113 +455,5 @@ async function copySealedSecret(counter) {
   setTimeout(() => {
     copiedIndividual.value[counter] = false
   }, COPIED_FEEDBACK_MS)
-}
-
-// The list never becomes empty: removing the only row leaves a blank one.
-function removeEntry(id) {
-  const remaining = secrets.value.filter((entry) => entry.id !== id)
-  secrets.value = remaining.length > 0 ? remaining : [createSecretEntry()]
-}
-
-function removeAllEntries() {
-  secrets.value = [createSecretEntry()]
-}
-
-function resetSealedSecretImport() {
-  importMenuOpen.value = false
-  availableSealedSecrets.value = []
-  selectedSealedSecret.value = null
-}
-
-async function loadSealedSecretsForNamespace() {
-  if (!namespaceName.value || !sealedSecretImportFeatureEnabled.value) {
-    availableSealedSecrets.value = []
-    selectedSealedSecret.value = null
-    return
-  }
-
-  try {
-    loadingSealedSecrets.value = true
-    availableSealedSecrets.value = await fetchSealedSecrets(await getConfig(), namespaceName.value)
-  } catch (error) {
-    log.error(
-      `Failed to fetch existing SealedSecrets in namespace "${namespaceName.value}":`,
-      error
-    )
-    setErrorMessage(`Failed to fetch existing SealedSecrets. Error Message: ${error.message}.`)
-    availableSealedSecrets.value = []
-    selectedSealedSecret.value = null
-  } finally {
-    loadingSealedSecrets.value = false
-  }
-}
-
-// A value picked from the cluster list is not valid as free text and vice
-// versa, so start from an empty field whenever the mode changes.
-watch(newNamespace, () => {
-  namespaceName.value = ''
-})
-
-// The namespace is irrelevant for cluster-wide secrets.
-watch(scope, (newScope) => {
-  if (!scopeNeedsNamespace(newScope)) {
-    newNamespace.value = false
-  }
-})
-
-watch(namespaceName, () => {
-  confirmOverwriteDialog.value = false
-  pendingNewSealedSecret.value = null
-  availableSealedSecrets.value = []
-  selectedSealedSecret.value = null
-  importMenuOpen.value = false
-})
-
-async function onImportMenuOpen() {
-  if (!availableSealedSecrets.value.length) {
-    await loadSealedSecretsForNamespace()
-  }
-}
-
-watch(selectedSealedSecret, (newSealedSecret) => {
-  if (!newSealedSecret || !Array.isArray(newSealedSecret.keys)) {
-    return
-  }
-  if (hasUserEnteredSecretData()) {
-    pendingNewSealedSecret.value = newSealedSecret
-    confirmOverwriteDialog.value = true
-    return
-  }
-  applySelectedSealedSecret(newSealedSecret)
-})
-
-function applySelectedSealedSecret(sealedSecret) {
-  const entries = sealedSecret.keys.map((key) => createSecretEntry({ key }))
-  secrets.value = entries.length > 0 ? entries : [createSecretEntry()]
-}
-
-function confirmOverwrite() {
-  confirmOverwriteDialog.value = false
-  if (pendingNewSealedSecret.value) {
-    applySelectedSealedSecret(pendingNewSealedSecret.value)
-    pendingNewSealedSecret.value = null
-  }
-}
-
-function cancelOverwrite() {
-  confirmOverwriteDialog.value = false
-  pendingNewSealedSecret.value = null
-  selectedSealedSecret.value = null
-}
-
-async function getConfig() {
-  if (!Object.keys(config.value).length) {
-    config.value = await fetchConfig()
-  }
-  return config.value
-}
-
-function hasUserEnteredSecretData() {
-  return secrets.value.some((entry) => !isEntryBlank(entry))
 }
 </script>

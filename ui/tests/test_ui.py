@@ -247,6 +247,84 @@ def test_remove_all_leaves_one_blank_row(app_page: Page):
     expect(page.locator("textarea#secretValue-0")).to_have_value("")
 
 
+def enable_sealed_secret_import(page: Page) -> list[str]:
+    """Switch the import feature on and serve two existing SealedSecrets."""
+    requested_urls: list[str] = []
+
+    def config_json(route: Route):
+        config = route.fetch().json()
+        config["enable_existing_sealed_secret_loading"] = True
+        route.fulfill(json=config)
+
+    def sealed_secrets(route: Route):
+        requested_urls.append(route.request.url)
+        route.fulfill(
+            json=[
+                {"name": "app-secrets", "keys": ["API_KEY", "TOKEN"]},
+                {"name": "db-secrets", "keys": ["PASSWORD"]},
+            ]
+        )
+
+    page.route("**/config.json", config_json)
+    page.route("**/sealed-secrets/*", sealed_secrets)
+    return requested_urls
+
+
+def import_sealed_secret(page: Page, name: str):
+    page.get_by_role("button", name="Import existing sealed secret").click()
+    # typing filters the list, whether or not it is open already
+    page.get_by_role("combobox", name="Select SealedSecret").fill(name)
+    page.get_by_role("option", name=name).click()
+
+
+def secret_keys(page: Page) -> list[str]:
+    return [
+        key.input_value() for key in page.locator("textarea[id^='secretKey-']").all()
+    ]
+
+
+def test_import_keys_of_an_existing_sealed_secret(page: Page):
+    requested_urls = enable_sealed_secret_import(page)
+    page.goto("/")
+    import_button = page.get_by_role("button", name="Import existing sealed secret")
+
+    # only offered for a namespace of the cluster
+    page.wait_for_selector("input#namespaceSelection")
+    expect(import_button).to_have_count(0)
+    namespace = namespace_select(page)
+    expect(import_button).to_be_visible()
+
+    # nothing entered yet: the keys are taken over right away
+    import_sealed_secret(page, "app-secrets")
+    expect(page.locator("textarea[id^='secretKey-']")).to_have_count(2)
+    assert secret_keys(page) == ["API_KEY", "TOKEN"]
+    assert requested_urls == [f"{page.url}sealed-secrets/{namespace}"]
+
+    # replacing entered data needs a confirmation
+    page.fill("textarea#secretValue-0", SECRET_VALUE)
+    import_sealed_secret(page, "db-secrets")
+    dialog = page.locator(".v-dialog", has_text="Replace key list?")
+    expect(dialog).to_be_visible()
+    dialog.get_by_role("button", name="Cancel").click()
+    expect(dialog).to_be_hidden()
+    assert secret_keys(page) == ["API_KEY", "TOKEN"]
+    expect(page.locator("textarea#secretValue-0")).to_have_value(SECRET_VALUE)
+
+    import_sealed_secret(page, "db-secrets")
+    expect(dialog).to_be_visible()
+    dialog.get_by_role("button", name="Continue").click()
+    expect(dialog).to_be_hidden()
+    expect(page.locator("textarea[id^='secretKey-']")).to_have_count(1)
+    assert secret_keys(page) == ["PASSWORD"]
+    expect(page.locator("textarea#secretValue-0")).to_have_value("")
+    # the list of the namespace was loaded once
+    assert len(requested_urls) == 1
+
+    # not offered for a namespace that does not exist yet
+    page.locator("#newNamespaceCheckbox").check()
+    expect(import_button).to_have_count(0)
+
+
 def test_secret_form_with_invalid_file(app_page: Page, tmp_path):
     page = app_page
     file_input = page.locator('input[type="file"]#fileInput-0')

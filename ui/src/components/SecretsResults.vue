@@ -4,10 +4,7 @@
       <v-col>
         <SealedSecretCard
           ref="sealedSecretCardRef"
-          :secret-name="secretName"
-          :namespace-name="namespaceName"
-          :sealed-secrets-annotations="sealedSecretsAnnotations"
-          :rendered-secrets="renderedSecrets"
+          :manifest="manifest"
           :is-copied="isCopiedMain"
           :clipboard-available="clipboardAvailable"
           @copy="$emit('copy-main')"
@@ -44,19 +41,8 @@ defineProps({
     type: Array,
     required: true
   },
-  secretName: {
-    type: String,
-    default: ''
-  },
-  namespaceName: {
-    type: String,
-    default: ''
-  },
-  sealedSecretsAnnotations: {
-    type: String,
-    required: true
-  },
-  renderedSecrets: {
+  // The complete SealedSecret manifest as YAML text.
+  manifest: {
     type: String,
     required: true
   },

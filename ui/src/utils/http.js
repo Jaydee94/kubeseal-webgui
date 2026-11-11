@@ -18,7 +18,8 @@ export class HttpError extends Error {
   }
 }
 
-function describeDetail(detail) {
+/** Turn the `detail` of a FastAPI error response into one line of text. */
+export function describeDetail(detail) {
   if (typeof detail === 'string') {
     return detail
   }
