@@ -103,6 +103,39 @@ def test_secret_form_with_new_namespace():
         browser.close()
 
 
+def test_secret_name_is_optional_outside_strict_scope():
+    with sync_playwright() as ctx:
+        browser = ctx.chromium.launch(headless=True)
+        page = browser.new_page()
+        page.goto("http://localhost:8080")
+        page.wait_for_load_state("load")
+
+        disabled_encrypt_button(page)
+        select_scope(page, "namespace-wide")
+        namespace_select(page)
+        add_secret_key_value(page)
+
+        # the name is not sealed into the secret for this scope, so it is
+        # optional, but it can still be entered for the generated YAML
+        encrypt_button = page.locator('button:has-text("Encrypt")')
+        name_input = page.locator("#secretName")
+        assert name_input.is_enabled()
+        assert encrypt_button.is_enabled()
+
+        name_input.fill("Not_Valid")
+        assert encrypt_button.is_disabled()
+
+        name_input.fill("valid-secret-name")
+        assert encrypt_button.is_enabled()
+
+        # the strict scope requires the name again
+        name_input.fill("")
+        select_scope(page, "strict")
+        assert encrypt_button.is_disabled()
+
+        browser.close()
+
+
 def namespace_select(page: Page):
     input_selector = "input#namespaceSelection"
     page.wait_for_selector(input_selector, timeout=10000)
@@ -131,18 +164,17 @@ def secret_name(page: Page):
 
 
 def scope_strict(page: Page):
+    select_scope(page, "strict")
+
+
+def select_scope(page: Page, scope: str):
     select_selector = "div.v-select"
     page.wait_for_selector(select_selector)
     page.click(select_selector)
-    item_selector = "div.v-list-item"
-    page.wait_for_selector(item_selector)
-    items = page.locator(item_selector).all()
-    assert len(items) > 0, "No items found in the dropdown."
-    for item in items:
-        title_locator = item.locator("div.v-list-item-title")
-        if title_locator.count() > 0 and title_locator.inner_text().strip() == "strict":
-            item.click()
-            break
+    item = page.locator("div.v-list-item", has_text=scope).last
+    item.wait_for()
+    item.click()
+    item.wait_for(state="hidden")
 
 
 def add_secret_key_value(page: Page):
