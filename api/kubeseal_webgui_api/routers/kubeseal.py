@@ -19,21 +19,22 @@ def encrypt(data: Data) -> list[KeyValuePair]:
     scope = data.scope or Scope.STRICT
     started = time.perf_counter()
     # Only metadata is logged here. Never log `data.secrets` values: they are
-    # the cleartext secrets.
+    # the cleartext secrets. Name and namespace are logged with %r because they
+    # are client input that may not have been validated (escapes line breaks).
     try:
-        sealed_secrets = run_kubeseal(data.secrets, data.namespace, data.secret, scope)
+        sealed_secrets = run_kubeseal(data.secrets, data.namespace, data.name, scope)
     except (KeyError, ValueError) as e:
         LOGGER.warning(
-            "Rejected sealing request for secret '%s' in namespace '%s': %s",
-            data.secret,
+            "Rejected sealing request for secret %r in namespace %r: %s",
+            data.name,
             data.namespace,
-            e,
+            loggable_reason(e),
         )
         raise HTTPException(400, f"Invalid data for sealing secrets: {e}") from None
     except RuntimeError:
         LOGGER.exception(
-            "Failed to seal secret '%s' in namespace '%s' with scope '%s'.",
-            data.secret,
+            "Failed to seal secret %r in namespace %r with scope '%s'.",
+            data.name,
             data.namespace,
             scope.value,
         )
@@ -42,16 +43,26 @@ def encrypt(data: Data) -> list[KeyValuePair]:
         ) from None
 
     LOGGER.info(
-        "Sealed %d key(s) %s of secret '%s' in namespace '%s' with scope '%s' "
+        "Sealed %d key(s) %s of secret %r in namespace %r with scope '%s' "
         "in %.0f ms.",
         len(sealed_secrets),
         [sealed_secret.key for sealed_secret in sealed_secrets],
-        data.secret,
+        data.name,
         data.namespace,
         scope.value,
         (time.perf_counter() - started) * 1000,
     )
     return sealed_secrets
+
+
+def loggable_reason(error: Exception) -> str:
+    """Describe a rejected request without quoting any part of a secret value."""
+    # Encoding errors name the offending byte or character of the value.
+    if isinstance(error, UnicodeError):
+        return f"a secret value is not valid base64-encoded UTF-8 ({type(error).__name__})"
+    # Validation messages can quote client input; escape line breaks and other
+    # control characters so it cannot forge additional log lines.
+    return str(error).encode("unicode_escape").decode("ascii")
 
 
 def is_blank(value: Optional[str]) -> bool:

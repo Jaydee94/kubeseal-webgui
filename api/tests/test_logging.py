@@ -133,7 +133,7 @@ def test_logging_config_is_loadable():
 
 
 def test_resolver_failure_is_logged_with_traceback(caplog):
-    def broken_resolver():
+    def broken_resolver() -> list[str]:
         # Not a RuntimeError, like kubernetes.client.ApiException.
         raise ValueError("403 Forbidden")
 
@@ -180,6 +180,7 @@ def test_sealing_logs_metadata_but_no_secret_values(caplog, monkeypatch):
         )
     assert response.status_code == 200
     assert "Sealed 1 key(s) ['password'] of secret 'my-secret'" in caplog.text
+    assert "in namespace 'default'" in caplog.text
     assert CLEARTEXT_BASE64 not in caplog.text
     assert "super-secret-value" not in caplog.text
 
@@ -198,3 +199,46 @@ def test_invalid_sealing_request_is_logged_as_warning(caplog):
     (record,) = caplog.records
     assert record.levelno == logging.WARNING
     assert "secret_name was not given" in record.getMessage()
+
+
+def test_undecodable_secret_value_is_not_quoted_in_log(caplog, monkeypatch):
+    monkeypatch.setattr(
+        "kubeseal_webgui_api.routers.kubeseal.settings.mock_enabled", False
+    )
+    with caplog.at_level(logging.WARNING, logger="kubeseal-webgui"):
+        response = client.post(
+            "/secrets",
+            json={
+                "secret": "my-secret",
+                "namespace": "default",
+                # base64 of the single byte 0xff, which is not valid UTF-8
+                "secrets": [{"key": "password", "value": "/w=="}],
+            },
+        )
+    assert response.status_code == 400
+    (record,) = caplog.records
+    assert "UnicodeDecodeError" in record.getMessage()
+    assert "0xff" not in record.getMessage()
+
+
+def test_client_supplied_names_cannot_forge_log_lines(caplog):
+    with caplog.at_level(logging.WARNING, logger="kubeseal-webgui"):
+        response = client.post(
+            "/secrets",
+            json={
+                "secret": "name\nFAKE - kubeseal-webgui - ERROR - forged",
+                "namespace": "default",
+                "scope": "strict",
+                "secrets": [{"key": "password", "value": CLEARTEXT_BASE64}],
+            },
+        )
+    assert response.status_code == 400
+    (record,) = caplog.records
+    assert "\n" not in record.getMessage()
+
+
+def test_secret_name_keeps_its_json_key():
+    schema = client.get("/openapi.json").json()
+    properties = schema["components"]["schemas"]["Data"]["properties"]
+    assert "secret" in properties
+    assert "name" not in properties
