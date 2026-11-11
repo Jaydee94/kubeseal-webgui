@@ -3,7 +3,6 @@ import logging
 import re
 import subprocess  # noqa: S404 the binary has to be configured by an admin
 import time
-from typing import List, Optional, Union, overload
 
 from fastapi import APIRouter, HTTPException
 
@@ -14,7 +13,7 @@ router = APIRouter()
 LOGGER = logging.getLogger("kubeseal-webgui")
 
 
-@router.post("/secrets", response_model=List[KeyValuePair])
+@router.post("/secrets", response_model=list[KeyValuePair])
 def encrypt(data: Data) -> list[KeyValuePair]:
     scope = data.scope or Scope.STRICT
     started = time.perf_counter()
@@ -22,7 +21,7 @@ def encrypt(data: Data) -> list[KeyValuePair]:
     # the cleartext secrets. Name and namespace are logged with %r because they
     # are client input that may not have been validated (escapes line breaks).
     try:
-        sealed_secrets = run_kubeseal(data.secrets, data.namespace, data.name, scope)
+        sealed_secrets = seal_secrets(data.secrets, data.namespace, data.name, scope)
     except (KeyError, ValueError) as e:
         LOGGER.warning(
             "Rejected sealing request for secret %r in namespace %r: %s",
@@ -66,38 +65,29 @@ def loggable_reason(error: Exception) -> str:
     return str(error).encode("unicode_escape").decode("ascii")
 
 
-def is_blank(value: Optional[str]) -> bool:
+def is_blank(value: str | None) -> bool:
     return value is None or value.strip() == ""
 
 
-def verify(name: str, value: Optional[str], mandatory: bool = True) -> None:
-    if mandatory and is_blank(value):
-        raise ValueError(f"{name} was not given")
+def require_given(field_name: str, value: str | None) -> None:
+    if is_blank(value):
+        raise ValueError(f"{field_name} was not given")
 
 
-def run_kubeseal(
-    cleartext_secrets: List[Secret],
-    secret_namespace: Optional[str],
-    secret_name: Optional[str],
+def seal_secrets(
+    entries: list[Secret],
+    secret_namespace: str | None,
+    secret_name: str | None,
     scope: Scope = Scope.STRICT,
 ) -> list[KeyValuePair]:
-    """Check input and initiate kubeseal-cli call."""
-
-    verify("secret_namespace", secret_namespace, scope.needs_namespace())
-    verify("secret_name", secret_name, scope.needs_name())
-
-    list_of_non_dict_inputs = [
-        element for element in cleartext_secrets if not isinstance(element, Secret)
-    ]
-    if cleartext_secrets and list_of_non_dict_inputs:
-        error_message = "Input of cleartext_secrets was not a list of dicts."
-        raise ValueError(error_message)
+    """Seal every entry for the given namespace, name and scope."""
+    if scope.needs_namespace():
+        require_given("secret_namespace", secret_namespace)
+    if scope.needs_name():
+        require_given("secret_name", secret_name)
 
     return [
-        run_kubeseal_command(
-            cleartext_secret_tuple, secret_namespace, secret_name, scope
-        )
-        for cleartext_secret_tuple in cleartext_secrets
+        seal_entry(entry, secret_namespace, secret_name, scope) for entry in entries
     ]
 
 
@@ -109,153 +99,80 @@ def valid_k8s_name(value: str | None) -> str:
     raise ValueError(f"Invalid k8s name: {value}")
 
 
-def run_kubeseal_command(
-    cleartext_secret_tuple: Secret,
-    secret_namespace: Optional[str],
-    secret_name: Optional[str],
+def seal_entry(
+    entry: Secret,
+    secret_namespace: str | None,
+    secret_name: str | None,
     scope: Scope = Scope.STRICT,
 ) -> KeyValuePair:
+    """Seal the value or file of one entry with the kubeseal binary."""
     LOGGER.debug(
         "Sealing secret '%s.%s' for namespace '%s' with scope '%s'.",
         secret_name,
-        cleartext_secret_tuple.key,
+        entry.key,
         secret_namespace,
         scope.value,
     )
 
     if settings.mock_enabled:
-        return KeyValuePair(
-            key=cleartext_secret_tuple.key,
-            value="AgBy3... (Mock Sealed Secret)"
-        )
+        return KeyValuePair(key=entry.key, value="AgBy3... (Mock Sealed Secret)")
 
-    if cleartext_secret_tuple.value is not None:
-        cleartext_secret = decode_base64_string(cleartext_secret_tuple.value)
-        return encrypt_value_or_file(
-            cleartext_secret_tuple,
-            secret_namespace,
-            secret_name,
-            cleartext_secret,
-            settings.kubeseal_binary,
-            settings.kubeseal_cert,
-            scope,
-        )
-    if cleartext_secret_tuple.file is not None:
-        file_secret = decode_base64_bytearray(cleartext_secret_tuple.file)
-        return encrypt_value_or_file(
-            cleartext_secret_tuple,
-            secret_namespace,
-            secret_name,
-            file_secret,
-            settings.kubeseal_binary,
-            settings.kubeseal_cert,
-            scope,
-            encoding=None,
-        )
+    cleartext = decode_cleartext(entry)
+    command = build_kubeseal_command(secret_namespace, secret_name, scope)
+    return KeyValuePair(key=entry.key, value=pipe_through_kubeseal(command, cleartext))
+
+
+def decode_cleartext(entry: Secret) -> bytes:
+    """Return the bytes to seal. A `value` has to be UTF-8 text, a `file` not."""
+    if entry.value is not None:
+        return decode_base64_string(entry.value).encode("utf-8")
+    if entry.file is not None:
+        return bytes(decode_base64_bytearray(entry.file))
     raise RuntimeError("Invalid parameters. Must have a file or a value")
 
 
-@overload
-def encrypt_value_or_file(
-    cleartext_secret_tuple: Secret,
-    secret_namespace: str | None,
-    secret_name: str | None,
-    cleartext_secret: str,
-    binary: str,
-    cert: str,
-    scope: Scope,
-    encoding: str = "utf-8",
-) -> KeyValuePair: ...
-
-
-@overload
-def encrypt_value_or_file(
-    cleartext_secret_tuple: Secret,
-    secret_namespace: str | None,
-    secret_name: str | None,
-    cleartext_secret: bytearray,
-    binary: str,
-    cert: str,
-    scope: Scope,
-    encoding: None = None,
-) -> KeyValuePair: ...
-
-
-def encrypt_value_or_file(
-    cleartext_secret_tuple: Secret,
-    secret_namespace: str | None,
-    secret_name: str | None,
-    cleartext_secret: Union[str, bytearray],
-    binary: str,
-    cert: str,
-    scope: Scope,
-    encoding: Optional[str] = "utf-8",
-) -> KeyValuePair:
-    kubeseal_command_cmd = construct_kubeseal_cmd(
-        secret_namespace, secret_name, binary, cert, scope
-    )
+def pipe_through_kubeseal(command: list[str], cleartext: bytes) -> str:
+    """Pipe the cleartext through kubeseal and return the sealed value."""
     try:
-        kubeseal_subprocess = subprocess.Popen(  # noqa: S603 input has been checked above
-            kubeseal_command_cmd,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            encoding=encoding,
+        completed = subprocess.run(  # noqa: S603 the command is built from checked input
+            command,
+            input=cleartext,
+            capture_output=True,
+            check=False,
         )
     except FileNotFoundError as file_error:
         raise RuntimeError("Could not find kubeseal binary") from file_error
 
-    if encoding:
-        output, error = kubeseal_subprocess.communicate(input=cleartext_secret)
-    else:
-        output_bytes, error_bytes = kubeseal_subprocess.communicate(
-            input=cleartext_secret
-        )
-        output, error = output_bytes.decode("utf-8"), error_bytes.decode("utf-8")
-
+    error_output = completed.stderr.decode("utf-8")
     # Not logged here: the caller logs the failure once, with request context.
-    if error or kubeseal_subprocess.returncode != 0:
+    if error_output or completed.returncode != 0:
         raise RuntimeError(
-            f"Error in run_kubeseal (exit code {kubeseal_subprocess.returncode}): "
-            f"{error.strip() or 'no error output'}"
+            f"Error in run_kubeseal (exit code {completed.returncode}): "
+            f"{error_output.strip() or 'no error output'}"
         )
 
-    sealed_secret = "".join(output.split("\n"))
-    return KeyValuePair(key=cleartext_secret_tuple.key, value=sealed_secret)
+    return "".join(completed.stdout.decode("utf-8").split("\n"))
 
 
-def construct_kubeseal_cmd(
+def build_kubeseal_command(
     secret_namespace: str | None,
     secret_name: str | None,
-    binary: str,
-    cert: str,
     scope: Scope,
 ) -> list[str]:
-    exec_kubeseal_command = [
-        binary,
+    command = [
+        settings.kubeseal_binary,
         "--raw",
         "--from-file=/dev/stdin",
         "--cert",
-        cert,
+        settings.kubeseal_cert,
         "--scope",
         scope.value,
     ]
     if scope.needs_namespace():
-        exec_kubeseal_command.extend(
-            [
-                "--namespace",
-                valid_k8s_name(secret_namespace),
-            ]
-        )
+        command.extend(["--namespace", valid_k8s_name(secret_namespace)])
     if scope.needs_name():
-        exec_kubeseal_command.extend(
-            [
-                "--name",
-                valid_k8s_name(secret_name),
-            ]
-        )
-
-    return exec_kubeseal_command
+        command.extend(["--name", valid_k8s_name(secret_name)])
+    return command
 
 
 def decode_base64_string(base64_string_message: str) -> str:

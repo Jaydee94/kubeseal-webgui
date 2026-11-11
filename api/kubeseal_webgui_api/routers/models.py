@@ -31,11 +31,10 @@ class Secret(BaseModel):
 
     @model_validator(mode="after")
     def value_or_file_set(self: Self) -> Self:
-        file, value = self.file, self.value
-        if file and value:
-            raise AssertionError("Only one field of 'value' or 'file' can be used")
-        if file is None and value is None:
-            raise AssertionError("One field of 'value' or 'file' has to be set")
+        if self.file is not None and self.value is not None:
+            raise ValueError("Only one field of 'value' or 'file' can be used")
+        if self.file is None and self.value is None:
+            raise ValueError("One field of 'value' or 'file' has to be set")
         return self
 
 
