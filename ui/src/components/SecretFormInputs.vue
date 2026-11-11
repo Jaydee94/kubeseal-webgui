@@ -5,8 +5,6 @@
         <v-select
           :model-value="scope"
           :items="scopes"
-          :select-size="1"
-          :plain="true"
           label="Scope"
           variant="outlined"
           class="modern-input"
@@ -38,7 +36,6 @@
           :model-value="namespaceName"
           label="New namespace name"
           autocomplete="off"
-          trim
           clearable
           variant="outlined"
           class="modern-input"
@@ -84,7 +81,6 @@
             <v-list-item v-bind="itemProps" :value="item" class="transition-fast">
               <template #prepend>
                 <v-icon
-                  small
                   color="warning"
                   class="transition-fast"
                   @click.stop="$emit('toggle-favorite', item.value)"
@@ -132,7 +128,6 @@
           :model-value="secretName"
           :label="secretNameRequired ? 'Secret name' : 'Secret name (optional)'"
           autocomplete="off"
-          trim
           clearable
           variant="outlined"
           class="modern-input"

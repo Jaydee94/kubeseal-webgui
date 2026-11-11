@@ -36,7 +36,6 @@
         id="fileInput"
         :model-value="secret.file"
         show-size
-        dense
         clearable
         label="Upload File"
         prepend-icon="mdi-file-upload-outline"

@@ -15,8 +15,7 @@
     "format:check": "prettier --check src/"
   },
   "dependencies": {
-    "@fontsource/roboto": "*",
-    "core-js": "^3.49.0",
+    "@fontsource/roboto": "^5.3.0",
     "js-base64": "^3.7.8",
     "vue": "^3.5.34",
     "vuetify": "^4.0.7"
@@ -24,7 +23,6 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@mdi/font": "^7.4.47",
-    "@rushstack/eslint-patch": "^1.16.1",
     "@vitejs/plugin-vue": "^6.0.7",
     "@vue/eslint-config-prettier": "^10.2.0",
     "eslint": "^10.4.0",

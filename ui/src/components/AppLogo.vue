@@ -1,6 +1,6 @@
 <template>
   <v-col>
-    <a id="logo" class="navbar-brand" href="#">
+    <a id="logo" href="#">
       <img id="logo-img" alt="Kubeseal-Webgui Logo" src="@/assets/logo-2025.png" />
     </a>
   </v-col>
@@ -26,6 +26,4 @@ export default {
   height: 200px;
   margin: 0;
 }
-
-/* Removed text styles */
 </style>

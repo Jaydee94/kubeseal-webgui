@@ -1,10 +1,6 @@
 <template>
   <div class="secrets-component">
-    <v-container
-      v-if="displayName"
-      class="text-h5 text-gradient-primary text-center mb-2 py-0"
-      align="center"
-    >
+    <v-container v-if="displayName" class="text-h5 text-gradient-primary text-center mb-2 py-0">
       {{ displayName }}
     </v-container>
 
@@ -154,12 +150,12 @@
     </v-dialog>
 
     <!-- Snackbars -->
-    <v-snackbar v-model="showErrorSnackbar" color="red" timeout="5000" top>
-      <v-icon left>mdi-alert-circle</v-icon>
+    <v-snackbar v-model="showErrorSnackbar" color="red" timeout="5000">
+      <v-icon>mdi-alert-circle</v-icon>
       {{ errorMessage }}
     </v-snackbar>
-    <v-snackbar v-model="clipboardSnackbar" color="green" timeout="3000" top>
-      <v-icon left>mdi-check-circle</v-icon>
+    <v-snackbar v-model="clipboardSnackbar" color="green" timeout="3000">
+      <v-icon>mdi-check-circle</v-icon>
       {{ clipboardMessage }}
     </v-snackbar>
   </div>
@@ -662,96 +658,3 @@ function validateFile(file, counter) {
   secrets.value = [...secrets.value]
 }
 </script>
-
-<style>
-.helper-info {
-  margin-bottom: 10px;
-}
-
-pre:has(code) {
-  background-color: rgba(var(--v-theme-on-surface), 0.05);
-  color: rgb(var(--v-theme-on-surface));
-  padding: 12px;
-  border-radius: var(--radius-md, 12px);
-  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
-}
-
-pre > code {
-  padding: 0 !important;
-  background: transparent !important;
-  color: inherit !important;
-}
-
-.secrets-component {
-  max-width: 1600px;
-  margin: 0 auto;
-  min-height: 400px;
-}
-
-.copy-btn {
-  transition: all var(--transition-fast, 0.15s ease) !important;
-}
-
-.copy-btn:hover {
-  transform: scale(1.1);
-}
-
-.secrets-form {
-  animation: fadeIn 0.5s ease;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.modern-input {
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.encrypt-btn {
-  font-size: 1rem !important;
-  font-weight: 500 !important;
-  transition: all var(--transition-fast, 0.15s ease) !important;
-}
-
-.result-code {
-  border-radius: var(--radius-md, 12px);
-  padding: 1rem;
-  font-size: 0.875rem;
-  line-height: 1.6;
-}
-
-.key-code {
-  background: linear-gradient(135deg, rgba(0, 123, 255, 0.1), rgba(253, 126, 20, 0.1));
-  padding: 0.25rem 0.5rem;
-  border-radius: var(--radius-sm, 8px);
-  font-weight: 600;
-}
-
-/* Transition Classes */
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity var(--transition-base, 0.3s ease);
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-
-.slide-up-enter-active {
-  transition: all var(--transition-base, 0.3s ease);
-}
-
-.slide-up-enter-from {
-  opacity: 0;
-  transform: translateY(30px);
-}
-</style>

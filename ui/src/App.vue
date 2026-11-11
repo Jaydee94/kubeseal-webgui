@@ -33,5 +33,3 @@ import AppLogo from './components/AppLogo.vue'
 import DarkMode from './components/DarkMode.vue'
 import AppConfig from './components/AppConfig.vue'
 </script>
-
-<style scoped></style>
