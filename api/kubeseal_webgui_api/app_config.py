@@ -21,8 +21,41 @@ class AppSettings(BaseSettings):
 LOGGER = logging.getLogger("kubeseal-webgui")
 
 
+def _run_kubeseal(arguments: list[str], purpose: str) -> str:
+    """Run the kubeseal binary and return its stdout, logging any failure."""
+    command = [binary, *arguments]
+    LOGGER.debug("Running %s", command)
+    try:
+        completed = subprocess.run(  # noqa: S603 the binary is configured by an admin
+            command,
+            capture_output=True,
+            encoding="utf-8",
+            check=False,
+        )
+    except OSError as os_error:
+        error_message = f"Failed to {purpose}: cannot execute '{binary}': {os_error}"
+        LOGGER.error(error_message)
+        raise RuntimeError(error_message) from os_error
+
+    if completed.stderr or completed.returncode != 0:
+        error_message = (
+            f"Failed to {purpose} (exit code {completed.returncode}): "
+            f"{completed.stderr.strip() or 'no error output'}"
+        )
+        LOGGER.error(error_message)
+        raise RuntimeError(error_message)
+    return completed.stdout
+
+
 def fetch_sealed_secrets_cert() -> None:
-    if mock or autofetch == "false":
+    if mock:
+        LOGGER.info("Mock mode is enabled, not fetching a certificate.")
+        return
+    if autofetch == "false":
+        LOGGER.info(
+            "Certificate auto-fetch is disabled, using certificate at '%s'.",
+            kubeseal_cert,
+        )
         return
 
     sealed_secrets_namespace = environ.get(
@@ -37,24 +70,17 @@ def fetch_sealed_secrets_cert() -> None:
         sealed_secrets_controller_name,
         sealed_secrets_namespace,
     )
-    kubeseal_subprocess = subprocess.Popen(
+    output = _run_kubeseal(
         [
-            binary,
             "--fetch-cert",
             "--controller-name",
             sealed_secrets_controller_name,
             "--controller-namespace",
             sealed_secrets_namespace,
         ],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        encoding="utf-8",
+        f"fetch the certificate from controller '{sealed_secrets_controller_name}' "
+        f"in namespace '{sealed_secrets_namespace}'",
     )
-    output, error = kubeseal_subprocess.communicate()
-    if error:
-        error_message = f"Error in run_kubeseal: {error}"
-        LOGGER.error(error_message)
-        raise RuntimeError(error_message)
     with open(kubeseal_cert, "w") as file:
         LOGGER.info("Saving certificate in '%s'", kubeseal_cert)
         file.write(output)
@@ -63,21 +89,20 @@ def fetch_sealed_secrets_cert() -> None:
 def get_kubeseal_version() -> str:
     """Retrieve the kubeseal binary version."""
     LOGGER.debug("Retrieving kubeseal binary version.")
-    kubeseal_subprocess = subprocess.Popen(
-        [binary, "--version"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        encoding="utf-8",
-    )
-    output, error = kubeseal_subprocess.communicate()
-    if error:
-        error_message = f"Error in run_kubeseal: {error}"
+    output = _run_kubeseal(["--version"], "determine the kubeseal version")
+
+    try:
+        version = "".join(output.split("\n")).split(":")[1].replace('"', "").lstrip()
+    except IndexError:
+        error_message = (
+            f"Unexpected output of '{binary} --version': {output!r}. "
+            "Check that KUBESEAL_BINARY points to a kubeseal binary."
+        )
         LOGGER.error(error_message)
-        raise RuntimeError(error_message)
+        raise RuntimeError(error_message) from None
 
-    version = "".join(output.split("\n"))
-
-    return str(version).split(":")[1].replace('"', "").lstrip()
+    LOGGER.debug("Detected kubeseal version '%s'.", version)
+    return version
 
 
 settings = AppSettings(

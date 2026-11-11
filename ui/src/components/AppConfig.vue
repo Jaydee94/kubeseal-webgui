@@ -39,6 +39,9 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useConfig } from '@/composables/useConfig'
+import { createLogger } from '@/utils/logger'
+
+const log = createLogger('AppConfig')
 
 const configs = ref({})
 const errorMessage = ref("")
@@ -53,7 +56,8 @@ async function fetchConfigs() {
     configs.value = result.configs;
     fetchConfigsSuccessful.value = result.success;
   } catch (error) {
-    errorMessage.value = error;
+    log.error('Could not retrieve application properties:', error);
+    errorMessage.value = error.message || String(error);
     fetchConfigsSuccessful.value = false;
   }
 };

@@ -83,6 +83,7 @@ grants `list` on `namespaces` and `get`/`list` on
 | `nodeSelector` | Pod node selector. | `{}` |
 | `api.url` | Public URL of the API as seen by the browser. Rendered into the UI's `config.json` ConfigMap. | `http://localhost:8080` |
 | `api.loglevel` | Log level for the API container (`DEBUG`, `INFO`, `WARNING`, `ERROR`). | `INFO` |
+| `api.logformat` | Log output format of the API container: `text` or `json` (one JSON object per line, for log aggregators). | `text` |
 | `api.environment` | Additional environment variables for the API container as a map. | `{}` |
 
 ### Security context

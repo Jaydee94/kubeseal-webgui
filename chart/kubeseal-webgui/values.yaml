@@ -10,6 +10,8 @@ api:
     tag: 4.13.0
   environment: {}
   loglevel: "INFO"
+  ## Log output format of the API container: "text" or "json" (one JSON object per line).
+  logformat: "text"
 ui:
   image:
     repository: ghcr.io/jaydee94/kubeseal-webgui/ui
