@@ -10,7 +10,8 @@ readonly NAMESPACE="kubeseal-webgui"
 readonly E2E_NAMESPACE="e2e"
 readonly DEV_NAMESPACE="dev"
 readonly STAGING_NAMESPACE="staging"
-HOSTNAME_FQDN="$(hostname -f)"
+# Lower-cased: Ingress hosts must be RFC 1123 (macOS hostnames often are not).
+HOSTNAME_FQDN="$(hostname -f | tr "[:upper:]" "[:lower:]")"
 readonly API_URL="http://${HOSTNAME_FQDN}:7180"
 readonly TIMEOUT="90s"
 readonly MAX_RETRIES=3
@@ -124,7 +125,7 @@ EOF
 fi
 
 log_info "Installing sealed-secrets controller"
-helm repo add sealed-secrets https://bitnami-labs.github.io/sealed-secrets 2>/dev/null || true
+helm repo add sealed-secrets https://bitnami.github.io/sealed-secrets 2>/dev/null || true
 if helm list -n kube-system | grep -q "^sealed-secrets"; then
     log_info "Sealed-secrets already installed, skipping"
 else
@@ -174,7 +175,7 @@ helm template \
     --set enableExistingSealedSecretLoading=true \
     --set image.pullPolicy=Never \
     --set ingress.enabled=true \
-    --set ingress.hostname="$(hostname -f)" \
+    --set ingress.hostname="${HOSTNAME_FQDN}" \
     --set resources=null \
     --set sealedSecrets.autoFetchCert=true \
     --set ui.image.tag=snapshot \
@@ -296,7 +297,7 @@ else
 fi
 kubectl delete pod curl-test
 
-log_info "Setup complete! Access the UI at: http://$(hostname -f):7180"
+log_info "Setup complete! Access the UI at: http://${HOSTNAME_FQDN}:7180"
 log_info "Feature 'Load keys from existing SealedSecret' is enabled."
 log_info "In the UI, select namespace '${E2E_NAMESPACE}' and try importing keys from 'app-secrets' or 'db-secrets'."
 log_info "Additional test data available in namespaces '${DEV_NAMESPACE}' and '${STAGING_NAMESPACE}'."
