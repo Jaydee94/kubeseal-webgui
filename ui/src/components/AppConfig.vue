@@ -29,27 +29,27 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useConfig } from '@/composables/useConfig'
+import { fetchApiConfig } from '@/api'
+import { loadConfig } from '@/config'
 import { createLogger } from '@/utils/logger'
 
 const log = createLogger('AppConfig')
 
+// The properties shown as chips, in this order.
 const configs = ref({})
+// null while loading, afterwards whether loading worked.
 const fetchConfigsSuccessful = ref(null)
-const { fetchAppConfig } = useConfig()
 
-onMounted(async () => fetchConfigs())
-
-async function fetchConfigs() {
+onMounted(async () => {
   try {
-    const result = await fetchAppConfig()
-    configs.value = result.configs
-    fetchConfigsSuccessful.value = result.success
+    const { uiVersion, apiVersion } = await loadConfig()
+    configs.value = { ...(await fetchApiConfig()), uiVersion, apiVersion }
+    fetchConfigsSuccessful.value = true
   } catch (error) {
     log.error('Could not retrieve application properties:', error)
     fetchConfigsSuccessful.value = false
   }
-}
+})
 </script>
 
 <style scoped>

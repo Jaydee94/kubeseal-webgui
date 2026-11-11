@@ -95,10 +95,13 @@ This project uses npm. There is no `yarn.lock`; do not use Yarn.
 npm run dev
 ```
 
-Vite serves the SPA on `http://localhost:8080` with hot reload. By default it
-expects the API at `http://localhost:5000` (set in
-`src/composables/useConfig.js` or equivalent — check `public/config.json` for
-the runtime value).
+Vite serves the SPA on `http://localhost:8080` with hot reload and proxies
+the API routes to `http://localhost:5000` (see `server.proxy` in
+`vite.config.mjs`). The API URL the SPA uses comes from `public/config.json`,
+which `src/config.js` loads at startup; it is empty in development, so
+requests go through the proxy. `.env.development` sets
+`VITE_MOCK_NAMESPACES=true`, which makes the namespace list work without an
+API.
 
 ### Build for production
 

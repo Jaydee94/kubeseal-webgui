@@ -92,7 +92,7 @@
                 variant="elevated"
                 :disabled="notReadyToEncode"
                 min-width="200"
-                @click="fetchEncodedSecrets()"
+                @click="seal"
               >
                 Encrypt
               </v-btn>
@@ -153,10 +153,10 @@ import { ref, computed, onBeforeMount, watch } from 'vue'
 import SecretFormInputs from './SecretFormInputs.vue'
 import SecretsList from './SecretsList.vue'
 import SecretsResults from './SecretsResults.vue'
-import { useConfig } from '@/composables/useConfig'
+import { fetchNamespaces, fetchSealedSecrets, sealSecrets } from '@/api'
+import { loadConfig } from '@/config'
 import { useFavoriteNamespaces } from '@/composables/useFavoriteNamespaces'
 import { useSealedSecretImport } from '@/composables/useSealedSecretImport'
-import { useSecrets } from '@/composables/useSecrets'
 import {
   CLIPBOARD_SNACKBAR_TIMEOUT_MS,
   DEFAULT_SCOPE,
@@ -176,16 +176,9 @@ defineOptions({
 })
 
 const log = createLogger('Secrets')
-const { fetchConfig } = useConfig()
-const {
-  fetchNamespaces,
-  fetchSealedSecrets,
-  fetchEncodedSecrets: fetchEncodedSecretsApi
-} = useSecrets()
 const { favoriteNamespaces, toggleFavorite } = useFavoriteNamespaces()
 
 // Configuration and data loaded from the server
-const config = ref({})
 const displayName = ref('')
 const sealedSecretImportFeatureEnabled = ref(false)
 const namespaces = ref([])
@@ -223,7 +216,7 @@ const {
 } = useSealedSecretImport({
   namespaceName,
   enabled: sealedSecretImportFeatureEnabled,
-  fetchSealedSecrets: async (namespace) => fetchSealedSecrets(await getConfig(), namespace),
+  fetchSealedSecrets,
   hasUserEnteredData: () => secrets.value.some((entry) => !isEntryBlank(entry)),
   applyKeys: replaceEntriesWithKeys,
   onError: setErrorMessage
@@ -271,18 +264,17 @@ const sealedSecretYaml = computed(() =>
 )
 
 onBeforeMount(async () => {
+  let config
   try {
-    config.value = await fetchConfig()
+    config = await loadConfig()
   } catch (error) {
     log.error('Failed to load the UI configuration (config.json):', error)
     setErrorMessage(`Failed to load the UI configuration. Error Message: ${error.message}.`)
     return
   }
-  sealedSecretImportFeatureEnabled.value = isEnabled(
-    config.value.enable_existing_sealed_secret_loading
-  )
-  await fetchNamespacesData(config.value)
-  displayName.value = config.value.display_name
+  displayName.value = config.displayName
+  sealedSecretImportFeatureEnabled.value = config.importEnabled
+  await loadNamespaces()
 })
 
 // A value picked from the cluster list is not valid as free text and vice
@@ -298,27 +290,9 @@ watch(scope, (newScope) => {
   }
 })
 
-// The Helm-rendered config.json may contain the flag as boolean or string.
-function isEnabled(value) {
-  if (typeof value === 'boolean') {
-    return value
-  }
-  if (typeof value === 'string') {
-    return ['true', '1', 'yes', 'on'].includes(value.toLowerCase())
-  }
-  return false
-}
-
-async function getConfig() {
-  if (!Object.keys(config.value).length) {
-    config.value = await fetchConfig()
-  }
-  return config.value
-}
-
-async function fetchNamespacesData(config) {
+async function loadNamespaces() {
   try {
-    namespaces.value = await fetchNamespaces(config)
+    namespaces.value = await fetchNamespaces()
   } catch (error) {
     log.error('Failed to fetch namespaces:', error)
     setErrorMessage(`Failed to fetch namespaces. Error Message: ${error.message}.`, 'namespaces')
@@ -393,14 +367,14 @@ function replaceEntriesWithKeys(keys) {
   secrets.value = entries.length > 0 ? entries : [createSecretEntry()]
 }
 
-async function fetchEncodedSecrets() {
+async function seal() {
   try {
     loading.value = true
-    sealedSecrets.value = await fetchEncodedSecretsApi(await getConfig(), {
+    sealedSecrets.value = await sealSecrets({
       secretName: secretName.value,
       namespaceName: namespaceName.value,
       scope: scope.value,
-      secrets: secrets.value
+      entries: secrets.value
     })
     await new Promise((resolve) => setTimeout(resolve, POST_SEAL_DELAY_MS))
     displayCreateSealedSecretForm.value = false

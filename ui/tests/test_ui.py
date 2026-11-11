@@ -46,6 +46,59 @@ def b64(text: str) -> str:
     return base64.b64encode(text.encode("utf-8")).decode("ascii")
 
 
+def test_config_json_is_requested_once_per_page_load(page: Page):
+    config_requests: list[str] = []
+    page.on(
+        "request",
+        lambda request: (
+            config_requests.append(request.url)
+            if request.url.endswith("/config.json")
+            else None
+        ),
+    )
+    page.route(
+        "**/config", lambda route: route.fulfill(json={"kubesealVersion": "0.27.1"})
+    )
+    SealingApi(page)
+
+    page.goto("/")
+    # both consumers of the configuration have rendered
+    expect(page.locator(".v-footer .v-chip")).to_have_count(3)
+    expect(page.locator(".secrets-component .text-h5")).to_have_text("Test")
+    # sealing needs the API URL from the configuration again
+    seal_one_value(page)
+
+    assert len(config_requests) == 1, config_requests
+
+
+def test_footer_shows_the_versions(page: Page):
+    page.route(
+        "**/config", lambda route: route.fulfill(json={"kubesealVersion": "0.27.1"})
+    )
+    page.goto("/")
+
+    chips = page.locator(".v-footer .v-chip")
+    expect(chips).to_have_count(3)
+    assert [" ".join(text.split()) for text in chips.all_inner_texts()] == [
+        "kubesealVersion: 0.27.1",
+        "uiVersion: 2.1.0",
+        "apiVersion: 2.1.0",
+    ]
+
+
+def test_footer_reports_an_unreachable_api(page: Page):
+    page.route(
+        "**/config",
+        lambda route: route.fulfill(status=500, json={"detail": "Internal Server Error"}),
+    )
+    page.goto("/")
+
+    expect(page.locator(".v-footer").first).to_contain_text(
+        "Could not retrieve application properties."
+    )
+    expect(page.locator(".v-footer .v-chip")).to_have_count(0)
+
+
 def test_ui_start(app_page: Page):
     assert app_page.title() == "Kubeseal WebGui - Sealed Secrets Management"
 
