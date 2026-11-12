@@ -4,6 +4,7 @@ import { Base64 } from 'js-base64'
 import { loadConfig } from '@/config'
 import { requestJson } from '@/utils/http'
 import { mockNamespacesResolver } from '@/utils/mockData'
+import { entryHasFile } from '@/utils/secretEntry'
 
 const MOCK_NAMESPACE_COUNT = 10
 
@@ -30,12 +31,14 @@ export async function fetchApiConfig() {
   return requestJson(await apiUrl('/config'))
 }
 
+// A row holds a file or a text value. Anything without a file is sent as a
+// value, an empty one included, so a row is never read as a missing file.
 async function toRequestEntry(entry) {
-  if (entry.value) {
-    return { key: entry.key, value: Base64.encode(entry.value) }
+  if (entryHasFile(entry)) {
+    const content = new Uint8Array(await entry.file.arrayBuffer())
+    return { key: entry.key, file: Base64.fromUint8Array(content) }
   }
-  const content = new Uint8Array(await entry.file.arrayBuffer())
-  return { key: entry.key, file: Base64.fromUint8Array(content) }
+  return { key: entry.key, value: Base64.encode(entry.value) }
 }
 
 /**

@@ -103,6 +103,19 @@ describe('api', () => {
     })
   })
 
+  it('sends a row without a file as a value, even an empty one', async () => {
+    stubFetch([{ key: 'empty', value: 'AgA' }])
+
+    await api.sealSecrets({
+      secretName: 'my-secret',
+      namespaceName: 'my-namespace',
+      scope: 'strict',
+      entries: [{ id: 1, key: 'empty', value: '', file: null, fileError: '' }]
+    })
+
+    expect(JSON.parse(requests[0].body).secrets).toEqual([{ key: 'empty', value: '' }])
+  })
+
   it('reads config.json once for several API calls', async () => {
     stubFetch([])
     await api.fetchNamespaces()
