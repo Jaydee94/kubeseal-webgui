@@ -107,7 +107,7 @@ def test_boolean_settings_accept_the_usual_spellings(clean_env, name, raw, expec
     assert getattr(AppSettings(), name.lower()) is expected
 
 
-def test_unparseable_boolean_setting_is_rejected(clean_env):
+def test_unparsable_boolean_setting_is_rejected(clean_env):
     clean_env.setenv("KUBESEAL_AUTOFETCH", "maybe")
     with pytest.raises(ValueError, match="kubeseal_autofetch"):
         AppSettings()
