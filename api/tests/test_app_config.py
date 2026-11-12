@@ -19,6 +19,7 @@ SETTINGS_ENV_NAMES = [
     "KUBESEAL_CONTROLLER_NAME",
     "MOCK_ENABLED",
     "MOCK_NAMESPACE_COUNT",
+    "ORIGIN_URL",
 ]
 
 
@@ -59,6 +60,7 @@ def test_settings_defaults(clean_env):
     assert settings.kubeseal_controller_name == "sealed-secrets-controller"
     assert settings.mock_enabled is False
     assert settings.mock_namespace_count == 120
+    assert settings.origin_url == "http://localhost:8080"
 
 
 def test_settings_are_read_from_the_documented_env_names(clean_env):
@@ -232,3 +234,43 @@ def test_certificate_is_not_fetched_unless_enabled(monkeypatch, tmp_path):
         pass
 
     assert not cert.exists()
+
+
+@pytest.mark.parametrize(
+    ("url", "origin"),
+    [
+        ("http://localhost:8080", "http://localhost:8080"),
+        ("https://example.com/", "https://example.com"),
+        ("https://example.com/kubeseal/", "https://example.com"),
+        (" https://example.com:8443/path?x=1 ", "https://example.com:8443"),
+    ],
+)
+def test_cors_origin_is_the_url_without_its_path(url, origin):
+    assert app_config.cors_origins(url) == [origin]
+
+
+@pytest.mark.parametrize("url", ["", "/", "example.com", "/just/a/path"])
+def test_no_cross_origin_access_without_an_absolute_url(url):
+    assert app_config.cors_origins(url) == []
+
+
+def test_origin_url_is_read_from_the_environment(clean_env):
+    clean_env.setenv("ORIGIN_URL", "https://seal.example.com")
+    assert AppSettings().origin_url == "https://seal.example.com"
+
+
+def test_only_the_configured_origin_gets_cors_headers(clean_env):
+    # the test environment sets no ORIGIN_URL, so the default applies
+    from fastapi.testclient import TestClient
+
+    from kubeseal_webgui_api.app import app, origins
+
+    assert origins == ["http://localhost:8080"]
+    clean_env.setattr(app_config.settings, "mock_enabled", True)
+    client = TestClient(app)
+
+    allowed = client.get("/config", headers={"Origin": "http://localhost:8080"})
+    assert allowed.headers["access-control-allow-origin"] == "http://localhost:8080"
+
+    other = client.get("/config", headers={"Origin": "https://evil.example"})
+    assert "access-control-allow-origin" not in other.headers

@@ -7,7 +7,12 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from .app_config import fetch_sealed_secrets_cert, get_kubeseal_version, settings
+from .app_config import (
+    cors_origins,
+    fetch_sealed_secrets_cert,
+    get_kubeseal_version,
+    settings,
+)
 from .logging_utils import LOGGER_NAME, REQUEST_ID_HEADER, RequestIdMiddleware
 from .routers import config, kubernetes, kubeseal
 
@@ -28,6 +33,10 @@ async def lifespan(fastapi_app: fastapi.FastAPI):  # noqa: ANN201 skipcq: PYL-W0
         settings.kubeseal_autofetch,
         settings.mock_enabled,
     )
+    LOGGER.info(
+        "Cross-origin requests are allowed from: %s",
+        ", ".join(origins) or "nowhere (ORIGIN_URL is not an absolute URL)",
+    )
     fetch_sealed_secrets_cert()
     LOGGER.info("Startup tasks complete.")
     yield
@@ -36,9 +45,9 @@ async def lifespan(fastapi_app: fastapi.FastAPI):  # noqa: ANN201 skipcq: PYL-W0
 
 app = fastapi.FastAPI(lifespan=lifespan)
 
-origins = [
-    "http://localhost:8080",
-]
+# Only needed when the UI is not served from the same origin as the API, as
+# with the dev server. The default is the dev server's address.
+origins = cors_origins(settings.origin_url)
 
 app.add_middleware(
     CORSMiddleware,

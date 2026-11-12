@@ -124,6 +124,7 @@ These are read directly by the API process and can be set via
 | `KUBESEAL_AUTOFETCH` | Set to `true` to fetch the certificate from the controller on startup. Set by the chart when `sealedSecrets.autoFetchCert=true`. A boolean: `true`/`false`, `1`/`0`, `yes`/`no`, `on`/`off` in any case; any other value stops the API at startup. | `false` |
 | `KUBESEAL_CONTROLLER_NAME` | Deployment name of the Sealed Secrets controller (used when auto-fetching). | `sealed-secrets-controller` |
 | `KUBESEAL_CONTROLLER_NAMESPACE` | Namespace of the Sealed Secrets controller (used when auto-fetching). | `sealed-secrets` in the API code, overridden to match `sealedSecrets.controllerNamespace` by the chart. |
+| `ORIGIN_URL` | The one origin that may call the API from a browser page served elsewhere (CORS). Only scheme, host and port are used. Set by the chart to `api.url`. Not needed when UI and API share an origin, as behind the chart's ingress; a value that is not an absolute URL allows no other origin. | `http://localhost:8080` (the UI dev server) |
 | `MOCK_ENABLED` | Replace the Kubernetes client and `kubeseal` invocations with in-memory mocks. Useful for local development without a cluster; no `kubeseal` binary is needed. A boolean like `KUBESEAL_AUTOFETCH`. | `false` |
 
 ## UI configuration

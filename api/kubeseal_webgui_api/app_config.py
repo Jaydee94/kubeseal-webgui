@@ -9,6 +9,7 @@ import functools
 import logging
 import subprocess
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from pydantic_settings import BaseSettings
 
@@ -29,9 +30,27 @@ class AppSettings(BaseSettings):
     kubeseal_controller_name: str = "sealed-secrets-controller"
     mock_enabled: bool = False
     mock_namespace_count: int = 120
+    # Where the UI is served from, if that is not where the API is served
+    # from: the one origin that may call the API across origins (CORS).
+    origin_url: str = "http://localhost:8080"
 
 
 settings = AppSettings()
+
+
+def cors_origins(url: str) -> list[str]:
+    """Return the origins that may call the API from another origin.
+
+    Browsers send an origin without path or trailing slash, so a configured
+    URL such as ``https://example.com/kubeseal/`` is reduced to scheme, host
+    and port. Anything that is not an absolute URL (the chart passes its
+    ``api.url``, which may be empty or a path) allows no other origin; a UI
+    served from the same origin as the API does not need one.
+    """
+    parts = urlsplit(url.strip())
+    if not parts.scheme or not parts.netloc:
+        return []
+    return [f"{parts.scheme}://{parts.netloc}"]
 
 
 def _run_kubeseal(arguments: list[str], purpose: str) -> str:
