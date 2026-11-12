@@ -93,21 +93,29 @@ def seal_secrets(
 
 
 # Names as Kubernetes defines them (RFC 1123); the UI applies the same rules.
-# A label: lower case alphanumerics and '-', starting and ending with an
-# alphanumeric, at most 63 characters. A subdomain: labels joined by dots, at
-# most 253 characters in total.
+# They are checked character by character instead of with a regular
+# expression: the usual patterns backtrack on long input, and these names
+# come straight from the request.
+MAX_DNS_LABEL_LENGTH = 63
 MAX_DNS_SUBDOMAIN_LENGTH = 253
-DNS_LABEL = re.compile(r"[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?")
-DNS_SUBDOMAIN = re.compile(
-    r"[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*"
-)
+DNS_NAME_CHARACTERS = frozenset("abcdefghijklmnopqrstuvwxyz0123456789-")
+
+
+def is_dns_name_part(value: str) -> bool:
+    """Lower case alphanumerics and '-', starting and ending alphanumeric."""
+    return (
+        value != ""
+        and DNS_NAME_CHARACTERS.issuperset(value)
+        and not value.startswith("-")
+        and not value.endswith("-")
+    )
 
 
 def valid_namespace_name(value: str | None) -> str:
     """Return the name if it can be the name of a namespace (a DNS label)."""
     if not value:
         raise ValueError("Invalid k8s namespace name: Must not be empty or None")
-    if DNS_LABEL.fullmatch(value):
+    if len(value) <= MAX_DNS_LABEL_LENGTH and is_dns_name_part(value):
         return value
     raise ValueError(f"Invalid k8s namespace name: {value}")
 
@@ -116,7 +124,9 @@ def valid_secret_name(value: str | None) -> str:
     """Return the name if it can be the name of a secret (a DNS subdomain)."""
     if not value:
         raise ValueError("Invalid k8s secret name: Must not be empty or None")
-    if len(value) <= MAX_DNS_SUBDOMAIN_LENGTH and DNS_SUBDOMAIN.fullmatch(value):
+    if len(value) <= MAX_DNS_SUBDOMAIN_LENGTH and all(
+        is_dns_name_part(part) for part in value.split(".")
+    ):
         return value
     raise ValueError(f"Invalid k8s secret name: {value}")
 
