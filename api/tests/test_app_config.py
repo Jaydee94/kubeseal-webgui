@@ -276,5 +276,7 @@ def test_only_the_configured_origin_gets_cors_headers(monkeypatch):
     allowed = client.get("/config", headers={"Origin": origin})
     assert allowed.headers["access-control-allow-origin"] == origin
 
-    other = client.get("/config", headers={"Origin": "https://evil.example"})
+    # an origin that cannot be the configured one, whatever ORIGIN_URL says
+    other_origin = origin.replace("://", "://not-") + ".invalid"
+    other = client.get("/config", headers={"Origin": other_origin})
     assert "access-control-allow-origin" not in other.headers
