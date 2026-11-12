@@ -27,7 +27,7 @@ http_client = TestClient(app)
 
 @pytest.fixture(autouse=True)
 def _reset_cluster_config(monkeypatch) -> Iterator[None]:
-    monkeypatch.setattr(kubernetes_utils, "_config_loaded", False)
+    monkeypatch.setattr(kubernetes_utils._state, "config_loaded", False)
     saved_default = client.Configuration._default
     client.Configuration.set_default(None)
     yield
@@ -136,7 +136,7 @@ def test_rotated_service_account_token_is_picked_up_after_one_load(
     Clock.skew = datetime.timedelta(minutes=2)
     kubernetes_utils.ensure_incluster_config()
 
-    assert kubernetes_utils._config_loaded is True
+    assert kubernetes_utils._state.config_loaded is True
     assert current_token() == "bearer second-token"
     # API objects are created per request and must see the new token as well
     api_configuration = client.CoreV1Api().api_client.configuration

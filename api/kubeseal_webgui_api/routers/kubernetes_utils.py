@@ -1,10 +1,12 @@
 import threading
+from types import SimpleNamespace
 
 from kubernetes import config
 from kubernetes.client import Configuration
 
 _load_lock = threading.Lock()
-_config_loaded = False
+# Whether the configuration is loaded and stays valid without reloading.
+_state = SimpleNamespace(config_loaded=False)
 
 
 def ensure_incluster_config() -> None:
@@ -15,12 +17,11 @@ def ensure_incluster_config() -> None:
     `fix_incluster_bearer_token` only refreshes the token under the old key,
     so for such a client the configuration is loaded again on every call.
     """
-    global _config_loaded
     with _load_lock:
-        if _config_loaded:
+        if _state.config_loaded:
             return
         config.load_incluster_config()
-        _config_loaded = not fix_incluster_bearer_token()
+        _state.config_loaded = not fix_incluster_bearer_token()
 
 
 def fix_incluster_bearer_token() -> bool:
