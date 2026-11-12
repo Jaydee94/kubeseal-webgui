@@ -237,9 +237,12 @@ const invalidNewNamespace = computed(
 
 // Only a failed load blocks sealing; a failed attempt to seal or to copy can
 // simply be repeated. Failing to list the cluster's namespaces only affects
-// the dropdown, so it does not block a manually entered namespace.
+// the dropdown, so it blocks neither a manually entered namespace nor a scope
+// that needs no namespace.
 const blockingError = computed(
-  () => loadError.value === 'config' || (loadError.value === 'namespaces' && !newNamespace.value)
+  () =>
+    loadError.value === 'config' ||
+    (loadError.value === 'namespaces' && scopeNeedsNamespace(scope.value) && !newNamespace.value)
 )
 
 // A secret name is optional outside the strict scope, but a name that is not
@@ -330,7 +333,12 @@ function findEntry(id) {
 }
 
 function updateEntry(id, changes) {
-  Object.assign(findEntry(id), changes)
+  const entry = findEntry(id)
+  Object.assign(entry, changes)
+  // A text value replaces the file, and with it the error of a rejected one.
+  if (changes.value) {
+    entry.fileError = ''
+  }
 }
 
 // A file above the size limit is rejected right away instead of being kept

@@ -30,6 +30,9 @@ export function useSealedSecretImport({
   const loadingSealedSecrets = ref(false)
   const confirmOverwriteDialog = ref(false)
   const pendingSealedSecret = ref(null)
+  // Counts the requests that are still wanted. A response is only used if no
+  // reset happened since its request: it belongs to the namespace of then.
+  let currentRequest = 0
 
   function clearSelection() {
     availableSealedSecrets.value = []
@@ -37,6 +40,8 @@ export function useSealedSecretImport({
   }
 
   function resetSealedSecretImport() {
+    currentRequest += 1
+    loadingSealedSecrets.value = false
     importMenuOpen.value = false
     clearSelection()
   }
@@ -47,18 +52,25 @@ export function useSealedSecretImport({
       return
     }
 
+    const namespace = namespaceName.value
+    currentRequest += 1
+    const request = currentRequest
+    const isStale = () => request !== currentRequest
+
     try {
       loadingSealedSecrets.value = true
-      availableSealedSecrets.value = await fetchSealedSecrets(namespaceName.value)
+      const sealedSecrets = await fetchSealedSecrets(namespace)
+      if (isStale()) return
+      availableSealedSecrets.value = sealedSecrets
     } catch (error) {
-      log.error(
-        `Failed to fetch existing SealedSecrets in namespace "${namespaceName.value}":`,
-        error
-      )
+      if (isStale()) return
+      log.error(`Failed to fetch existing SealedSecrets in namespace "${namespace}":`, error)
       onError(`Failed to fetch existing SealedSecrets. Error Message: ${error.message}.`)
       clearSelection()
     } finally {
-      loadingSealedSecrets.value = false
+      if (!isStale()) {
+        loadingSealedSecrets.value = false
+      }
     }
   }
 

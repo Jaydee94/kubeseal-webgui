@@ -145,4 +145,49 @@ describe('useSealedSecretImport', () => {
     expect(state.availableSealedSecrets.value).toEqual([])
     expect(state.selectedSealedSecret.value).toBeNull()
   })
+
+  it('ignores a response that arrives after the namespace changed', async () => {
+    const responses = {}
+    const state = setup({
+      fetchSealedSecrets: (namespace) =>
+        new Promise((resolve, reject) => {
+          responses[namespace] = { resolve, reject }
+        })
+    })
+
+    const loadingTeamA = state.onImportMenuOpen()
+    state.namespaceName.value = 'team-b'
+    await nextTick()
+    expect(state.loadingSealedSecrets.value).toBe(false)
+
+    responses['team-a'].resolve([APP_SECRETS])
+    await loadingTeamA
+    expect(state.availableSealedSecrets.value).toEqual([])
+
+    // the list of the new namespace is still requested and used
+    const loadingTeamB = state.onImportMenuOpen()
+    expect(state.fetchSealedSecrets).toHaveBeenLastCalledWith('team-b')
+    responses['team-b'].resolve([DB_SECRETS])
+    await loadingTeamB
+    expect(state.availableSealedSecrets.value).toEqual([DB_SECRETS])
+    expect(state.loadingSealedSecrets.value).toBe(false)
+  })
+
+  it('ignores a failure that arrives after the namespace changed', async () => {
+    let failTeamA
+    const state = setup({
+      fetchSealedSecrets: () =>
+        new Promise((_, reject) => {
+          failTeamA = reject
+        })
+    })
+
+    const loadingTeamA = state.onImportMenuOpen()
+    state.namespaceName.value = 'team-b'
+    await nextTick()
+    failTeamA(new Error('HTTP 500 - nope'))
+    await loadingTeamA
+
+    expect(state.onError).not.toHaveBeenCalled()
+  })
 })

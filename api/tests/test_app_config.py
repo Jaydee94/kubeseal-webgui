@@ -259,18 +259,22 @@ def test_origin_url_is_read_from_the_environment(clean_env):
     assert AppSettings().origin_url == "https://seal.example.com"
 
 
-def test_only_the_configured_origin_gets_cors_headers(clean_env):
-    # the test environment sets no ORIGIN_URL, so the default applies
+def test_only_the_configured_origin_gets_cors_headers(monkeypatch):
     from fastapi.testclient import TestClient
 
     from kubeseal_webgui_api.app import app, origins
 
-    assert origins == ["http://localhost:8080"]
-    clean_env.setattr(app_config.settings, "mock_enabled", True)
+    # The app took its origin from the environment when it was imported: the
+    # default, unless whoever runs the tests has ORIGIN_URL set.
+    assert origins == app_config.cors_origins(app_config.settings.origin_url)
+    if not origins:
+        pytest.skip("ORIGIN_URL is set to something that allows no origin")
+    (origin,) = origins
+    monkeypatch.setattr(app_config.settings, "mock_enabled", True)
     client = TestClient(app)
 
-    allowed = client.get("/config", headers={"Origin": "http://localhost:8080"})
-    assert allowed.headers["access-control-allow-origin"] == "http://localhost:8080"
+    allowed = client.get("/config", headers={"Origin": origin})
+    assert allowed.headers["access-control-allow-origin"] == origin
 
     other = client.get("/config", headers={"Origin": "https://evil.example"})
     assert "access-control-allow-origin" not in other.headers
