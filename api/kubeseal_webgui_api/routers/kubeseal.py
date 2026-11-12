@@ -92,12 +92,33 @@ def seal_secrets(
     ]
 
 
-def valid_k8s_name(value: str | None) -> str:
+# Names as Kubernetes defines them (RFC 1123); the UI applies the same rules.
+# A label: lower case alphanumerics and '-', starting and ending with an
+# alphanumeric, at most 63 characters. A subdomain: labels joined by dots, at
+# most 253 characters in total.
+MAX_DNS_SUBDOMAIN_LENGTH = 253
+DNS_LABEL = re.compile(r"[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?")
+DNS_SUBDOMAIN = re.compile(
+    r"[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*"
+)
+
+
+def valid_namespace_name(value: str | None) -> str:
+    """Return the name if it can be the name of a namespace (a DNS label)."""
     if not value:
-        raise ValueError("Invalid k8s name: Must not be empty or None")
-    if re.match(r"^[a-z0-9]([a-z0-9_.-]{,251}[a-z0-9])?$", value):
+        raise ValueError("Invalid k8s namespace name: Must not be empty or None")
+    if DNS_LABEL.fullmatch(value):
         return value
-    raise ValueError(f"Invalid k8s name: {value}")
+    raise ValueError(f"Invalid k8s namespace name: {value}")
+
+
+def valid_secret_name(value: str | None) -> str:
+    """Return the name if it can be the name of a secret (a DNS subdomain)."""
+    if not value:
+        raise ValueError("Invalid k8s secret name: Must not be empty or None")
+    if len(value) <= MAX_DNS_SUBDOMAIN_LENGTH and DNS_SUBDOMAIN.fullmatch(value):
+        return value
+    raise ValueError(f"Invalid k8s secret name: {value}")
 
 
 def seal_entry(
@@ -170,9 +191,9 @@ def build_kubeseal_command(
         scope.value,
     ]
     if scope.needs_namespace():
-        command.extend(["--namespace", valid_k8s_name(secret_namespace)])
+        command.extend(["--namespace", valid_namespace_name(secret_namespace)])
     if scope.needs_name():
-        command.extend(["--name", valid_k8s_name(secret_name)])
+        command.extend(["--name", valid_secret_name(secret_name)])
     return command
 
 

@@ -197,7 +197,9 @@ def test_invalid_names_are_rejected_before_the_binary_runs(fake_kubeseal):
 
     assert response.status_code == 400
     assert response.json() == {
-        "detail": "Invalid data for sealing secrets: Invalid k8s name: Not_Valid"
+        "detail": (
+            "Invalid data for sealing secrets: " "Invalid k8s namespace name: Not_Valid"
+        )
     }
     assert not (work_dir / "args").exists()
 

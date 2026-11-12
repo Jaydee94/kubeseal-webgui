@@ -9,53 +9,85 @@ from kubeseal_webgui_api.routers.kubeseal import (
     decode_base64_bytearray,
     decode_base64_string,
     seal_secrets,
-    valid_k8s_name,
+    valid_namespace_name,
+    valid_secret_name,
 )
 from kubeseal_webgui_api.routers.models import Secret
 
+VALID_EVERYWHERE = [
+    "abc",
+    "a",
+    "1",
+    "l" + "o" * 60 + "ng",
+    "some-1-too-check",
+    "ends-on-digit-1",
+    "1starts-with-it",
+]
+
+INVALID_EVERYWHERE = [
+    "",
+    None,
+    "-something",
+    "ähm",
+    "_not-valid",
+    "some_underscore",
+    "with spaces",
+    " not-trimmed ",
+    "trailing-newline\n",
+    "no-special-chars-like/,#+%",
+    "ends-on-dash-",
+    "Uppercase",
+    "U",
+    "uPPer",
+]
+
+
+@pytest.mark.parametrize("value", VALID_EVERYWHERE)
+def test_valid_namespace_name(value):
+    assert valid_namespace_name(value) == value
+
 
 @pytest.mark.parametrize(
     "value",
     [
-        "abc",
-        "l" + "o" * 60 + "ng",
-        "some-1-too-check",
-        "ends-on-digit-1",
-        "1starts-with-it",
-        "some.dots.or_underscore",
+        *INVALID_EVERYWHERE,
+        # a namespace is a DNS label: no dots, at most 63 characters
+        "some.dots",
+        "l" + "o" * 61 + "ng",
+    ],
+)
+def test_invalid_namespace_name(value):
+    with pytest.raises(ValueError, match="Invalid k8s namespace name"):
+        valid_namespace_name(value)
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        *VALID_EVERYWHERE,
+        # a secret name is a DNS subdomain: dots, up to 253 characters
+        "some.dots.in-it",
         "long-" + "a" * 248,
     ],
 )
-def test_valid_k8s_name(value):
-    # given a valid k8s-label-name
-    # when valid_k8s_name is called on the label-name
-    # then the label-name is returned unchanged
-    assert valid_k8s_name(value) == value
+def test_valid_secret_name(value):
+    assert valid_secret_name(value) == value
 
 
 @pytest.mark.parametrize(
     "value",
     [
-        "",
-        "-something",
+        *INVALID_EVERYWHERE,
         "too-l" + "o" * 247 + "ng",
-        "ähm",
-        "_not-valid",
-        "with spaces",
-        " not-trimmed ",
-        "no-special-chars-like/,#+%",
-        "ends-on-dash-",
-        "Uppercase",
-        "U",
-        "uPPer",
+        "double..dot",
+        ".starts-with-dot",
+        "ends-with-dot.",
+        "label-ends-on-dash-.next",
     ],
 )
-def test_invalid_k8s_name(value):
-    # given an invalid k8s-label-name
-    # when valid_k8s_name is called on the label-name
-    # then a ValueError is raised
-    with pytest.raises(ValueError, match="Invalid k8s name"):
-        valid_k8s_name(value)
+def test_invalid_secret_name(value):
+    with pytest.raises(ValueError, match="Invalid k8s secret name"):
+        valid_secret_name(value)
 
 
 def test_run_kubeseal_with_with_empty_string_namespace():
