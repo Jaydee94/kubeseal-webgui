@@ -10,6 +10,7 @@ from kubeseal_webgui_api.routers.kubernetes_namespace_resolver import (
 from kubeseal_webgui_api.routers.kubernetes_sealed_secret_resolver import (
     kubernetes_sealed_secret_resolver,
 )
+from kubeseal_webgui_api.routers.kubeseal import valid_namespace_name
 from kubeseal_webgui_api.routers.mock_namespace_resolver import mock_namespaces_resolver
 from kubeseal_webgui_api.routers.mock_sealed_secret_resolver import (
     mock_sealed_secret_resolver,
@@ -49,6 +50,15 @@ def get_namespaces() -> list[str]:
 
 @router.get("/sealed-secrets/{namespace}", response_model=list[ExistingSealedSecret])
 def get_sealed_secrets(namespace: str) -> list[ExistingSealedSecret]:
+    # The path segment is client input. Only a valid namespace name is passed
+    # on to the cluster and written to the log.
+    try:
+        namespace = valid_namespace_name(namespace)
+    except ValueError:
+        raise fastapi.HTTPException(
+            status_code=400, detail="Invalid namespace name."
+        ) from None
+
     try:
         return sealed_secret_resolver(namespace)
     except Exception:

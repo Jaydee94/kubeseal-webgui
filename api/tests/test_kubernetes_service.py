@@ -1,3 +1,4 @@
+import pytest
 from fastapi.testclient import TestClient
 
 from kubeseal_webgui_api.app import app
@@ -56,3 +57,17 @@ def test_get_sealed_secrets():
     assert response.json() == [
         item.model_dump() for item in dummy_sealed_secret_resolver(namespace)
     ]
+
+
+@pytest.mark.parametrize(
+    "namespace",
+    ["Not_Valid", "with.dot", "ends-with-dash-", "a" * 64, "line%0Abreak"],
+)
+def test_get_sealed_secrets_rejects_an_invalid_namespace(namespace):
+    def resolver_must_not_run(_namespace):
+        raise AssertionError("the resolver was called")
+
+    kubernetes.sealed_secret_resolver = resolver_must_not_run
+    response = client.get(f"/sealed-secrets/{namespace}")
+    assert response.status_code == 400
+    assert response.json() == {"detail": "Invalid namespace name."}
