@@ -659,8 +659,9 @@ Three of the out-of-scope items above were decided and implemented later:
   chart already sets it to `api.url`. A value that is not an absolute URL
   allows no other origin instead of stopping the API.
 - **Versions:** `api/pyproject.toml` and `ui/package.json` are set to 4.14.0.
-  No workflow updates them, so they fall behind again with the next release
-  unless `dev/bump_version.sh` becomes part of the release flow.
+  `helm-release.yml`, which already commits the chart versions for each
+  release tag, now updates them as well (not run yet: it only runs for a
+  release tag).
 
 The logo stays as it is.
 
