@@ -64,7 +64,7 @@ def test_get_sealed_secrets():
     ["Not_Valid", "with.dot", "ends-with-dash-", "a" * 64, "line%0Abreak"],
 )
 def test_get_sealed_secrets_rejects_an_invalid_namespace(namespace):
-    def resolver_must_not_run(_namespace):
+    def resolver_must_not_run(_namespace: str) -> list[ExistingSealedSecret]:
         raise AssertionError("the resolver was called")
 
     kubernetes.sealed_secret_resolver = resolver_must_not_run
