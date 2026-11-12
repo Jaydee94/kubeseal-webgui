@@ -1,6 +1,5 @@
 import base64
 import logging
-import re
 import subprocess
 import time
 
