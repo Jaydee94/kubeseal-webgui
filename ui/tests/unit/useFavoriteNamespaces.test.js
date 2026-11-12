@@ -41,9 +41,17 @@ describe('useFavoriteNamespaces', () => {
     expect(items.get('favoriteNamespaces')).toBe('["team-b"]')
   })
 
-  it.each(['not json', '42', '{"a":1}'])('ignores unusable stored content (%s)', (stored) => {
-    stubLocalStorage({ favoriteNamespaces: stored })
-    expect([...useFavoriteNamespaces().favoriteNamespaces.value]).toEqual([])
+  it.each(['not json', '42', '{"a":1}', '"team-a"', 'null'])(
+    'ignores unusable stored content (%s)',
+    (stored) => {
+      stubLocalStorage({ favoriteNamespaces: stored })
+      expect([...useFavoriteNamespaces().favoriteNamespaces.value]).toEqual([])
+    }
+  )
+
+  it('keeps only names from a stored list', () => {
+    stubLocalStorage({ favoriteNamespaces: '["team-a",null,7,"team-b"]' })
+    expect([...useFavoriteNamespaces().favoriteNamespaces.value]).toEqual(['team-a', 'team-b'])
   })
 
   it('works without localStorage (privacy mode)', () => {

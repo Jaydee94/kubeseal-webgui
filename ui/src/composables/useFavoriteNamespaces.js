@@ -9,7 +9,12 @@ const STORAGE_KEY = 'favoriteNamespaces'
 function readStoredFavorites() {
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
-    return new Set(stored === null ? [] : JSON.parse(stored))
+    const parsed = stored === null ? [] : JSON.parse(stored)
+    // Anything iterable would make a Set (a string: one entry per character).
+    if (!Array.isArray(parsed)) {
+      throw new TypeError('the stored favorites are not a list')
+    }
+    return new Set(parsed.filter((name) => typeof name === 'string'))
   } catch (error) {
     log.warn('Ignoring unreadable favorite namespaces in localStorage:', error)
     return new Set()
