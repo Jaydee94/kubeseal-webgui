@@ -195,7 +195,8 @@ After the script finishes, the UI is reachable at
 GitHub Actions workflows live under
 [`.github/workflows/`](../.github/workflows/). The most relevant ones are:
 
-- `main.yml`: lint, tests, basic builds on every push and PR.
+- `main.yml`: manually triggered build and push of the API and UI images to
+  Docker Hub.
 - `checks.yml`: API (ruff, black, isort, mypy, unit tests) and UI (ESLint,
   Prettier, unit tests, production build) checks on every pull request.
 - `frontend-tests.yml`: UI end-to-end tests (Playwright).

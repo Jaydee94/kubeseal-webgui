@@ -623,23 +623,28 @@ Side effects of the refactoring (all small, none on the happy path):
 
 Not planned, done deliberately: favourite namespaces work again (see above).
 
-### Found, not changed
+### Found during execution, fixed afterwards
 
-- After a failed seal the Encrypt button stays disabled until the page is
-  reloaded or a valid file is selected: `hasErrorMessage` is only cleared in
-  those two places. The same holds after a failed copy. Existing behaviour,
-  now visible in `test_failed_sealing_keeps_the_form_and_shows_the_error`.
-- Right after toggling a favourite, the open list can stay scrolled so that
-  the new first entry is above the visible part (Vuetify virtual scroll);
-  re-opening the list shows it. The E2E tests re-open the list for that
-  reason.
-- The result card renders its title below the manifest (`v-card-title`
-  after the `#text` slot), and on a 390 px screen the dark mode switch
-  overlaps the logo. Both unchanged.
-- `docs/development.md` describes `main.yml` as "lint, tests, basic builds";
+These were found while working through the list and fixed in a follow-up
+commit, each with an E2E test that fails without the fix:
+
+- After a failed seal (or a failed copy) the Encrypt button stayed disabled
+  until the page was reloaded. Only a failed load of `config.json` or of the
+  namespace list blocks sealing now (`loadError` in `Secrets.vue`); a failed
+  attempt can be repeated.
+- Marking a namespace as favourite in a scrolled list left the list where it
+  was, with the new favourite above the visible part. The list now scrolls to
+  its top, where the favourites are. Removing a favourite does not scroll.
+- The result cards rendered their title below the content (`v-card`'s `text`
+  and `actions` slots are rendered above the default slot). They use
+  `v-card-text` and `v-card-actions` now.
+- On a 390 px screen the dark mode switch overlapped the logo. Below 600 px
+  the logo is smaller and left-aligned and the switch shows only its icon; it
+  has an `aria-label` instead.
+- `docs/development.md` described `main.yml` as "lint, tests, basic builds";
   it is a manually triggered image build.
 - `<v-footer inset width="auto">` in `App.vue`: neither is a prop of
-  Vuetify 4's `VFooter`. Left alone because it was not on the list.
+  Vuetify 4's `VFooter`, so both were removed.
 
 ### Not verified by running
 

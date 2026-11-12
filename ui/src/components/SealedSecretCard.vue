@@ -6,14 +6,16 @@
         <span class="text-h6 font-weight-medium">Generated Sealed Secret</span>
       </div>
     </v-card-title>
-    <template #text>
+    <!-- Explicit components instead of the card's text/actions slots: the
+         slots are rendered above the default slot, i.e. above the title. -->
+    <v-card-text>
       <pre
         class="overflow-auto result-code"
       ><code id="sealed-secret-result" class="overflow-auto">{{ manifest }}</code></pre>
-    </template>
-    <template #actions>
+    </v-card-text>
+    <v-card-actions>
       <CopyButton :text="manifest" @copied="$emit('copied')" @copy-failed="$emit('copy-failed')" />
-    </template>
+    </v-card-actions>
   </v-card>
 </template>
 

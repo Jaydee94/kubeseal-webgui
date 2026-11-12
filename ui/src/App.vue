@@ -1,7 +1,7 @@
 <template>
   <v-app>
     <v-app-bar :elevation="0" class="glass-app-bar position-relative" height="100">
-      <div class="app-bar-logo position-absolute w-100 d-flex justify-center align-center">
+      <div class="app-bar-logo position-absolute w-100 d-flex align-center">
         <div class="app-bar-logo__link">
           <AppLogo />
         </div>
@@ -18,7 +18,7 @@
         <Secrets />
       </v-container>
     </v-main>
-    <v-footer inset app class="glass-app-bar py-2" width="auto">
+    <v-footer app class="glass-app-bar py-2">
       <AppConfig />
     </v-footer>
   </v-app>
@@ -37,7 +37,15 @@ import AppConfig from './components/AppConfig.vue'
 .app-bar-logo {
   left: 0;
   height: 100%;
+  justify-content: center;
   pointer-events: none;
+}
+
+/* On a phone there is no room for a centred logo next to the theme switch. */
+@media (max-width: 599px) {
+  .app-bar-logo {
+    justify-content: flex-start;
+  }
 }
 
 .app-bar-logo__link {

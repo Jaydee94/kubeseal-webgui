@@ -1,5 +1,11 @@
 <template>
-  <v-switch v-model="darkMode" color="primary" class="ma-4 dark-mode-switch" hide-details>
+  <v-switch
+    v-model="darkMode"
+    color="primary"
+    class="ma-4 dark-mode-switch"
+    aria-label="Dark mode"
+    hide-details
+  >
     <template #label>
       <div class="d-flex align-center">
         <v-icon
@@ -79,5 +85,16 @@ watch(darkMode, (dark) => {
 
 .dark-mode-switch:hover .dark-mode-icon {
   transform: rotate(20deg);
+}
+
+/* On a phone the icon alone has to do; the logo needs the space. */
+@media (max-width: 599px) {
+  .dark-mode-icon {
+    margin-inline-end: 0 !important;
+  }
+
+  .switch-label {
+    display: none;
+  }
 }
 </style>

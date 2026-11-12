@@ -18,4 +18,10 @@
   height: 200px;
   margin: 0;
 }
+
+@media (max-width: 599px) {
+  #logo-img {
+    height: 150px;
+  }
+}
 </style>

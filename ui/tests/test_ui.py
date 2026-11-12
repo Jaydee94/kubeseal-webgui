@@ -16,22 +16,22 @@ class SealingApi:
 
     def __init__(self, page: Page, status: int = 200, body=None):
         self.requests: list[dict] = []
-        self._status = status
-        self._body = body
+        self.status = status
+        self.body = body
         page.route("**/secrets", self._handle)
 
     def _handle(self, route: Route):
         assert route.request.method == "POST"
         payload = route.request.post_data_json
         self.requests.append(payload)
-        body = self._body
+        body = self.body
         if body is None:
             body = [
                 {"key": entry["key"], "value": SEALED_VALUE}
                 for entry in payload["secrets"]
             ]
         route.fulfill(
-            status=self._status,
+            status=self.status,
             content_type="application/json",
             body=json.dumps(body),
         )
@@ -118,8 +118,8 @@ def open_namespace_list(page: Page) -> list[str]:
 def reopen_namespace_list(page: Page) -> list[str]:
     """Close and open the list again: it then starts at its first entry.
 
-    Right after toggling a favorite the open list can stay scrolled to where
-    the toggled entry was, with the new first entry above the visible part.
+    The list is virtual, so only a list at its first entry is sure to have
+    rendered the favorites.
     """
     page.keyboard.press("Escape")
     expect(page.locator(".v-overlay .v-list-item-title")).to_have_count(0)
@@ -187,6 +187,23 @@ def test_favorite_namespaces_are_listed_first_and_remembered(page: Page):
     favorite_toggle(page, names[1]).click()
     assert reopen_namespace_list(page)[:3] == [names[3], names[0], names[1]]
     assert favorite_names(page) == [names[3]]
+
+
+def test_open_list_follows_a_new_favorite_to_the_top(page: Page):
+    page.add_init_script(SEEDED_RANDOM)
+    page.goto("/")
+    page.wait_for_selector("input#namespaceSelection")
+    names = open_namespace_list(page)
+    namespace_list = page.locator(".v-overlay .v-list")
+
+    # the last entry is only reachable by scrolling
+    favorite_toggle(page, names[-1]).scroll_into_view_if_needed()
+    assert namespace_list.evaluate("list => list.scrollTop") > 0
+    favorite_toggle(page, names[-1]).click()
+
+    expect(namespace_item(page, names[-1])).to_be_in_viewport()
+    assert namespace_list.evaluate("list => list.scrollTop") == 0
+    assert favorite_names(page) == [names[-1]]
 
 
 def test_favorite_toggle_works_with_the_keyboard(page: Page):
@@ -408,6 +425,41 @@ def test_failed_sealing_keeps_the_form_and_shows_the_error(app_page: Page):
     expect(page.locator("#secretName")).to_have_value(SECRET_NAME)
     expect(page.locator("textarea#secretKey-0")).to_have_value(SECRET_KEY)
     expect(page.locator("textarea#secretValue-0")).to_have_value(SECRET_VALUE)
+
+    # a failed attempt does not lock the form: the user can simply try again
+    # (once the form has faded back in after the progress indicator)
+    expect(page.locator(".fade-enter-active, .fade-leave-active")).to_have_count(0)
+    api.status, api.body = 200, None
+    click_encrypt_button(page)
+    expect(page.locator("#sealed-secret-result")).to_be_visible()
+    assert len(api.requests) == 2
+    expect(snackbar).to_be_hidden()
+
+
+def test_result_cards_show_their_title_above_the_content(app_page: Page):
+    page = app_page
+    SealingApi(page)
+    seal_one_value(page)
+
+    for card in (".result-card", ".secret-key-card"):
+        title = page.locator(f"{card} .v-card-title").bounding_box()
+        content = page.locator(f"{card} pre").bounding_box()
+        actions = page.locator(f"{card} .copy-btn").bounding_box()
+        assert title["y"] + title["height"] <= content["y"], card
+        assert content["y"] + content["height"] <= actions["y"], card
+
+
+def test_logo_and_theme_switch_do_not_overlap_on_a_phone(page: Page):
+    page.set_viewport_size({"width": 390, "height": 800})
+    page.goto("/")
+    logo = page.locator("#logo-img").bounding_box()
+    switch = page.locator(".dark-mode-switch").bounding_box()
+
+    assert logo["x"] >= 0
+    assert logo["x"] + logo["width"] <= switch["x"]
+    assert switch["x"] + switch["width"] <= 390
+    # without its visible label the switch still has a name
+    expect(page.get_by_role("checkbox", name="Dark mode")).to_have_count(1)
 
 
 def test_clear_on_result_view_returns_to_an_empty_form(app_page: Page):

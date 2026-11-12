@@ -98,7 +98,7 @@
               </v-btn>
               <transition name="fade">
                 <div
-                  v-if="notReadyToEncode && !hasErrorMessage"
+                  v-if="notReadyToEncode && !blockingError"
                   class="text-caption text-medium-emphasis text-center mt-3 d-flex align-center justify-center"
                 >
                   <v-icon size="small" class="mr-1">mdi-information-outline</v-icon>
@@ -192,13 +192,14 @@ const secrets = ref([createSecretEntry()])
 
 // Sealing and its result
 const loading = ref(false)
+// What could not be loaded at start-up: '', 'config' or 'namespaces'. Unlike
+// the error message this does not go away, because nothing retries the load.
+const loadError = ref('')
 const displayCreateSealedSecretForm = ref(true)
 const sealedSecrets = ref([])
 
 // Feedback
 const errorMessage = ref('')
-const hasErrorMessage = ref(false)
-const errorSource = ref('')
 const showErrorSnackbar = ref(false)
 const clipboardSnackbar = ref(false)
 const clipboardMessage = ref('')
@@ -234,10 +235,11 @@ const invalidNewNamespace = computed(
   () => newNamespace.value && scopeNeedsNamespace(scope.value) && !isDnsLabel(namespaceName.value)
 )
 
-// Failing to list the cluster's namespaces only affects the dropdown, so it
-// must not block sealing for a manually entered namespace.
+// Only a failed load blocks sealing; a failed attempt to seal or to copy can
+// simply be repeated. Failing to list the cluster's namespaces only affects
+// the dropdown, so it does not block a manually entered namespace.
 const blockingError = computed(
-  () => hasErrorMessage.value && !(newNamespace.value && errorSource.value === 'namespaces')
+  () => loadError.value === 'config' || (loadError.value === 'namespaces' && !newNamespace.value)
 )
 
 // A secret name is optional outside the strict scope, but a name that is not
@@ -269,6 +271,7 @@ onBeforeMount(async () => {
     config = await loadConfig()
   } catch (error) {
     log.error('Failed to load the UI configuration (config.json):', error)
+    loadError.value = 'config'
     setErrorMessage(`Failed to load the UI configuration. Error Message: ${error.message}.`)
     return
   }
@@ -295,14 +298,13 @@ async function loadNamespaces() {
     namespaces.value = await fetchNamespaces()
   } catch (error) {
     log.error('Failed to fetch namespaces:', error)
-    setErrorMessage(`Failed to fetch namespaces. Error Message: ${error.message}.`, 'namespaces')
+    loadError.value = 'namespaces'
+    setErrorMessage(`Failed to fetch namespaces. Error Message: ${error.message}.`)
   }
 }
 
-function setErrorMessage(newErrorMessage, source = '') {
+function setErrorMessage(newErrorMessage) {
   errorMessage.value = newErrorMessage
-  errorSource.value = newErrorMessage ? source : ''
-  hasErrorMessage.value = !!newErrorMessage
   showErrorSnackbar.value = !!newErrorMessage
 }
 
@@ -320,9 +322,7 @@ function resetForm() {
   secrets.value = [createSecretEntry()]
   sealedSecrets.value = []
   resetSealedSecretImport()
-  hasErrorMessage.value = false
-  errorSource.value = ''
-  errorMessage.value = ''
+  setErrorMessage('')
 }
 
 function findEntry(id) {

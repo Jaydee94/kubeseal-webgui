@@ -71,7 +71,7 @@
                   class="favorite-toggle transition-fast"
                   :aria-label="favoriteToggleLabel(item)"
                   :aria-pressed="favoriteNamespaces.has(item)"
-                  @click.stop="$emit('toggle-favorite', item)"
+                  @click.stop="toggleFavorite(item, $event)"
                   @keydown.enter.space.stop
                 >
                   <v-icon
@@ -178,7 +178,7 @@ const props = defineProps({
   }
 })
 
-defineEmits([
+const emit = defineEmits([
   'update:namespaceName',
   'update:secretName',
   'update:scope',
@@ -203,6 +203,19 @@ const secretNameRequired = computed(() => scopeNeedsName(props.scope))
 
 // The namespace is irrelevant for cluster-wide secrets.
 const namespaceNeeded = computed(() => scopeNeedsNamespace(props.scope))
+
+// A new favorite moves to the favorites at the top of the list. Go there with
+// it, so that the user sees where it went. (The list is virtual: the moved
+// entry itself may not be rendered yet, so the list is scrolled, not the
+// entry.) Removing a favorite happens at the top and needs no scrolling.
+function toggleFavorite(namespace, event) {
+  const becomesFavorite = !props.favoriteNamespaces.has(namespace)
+  const list = event.currentTarget.closest('.v-list')
+  emit('toggle-favorite', namespace)
+  if (becomesFavorite) {
+    list?.scrollTo({ top: 0 })
+  }
+}
 
 function favoriteToggleLabel(namespace) {
   return props.favoriteNamespaces.has(namespace)

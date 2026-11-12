@@ -4,19 +4,21 @@
       <v-icon size="small" class="mr-2" color="primary">mdi-key-variant</v-icon>
       <span class="text-subtitle-1 font-weight-medium">{{ secretKey }}</span>
     </v-card-title>
-    <template #text>
+    <!-- Explicit components instead of the card's text/actions slots: the
+         slots are rendered above the default slot, i.e. above the title. -->
+    <v-card-text>
       <pre
         class="overflow-auto result-code"
       ><code class="overflow-auto">{{ secretValue }}</code></pre>
-    </template>
-    <template #actions>
+    </v-card-text>
+    <v-card-actions>
       <CopyButton
         :text="secretValue"
         label="Copy value"
         @copied="$emit('copied')"
         @copy-failed="$emit('copy-failed')"
       />
-    </template>
+    </v-card-actions>
   </v-card>
 </template>
 
