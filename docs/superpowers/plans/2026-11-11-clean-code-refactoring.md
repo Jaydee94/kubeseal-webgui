@@ -646,6 +646,24 @@ commit, each with an E2E test that fails without the fix:
 - `<v-footer inset width="auto">` in `App.vue`: neither is a prop of
   Vuetify 4's `VFooter`, so both were removed.
 
+### Decided by the maintainer afterwards
+
+Three of the out-of-scope items above were decided and implemented later:
+
+- **Name validation:** the API now applies the UI's rules. A namespace has to
+  be a DNS label (63 characters, no `_`, no dots), a secret name a DNS
+  subdomain (253 characters, no `_`). Requests with other names get a 400;
+  Kubernetes could not have created such objects. A name with a trailing line
+  break is rejected as well (it used to pass).
+- **CORS:** `ORIGIN_URL` is read; the default is still the dev server. The
+  chart already sets it to `api.url`. A value that is not an absolute URL
+  allows no other origin instead of stopping the API.
+- **Versions:** `api/pyproject.toml` and `ui/package.json` are set to 4.14.0.
+  No workflow updates them, so they fall behind again with the next release
+  unless `dev/bump_version.sh` becomes part of the release flow.
+
+The logo stays as it is.
+
 ### Not verified by running
 
 - `checks.yml` has not run on GitHub: no pull request was opened and the
