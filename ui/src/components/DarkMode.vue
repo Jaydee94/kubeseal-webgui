@@ -3,12 +3,15 @@
     v-model="darkMode"
     color="primary"
     class="ma-4 dark-mode-switch"
+    aria-label="Dark mode"
     hide-details
-    @change="toggleDarkMode"
   >
     <template #label>
       <div class="d-flex align-center">
-        <v-icon :icon="darkMode ? 'mdi-weather-night' : 'mdi-white-balance-sunny'" class="mr-2" />
+        <v-icon
+          :icon="darkMode ? 'mdi-weather-night' : 'mdi-white-balance-sunny'"
+          class="dark-mode-icon mr-2"
+        />
         <span class="switch-label">{{ darkMode ? 'Dark' : 'Light' }}</span>
       </div>
     </template>
@@ -16,32 +19,54 @@
 </template>
 
 <script setup>
+import { ref, watch } from 'vue'
 import { useTheme } from 'vuetify'
-import { ref } from 'vue';
+import { createLogger } from '@/utils/logger'
 
-function isDarkModeEnabled(theme) {
-  let result = false;
+const log = createLogger('DarkMode')
+const STORAGE_KEY = 'useDarkTheme'
 
-  if (localStorage.useDarkTheme) {
-    result = localStorage.useDarkTheme === 'true'
-  } else {
-    let isSystemDarkModeSet = window.matchMedia('(prefers-color-scheme: dark)').matches;
-
-    if (isSystemDarkModeSet) {
-      result = true;
-    }
+// localStorage can be unavailable (privacy mode, blocked site data).
+function readStoredPreference() {
+  try {
+    return localStorage.getItem(STORAGE_KEY)
+  } catch (error) {
+    log.warn('Could not read the theme preference from localStorage:', error)
+    return null
   }
-  theme.global.name.value = result ? 'dark' : 'light'
-  return result;
+}
+
+function storePreference(dark) {
+  try {
+    localStorage.setItem(STORAGE_KEY, String(dark))
+  } catch (error) {
+    log.warn('Could not store the theme preference in localStorage:', error)
+  }
+}
+
+/** The stored choice of the user, otherwise the preference of the system. */
+function readPreferredDark() {
+  const stored = readStoredPreference()
+  if (stored) {
+    return stored === 'true'
+  }
+  return window.matchMedia('(prefers-color-scheme: dark)').matches
 }
 
 const theme = useTheme()
-const darkMode = ref(isDarkModeEnabled(theme))
+const darkMode = ref(readPreferredDark())
 
-function toggleDarkMode() {
-  theme.global.name.value = darkMode.value ? 'dark' : 'light'
-  localStorage.useDarkTheme = theme.global.current.value.dark
+function applyTheme(dark) {
+  theme.change(dark ? 'dark' : 'light')
 }
+
+applyTheme(darkMode.value)
+
+// Only an explicit choice is stored; until then the system preference decides.
+watch(darkMode, (dark) => {
+  applyTheme(dark)
+  storePreference(dark)
+})
 </script>
 
 <style scoped>
@@ -54,11 +79,22 @@ function toggleDarkMode() {
   transition: all var(--transition-base, 0.3s ease);
 }
 
-.v-icon {
+.dark-mode-icon {
   transition: all var(--transition-base, 0.3s ease);
 }
 
-.dark-mode-switch:hover .v-icon {
+.dark-mode-switch:hover .dark-mode-icon {
   transform: rotate(20deg);
+}
+
+/* On a phone the icon alone has to do; the logo needs the space. */
+@media (max-width: 599px) {
+  .dark-mode-icon {
+    margin-inline-end: 0 !important;
+  }
+
+  .switch-label {
+    display: none;
+  }
 }
 </style>

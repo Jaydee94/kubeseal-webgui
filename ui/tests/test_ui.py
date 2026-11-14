@@ -1,147 +1,791 @@
-import os
-from playwright.sync_api import sync_playwright, Page
+import base64
+import json
+
+from playwright.sync_api import Page, Route, expect
+
+SECRET_NAME = "valid-secret-name"
+SECRET_KEY = "my-secret-key"
+SECRET_VALUE = "my-secret-value"
+FILE_CONTENT = "This is a test file."
+SEALED_VALUE = "AgSealedValue"
+ONE_MEBIBYTE = 1024 * 1024
 
 
-def test_ui_start():
-    with sync_playwright() as ctx:
-        browser = ctx.chromium.launch(headless=True)
-        page = browser.new_page()
-        page.goto("http://localhost:8080")
-        page.wait_for_load_state("load")
-        assert page.title() == "Kubeseal WebGui - Sealed Secrets Management"
-        browser.close()
+class SealingApi:
+    """Stand-in for `POST /secrets`: there is no API behind the dev server."""
+
+    def __init__(self, page: Page, status: int = 200, body=None):
+        self.requests: list[dict] = []
+        self.status = status
+        self.body = body
+        page.route("**/secrets", self._handle)
+
+    def _handle(self, route: Route):
+        assert route.request.method == "POST"
+        payload = route.request.post_data_json
+        self.requests.append(payload)
+        body = self.body
+        if body is None:
+            body = [
+                {"key": entry["key"], "value": SEALED_VALUE}
+                for entry in payload["secrets"]
+            ]
+        route.fulfill(
+            status=self.status,
+            content_type="application/json",
+            body=json.dumps(body),
+        )
+
+    @property
+    def only_request(self) -> dict:
+        assert len(self.requests) == 1, f"Expected one request: {self.requests}"
+        return self.requests[0]
 
 
-def test_secret_form_with_value():
-    with sync_playwright() as ctx:
-        browser = ctx.chromium.launch(headless=True)
-        page = browser.new_page()
-        page.goto("http://localhost:8080")
-        page.wait_for_load_state("load")
-
-        disabled_encrypt_button(page)
-        namespace_select(page)
-        secret_name(page)
-        scope_strict(page)
-        add_secret_key_value(page)
-        click_encrypt_button(page)
-
-        browser.close()
+def b64(text: str) -> str:
+    return base64.b64encode(text.encode("utf-8")).decode("ascii")
 
 
-def test_secret_form_with_file():
-    with sync_playwright() as ctx:
-        browser = ctx.chromium.launch(headless=True)
-        page = browser.new_page()
-        page.goto("http://localhost:8080")
-        page.wait_for_load_state("load")
+def test_config_json_is_requested_once_per_page_load(page: Page):
+    config_requests: list[str] = []
+    page.on(
+        "request",
+        lambda request: (
+            config_requests.append(request.url)
+            if request.url.endswith("/config.json")
+            else None
+        ),
+    )
+    page.route(
+        "**/config", lambda route: route.fulfill(json={"kubesealVersion": "0.27.1"})
+    )
+    SealingApi(page)
 
-        disabled_encrypt_button(page)
-        namespace_select(page)
-        secret_name(page)
-        scope_strict(page)
-        add_secret_key_file(page)
-        click_encrypt_button(page)
+    page.goto("/")
+    # both consumers of the configuration have rendered
+    expect(page.locator(".v-footer .v-chip")).to_have_count(3)
+    expect(page.locator(".secrets-component .text-h5")).to_have_text("Test")
+    # sealing needs the API URL from the configuration again
+    seal_one_value(page)
 
-        browser.close()
-
-
-def test_secret_form_with_invalid_file():
-    with sync_playwright() as ctx:
-        browser = ctx.chromium.launch(headless=True)
-        page = browser.new_page()
-        page.goto("http://localhost:8080")
-        page.wait_for_load_state("load")
-
-        file_input = page.locator('input[type="file"]#fileInput')
-        # Try to upload a non-valid file
-        invalid_file_path = os.path.join(os.getcwd(), "large_test_file.txt")
-        with open(invalid_file_path, "w") as f:
-            f.write(
-                "X" * (10 * 1024 * 1024)
-            )  # Create a 10MB file (assuming it's too large)
-        file_input.set_input_files(invalid_file_path)
-
-        # Check for the snackbar error message
-        snackbar_message = page.locator("div[role='status']").get_by_text("File size should be less than 1 MB!")
-        assert (
-            snackbar_message.is_visible()
-        ), "Snackbar error message should be visible for invalid file"
-
-        if os.path.exists(invalid_file_path):
-            os.remove(invalid_file_path)
-        browser.close()
+    assert len(config_requests) == 1, config_requests
 
 
-def test_secret_form_with_new_namespace():
-    with sync_playwright() as ctx:
-        browser = ctx.chromium.launch(headless=True)
-        page = browser.new_page()
-        page.goto("http://localhost:8080")
-        page.wait_for_load_state("load")
+def test_footer_shows_the_versions(page: Page):
+    page.route(
+        "**/config", lambda route: route.fulfill(json={"kubesealVersion": "0.27.1"})
+    )
+    page.goto("/")
 
-        disabled_encrypt_button(page)
-        secret_name(page)
-        add_secret_key_value(page)
-
-        # a namespace that is not part of the cluster list can only be typed
-        # in after opting in via the checkbox
-        page.locator("#newNamespaceCheckbox").check()
-        namespace_input = page.locator("input#namespaceSelection")
-        namespace_input.wait_for()
-        namespace_input.fill("Not_Valid")
-        assert page.locator('button:has-text("Encrypt")').is_disabled()
-
-        namespace_input.fill("not-created-yet")
-        assert namespace_input.input_value() == "not-created-yet"
-        assert page.locator('button:has-text("Encrypt")').is_enabled()
-
-        # switching back to the cluster list starts with an empty selection
-        page.locator("#newNamespaceCheckbox").uncheck()
-        assert page.locator('button:has-text("Encrypt")').is_disabled()
-
-        browser.close()
+    chips = page.locator(".v-footer .v-chip")
+    expect(chips).to_have_count(3)
+    assert [" ".join(text.split()) for text in chips.all_inner_texts()] == [
+        "kubesealVersion: 0.27.1",
+        "uiVersion: 2.1.0",
+        "apiVersion: 2.1.0",
+    ]
 
 
-def test_secret_name_is_optional_outside_strict_scope():
-    with sync_playwright() as ctx:
-        browser = ctx.chromium.launch(headless=True)
-        page = browser.new_page()
-        page.goto("http://localhost:8080")
-        page.wait_for_load_state("load")
+def test_footer_reports_an_unreachable_api(page: Page):
+    page.route(
+        "**/config",
+        lambda route: route.fulfill(status=500, json={"detail": "Internal Server Error"}),
+    )
+    page.goto("/")
 
-        disabled_encrypt_button(page)
-        select_scope(page, "namespace-wide")
-        namespace_select(page)
-        add_secret_key_value(page)
-
-        # the name is not sealed into the secret for this scope, so it is
-        # optional, but it can still be entered for the generated YAML
-        encrypt_button = page.locator('button:has-text("Encrypt")')
-        name_input = page.locator("#secretName")
-        assert name_input.is_enabled()
-        assert encrypt_button.is_enabled()
-
-        # must be a DNS subdomain: no upper case, underscores or empty labels
-        for invalid_name in ["Not_Valid", "a_b", "a..b", "a.-b", "a" * 254]:
-            name_input.fill(invalid_name)
-            assert encrypt_button.is_disabled(), invalid_name
-
-        for valid_name in ["valid-secret-name", "my.secret-1", "a" * 253]:
-            name_input.fill(valid_name)
-            assert encrypt_button.is_enabled(), valid_name
-            # the field rule has to agree with the button state
-            assert page.locator(".v-col:has(#secretName) .v-input--error").count() == 0
-
-        # the strict scope requires the name again
-        name_input.fill("")
-        select_scope(page, "strict")
-        assert encrypt_button.is_disabled()
-
-        browser.close()
+    expect(page.locator(".v-footer").first).to_contain_text(
+        "Could not retrieve application properties."
+    )
+    expect(page.locator(".v-footer .v-chip")).to_have_count(0)
 
 
-def namespace_select(page: Page):
+# Makes the made-up namespace list of the dev server the same on every load.
+SEEDED_RANDOM = """
+    let seed = 42;
+    Math.random = () => {
+        seed = (seed * 1664525 + 1013904223) % 4294967296;
+        return seed / 4294967296;
+    };
+"""
+
+
+def open_namespace_list(page: Page) -> list[str]:
+    page.click("input#namespaceSelection")
+    page.wait_for_selector(".v-list-item-title")
+    return page.locator(".v-list-item-title").all_inner_texts()
+
+
+def reopen_namespace_list(page: Page) -> list[str]:
+    """Close and open the list again: it then starts at its first entry.
+
+    The list is virtual, so only a list at its first entry is sure to have
+    rendered the favorites.
+    """
+    page.keyboard.press("Escape")
+    expect(page.locator(".v-overlay .v-list-item-title")).to_have_count(0)
+    return open_namespace_list(page)
+
+
+def namespace_item(page: Page, name: str):
+    return page.locator(".v-overlay .v-list-item", has_text=name)
+
+
+def favorite_toggle(page: Page, name: str):
+    return namespace_item(page, name).locator(".v-list-item__prepend").get_by_role("button")
+
+
+def favorite_names(page: Page) -> list[str]:
+    return page.locator(
+        ".v-overlay .v-list-item:has(.mdi-heart) .v-list-item-title"
+    ).all_inner_texts()
+
+
+def test_favorite_namespaces_are_listed_first_and_remembered(page: Page):
+    page.add_init_script(SEEDED_RANDOM)
+    page.goto("/")
+    page.wait_for_selector("input#namespaceSelection")
+    names = open_namespace_list(page)
+    assert names == sorted(names) and len(names) >= 5
+    assert favorite_names(page) == []
+    expect(page.locator(".v-overlay .v-divider")).to_have_count(0)
+
+    # marking a namespace moves it to the top, above a divider
+    favorite_toggle(page, names[3]).click()
+    # toggling a favorite does not select the namespace
+    expect(page.locator("input#namespaceSelection")).to_have_value("")
+    expect(page.locator(".v-autocomplete__selection-text")).to_have_text("")
+    assert reopen_namespace_list(page) == [
+        names[3],
+        *names[:3],
+        *names[4:],
+    ]
+    assert favorite_names(page) == [names[3]]
+    expect(page.locator(".v-overlay .v-divider")).to_have_count(1)
+
+    favorite_toggle(page, names[1]).click()
+    assert reopen_namespace_list(page) == [
+        names[1],
+        names[3],
+        names[0],
+        names[2],
+        *names[4:],
+    ]
+    assert favorite_names(page) == [names[1], names[3]]
+    expect(page.locator(".v-overlay .v-divider")).to_have_count(1)
+    assert json.loads(page.evaluate("localStorage.favoriteNamespaces")) == [
+        names[3],
+        names[1],
+    ]
+
+    # favorites are kept across page loads
+    page.reload()
+    page.wait_for_selector("input#namespaceSelection")
+    assert open_namespace_list(page)[:2] == [names[1], names[3]]
+    assert favorite_names(page) == [names[1], names[3]]
+
+    # and can be removed again
+    favorite_toggle(page, names[1]).click()
+    assert reopen_namespace_list(page)[:3] == [names[3], names[0], names[1]]
+    assert favorite_names(page) == [names[3]]
+
+
+def test_open_list_follows_a_new_favorite_to_the_top(page: Page):
+    page.add_init_script(SEEDED_RANDOM)
+    page.goto("/")
+    page.wait_for_selector("input#namespaceSelection")
+    names = open_namespace_list(page)
+    namespace_list = page.locator(".v-overlay .v-list")
+
+    # the last entry is only reachable by scrolling
+    favorite_toggle(page, names[-1]).scroll_into_view_if_needed()
+    assert namespace_list.evaluate("list => list.scrollTop") > 0
+    favorite_toggle(page, names[-1]).click()
+
+    expect(namespace_item(page, names[-1])).to_be_in_viewport()
+    assert namespace_list.evaluate("list => list.scrollTop") == 0
+    assert favorite_names(page) == [names[-1]]
+
+
+def test_favorite_toggle_works_with_the_keyboard(page: Page):
+    page.add_init_script(SEEDED_RANDOM)
+    page.goto("/")
+    page.wait_for_selector("input#namespaceSelection")
+    names = open_namespace_list(page)
+    focused = page.locator("*:focus")
+
+    # arrow keys walk through the list: an item, then its favorite toggle
+    page.focus("input#namespaceSelection")
+    page.keyboard.press("ArrowDown")
+    expect(focused).to_have_text(names[0])
+    page.keyboard.press("ArrowDown")
+    expect(focused).to_have_role("button")
+    expect(focused).to_have_attribute("aria-label", f"Add {names[0]} to favorites")
+    expect(focused).to_have_attribute("aria-pressed", "false")
+    page.keyboard.press("ArrowDown")
+    page.keyboard.press("ArrowDown")
+    expect(focused).to_have_attribute("aria-label", f"Add {names[1]} to favorites")
+
+    # Enter toggles the favorite and does not select the namespace
+    page.keyboard.press("Enter")
+    expect(page.locator("input#namespaceSelection")).to_have_value("")
+    expect(page.locator(".v-autocomplete__selection-text")).to_have_text("")
+    assert reopen_namespace_list(page)[0] == names[1]
+    assert favorite_names(page) == [names[1]]
+    toggle = favorite_toggle(page, names[1])
+    expect(toggle).to_have_attribute("aria-label", f"Remove {names[1]} from favorites")
+    expect(toggle).to_have_attribute("aria-pressed", "true")
+
+    # so does Space
+    toggle.focus()
+    page.keyboard.press("Space")
+    expect(page.locator("input#namespaceSelection")).to_have_value("")
+    assert reopen_namespace_list(page) == names
+    assert favorite_names(page) == []
+
+
+def is_dark(page: Page) -> bool:
+    return page.locator(".v-application.v-theme--dark").count() == 1
+
+
+def dark_mode_switch(page: Page):
+    return page.locator(".dark-mode-switch input")
+
+
+def test_dark_mode_follows_the_system_until_the_user_chooses(page: Page):
+    page.emulate_media(color_scheme="dark")
+    page.goto("/")
+    expect(page.locator(".dark-mode-switch")).to_contain_text("Dark")
+    assert is_dark(page)
+    expect(dark_mode_switch(page)).to_be_checked()
+    # nothing is stored before the user makes a choice
+    assert page.evaluate("localStorage.getItem('useDarkTheme')") is None
+
+    dark_mode_switch(page).click()
+    expect(page.locator(".dark-mode-switch")).to_contain_text("Light")
+    assert not is_dark(page)
+    assert page.evaluate("localStorage.getItem('useDarkTheme')") == "false"
+
+    # the choice wins over the system preference on the next visit
+    page.reload()
+    expect(page.locator(".dark-mode-switch")).to_contain_text("Light")
+    assert not is_dark(page)
+
+    dark_mode_switch(page).click()
+    expect(page.locator(".dark-mode-switch")).to_contain_text("Dark")
+    assert is_dark(page)
+    assert page.evaluate("localStorage.getItem('useDarkTheme')") == "true"
+
+
+def test_light_system_preference_starts_light(page: Page):
+    page.emulate_media(color_scheme="light")
+    page.goto("/")
+    expect(page.locator(".dark-mode-switch")).to_contain_text("Light")
+    assert not is_dark(page)
+    expect(dark_mode_switch(page)).not_to_be_checked()
+
+
+def test_ui_works_without_local_storage(page: Page):
+    # e.g. a browser that blocks site data: reading window.localStorage throws
+    page.add_init_script("""
+        Object.defineProperty(window, 'localStorage', {
+            get() { throw new DOMException('The operation is insecure.', 'SecurityError') }
+        })
+    """)
+    errors: list[str] = []
+    page.on("pageerror", lambda error: errors.append(str(error)))
+    page.emulate_media(color_scheme="light")
+    page.goto("/")
+
+    expect(page.locator(".dark-mode-switch")).to_contain_text("Light")
+    dark_mode_switch(page).click()
+    expect(page.locator(".dark-mode-switch")).to_contain_text("Dark")
+    assert is_dark(page)
+
+    names = open_namespace_list(page)
+    favorite_toggle(page, names[2]).click()
+    assert reopen_namespace_list(page)[0] == names[2]
+    assert errors == []
+
+
+def test_logo_links_to_the_start_page(app_page: Page):
+    logo = app_page.locator("a#logo")
+    expect(logo).to_have_attribute("href", "/")
+    expect(logo.locator("img")).to_have_attribute("alt", "Kubeseal-Webgui Logo")
+
+
+def test_ui_start(app_page: Page):
+    assert app_page.title() == "Kubeseal WebGui - Sealed Secrets Management"
+
+
+def test_secret_form_with_value(app_page: Page):
+    page = app_page
+    api = SealingApi(page)
+
+    disabled_encrypt_button(page)
+    namespace = namespace_select(page)
+    secret_name(page)
+    scope_strict(page)
+    add_secret_key_value(page)
+    click_encrypt_button(page)
+
+    # exact text: this is what users copy into their manifests
+    assert sealed_secret_yaml(page) == (
+        "apiVersion: bitnami.com/v1alpha1\n"
+        "kind: SealedSecret\n"
+        "metadata:\n"
+        f"  name: {SECRET_NAME}\n"
+        f"  namespace: {namespace}\n"
+        "  annotations: {}\n"
+        "spec:\n"
+        "  encryptedData: \n"
+        f"    {SECRET_KEY}: {SEALED_VALUE}"
+    )
+    assert api.only_request == {
+        "secret": SECRET_NAME,
+        "namespace": namespace,
+        "scope": "strict",
+        "secrets": [{"key": SECRET_KEY, "value": b64(SECRET_VALUE)}],
+    }
+
+    # one card per key with the sealed value
+    key_card = page.locator(".secret-key-card")
+    expect(key_card).to_have_count(1)
+    expect(key_card.locator(".v-card-title")).to_have_text(SECRET_KEY)
+    expect(key_card.locator("code")).to_have_text(SEALED_VALUE)
+
+
+def test_secret_form_with_file(app_page: Page, tmp_path):
+    page = app_page
+    api = SealingApi(page)
+
+    disabled_encrypt_button(page)
+    namespace = namespace_select(page)
+    secret_name(page)
+    scope_strict(page)
+    add_secret_key_file(page, tmp_path)
+    click_encrypt_button(page)
+
+    expect(page.locator("#sealed-secret-result")).to_contain_text(
+        f"    {SECRET_KEY}: {SEALED_VALUE}"
+    )
+    assert api.only_request == {
+        "secret": SECRET_NAME,
+        "namespace": namespace,
+        "scope": "strict",
+        "secrets": [{"key": SECRET_KEY, "file": b64(FILE_CONTENT)}],
+    }
+
+
+def test_namespace_wide_result_without_secret_name(app_page: Page):
+    page = app_page
+    api = SealingApi(page)
+
+    disabled_encrypt_button(page)
+    select_scope(page, "namespace-wide")
+    namespace = namespace_select(page)
+    add_secret_key_value(page)
+    click_encrypt_button(page)
+
+    assert sealed_secret_yaml(page) == (
+        "apiVersion: bitnami.com/v1alpha1\n"
+        "kind: SealedSecret\n"
+        "metadata:\n"
+        "  name: # no secret name given\n"
+        f"  namespace: {namespace}\n"
+        '  annotations: { sealedsecrets.bitnami.com/namespace-wide: "true" }\n'
+        "spec:\n"
+        "  encryptedData: \n"
+        f"    {SECRET_KEY}: {SEALED_VALUE}"
+    )
+    request = api.only_request
+    assert request["secret"] == ""
+    assert request["namespace"] == namespace
+    assert request["scope"] == "namespace-wide"
+    assert request["secrets"] == [{"key": SECRET_KEY, "value": b64(SECRET_VALUE)}]
+
+
+def test_failed_sealing_keeps_the_form_and_shows_the_error(app_page: Page):
+    page = app_page
+    detail = "Failed to seal secrets. See the API logs for details."
+    api = SealingApi(page, status=500, body={"detail": detail})
+
+    namespace_select(page)
+    secret_name(page)
+    add_secret_key_value(page)
+    click_encrypt_button(page)
+
+    snackbar = page.locator(".v-snackbar").get_by_text(
+        f"Failed to seal secrets. Error Message: HTTP 500 - {detail}"
+    )
+    expect(snackbar).to_be_visible()
+    assert len(api.requests) == 1
+
+    # the form with everything the user entered is still there
+    expect(page.locator("#sealed-secret-result")).to_have_count(0)
+    expect(page.locator("#secretName")).to_have_value(SECRET_NAME)
+    expect(page.locator("textarea#secretKey-0")).to_have_value(SECRET_KEY)
+    expect(page.locator("textarea#secretValue-0")).to_have_value(SECRET_VALUE)
+
+    # a failed attempt does not lock the form: the user can simply try again
+    # (once the form has faded back in after the progress indicator)
+    expect(page.locator(".fade-enter-active, .fade-leave-active")).to_have_count(0)
+    api.status, api.body = 200, None
+    click_encrypt_button(page)
+    expect(page.locator("#sealed-secret-result")).to_be_visible()
+    assert len(api.requests) == 2
+    expect(snackbar).to_be_hidden()
+
+
+def test_result_cards_show_their_title_above_the_content(app_page: Page):
+    page = app_page
+    SealingApi(page)
+    seal_one_value(page)
+
+    for card in (".result-card", ".secret-key-card"):
+        title = page.locator(f"{card} .v-card-title").bounding_box()
+        content = page.locator(f"{card} pre").bounding_box()
+        actions = page.locator(f"{card} .copy-btn").bounding_box()
+        assert title["y"] + title["height"] <= content["y"], card
+        assert content["y"] + content["height"] <= actions["y"], card
+
+
+def test_logo_and_theme_switch_do_not_overlap_on_a_phone(page: Page):
+    page.set_viewport_size({"width": 390, "height": 800})
+    page.goto("/")
+    logo = page.locator("#logo-img").bounding_box()
+    switch = page.locator(".dark-mode-switch").bounding_box()
+
+    assert logo["x"] >= 0
+    assert logo["x"] + logo["width"] <= switch["x"]
+    assert switch["x"] + switch["width"] <= 390
+    # without its visible label the switch still has a name
+    expect(page.get_by_role("checkbox", name="Dark mode")).to_have_count(1)
+
+
+def test_clear_on_result_view_returns_to_an_empty_form(app_page: Page):
+    page = app_page
+    SealingApi(page)
+    seal_one_value(page)
+
+    page.get_by_role("button", name="Clear").click()
+
+    expect(page.locator("#sealed-secret-result")).to_have_count(0)
+    expect(page.locator("#secretName")).to_have_value("")
+    expect(page.locator("textarea#secretKey-0")).to_have_value("")
+    expect(page.locator("textarea#secretValue-0")).to_have_value("")
+    # Vuetify keeps an (empty) selection element for the empty string
+    expect(page.locator(".v-autocomplete__selection-text")).to_have_text("")
+    expect(page.locator("input#namespaceSelection")).to_have_value("")
+    expect(page.locator('button:has-text("Encrypt")')).to_be_disabled()
+
+
+def test_copy_buttons_copy_the_displayed_text(app_page: Page):
+    page = app_page
+    page.context.grant_permissions(["clipboard-read", "clipboard-write"])
+    SealingApi(page)
+    seal_one_value(page)
+    displayed_yaml = sealed_secret_yaml(page)
+
+    copy_manifest = page.locator(".result-card .copy-btn")
+    copy_manifest.click()
+
+    expect(page.locator(".v-snackbar").get_by_text("Sealed secret copied to clipboard!")).to_be_visible()
+    assert page.evaluate("navigator.clipboard.readText()") == displayed_yaml
+    # the button confirms the copy for a moment, then offers it again
+    expect(copy_manifest.locator(".mdi-check")).to_have_count(1)
+    expect(copy_manifest.locator(".mdi-content-copy")).to_have_count(1, timeout=5000)
+
+    page.locator(".secret-key-card .copy-btn").click()
+
+    expect(
+        page.locator(".v-snackbar").get_by_text(f'Secret key "{SECRET_KEY}" copied to clipboard!')
+    ).to_be_visible()
+    assert page.evaluate("navigator.clipboard.readText()") == SEALED_VALUE
+
+
+def test_copy_works_without_the_async_clipboard_api(page: Page):
+    # served over plain HTTP the browser has no navigator.clipboard
+    page.add_init_script(
+        "Object.defineProperty(Navigator.prototype, 'clipboard', { get: () => undefined })"
+    )
+    page.goto("/")
+    SealingApi(page)
+    seal_one_value(page)
+    assert page.evaluate("navigator.clipboard === undefined")
+
+    copy_manifest = page.locator(".result-card .copy-btn")
+    expect(copy_manifest).to_be_visible()
+    copy_manifest.click()
+
+    expect(page.locator(".v-snackbar").get_by_text("Sealed secret copied to clipboard!")).to_be_visible()
+
+
+def test_edit_on_result_view_returns_to_the_filled_form(app_page: Page):
+    page = app_page
+    SealingApi(page)
+    namespace = seal_one_value(page)
+
+    page.get_by_role("button", name="Edit Secrets").click()
+
+    expect(page.locator("#sealed-secret-result")).to_have_count(0)
+    expect(page.locator("#secretName")).to_have_value(SECRET_NAME)
+    expect(page.locator("textarea#secretKey-0")).to_have_value(SECRET_KEY)
+    expect(page.locator("textarea#secretValue-0")).to_have_value(SECRET_VALUE)
+    expect(page.locator(".v-autocomplete__selection-text")).to_have_text(namespace)
+    expect(page.locator('button:has-text("Encrypt")')).to_be_enabled()
+
+
+def test_removing_a_row_keeps_the_other_rows_intact(app_page: Page):
+    page = app_page
+    add_button = page.get_by_role("button", name="Add key-value pair")
+    add_button.click()
+    add_button.click()
+    expect(page.locator("textarea[id^='secretKey-']")).to_have_count(3)
+    assert duplicate_ids(page) == []
+
+    page.fill("textarea#secretKey-0", "first-key")
+    page.fill("textarea#secretValue-0", "first value")
+    # the middle row has been edited and shows a validation error
+    page.fill("textarea#secretKey-1", "second-key")
+    page.fill("textarea#secretKey-1", "")
+    expect(page.locator(".v-row:has(#secretKey-1) .v-input--error")).to_have_count(1)
+    # the key of the last row has not been touched yet
+    page.fill("textarea#secretValue-2", "third value")
+    expect(page.locator(".v-row:has(#secretKey-2) .v-input--error")).to_have_count(0)
+
+    # remove the middle row with its delete icon
+    page.locator(".v-row:has(#secretKey-1) .mdi-delete").click()
+
+    expect(page.locator("textarea[id^='secretKey-']")).to_have_count(2)
+    expect(page.locator("textarea#secretKey-0")).to_have_value("first-key")
+    expect(page.locator("textarea#secretValue-0")).to_have_value("first value")
+    expect(page.locator("textarea#secretKey-1")).to_have_value("")
+    expect(page.locator("textarea#secretValue-1")).to_have_value("third value")
+    # the error went away with the removed row instead of moving to its neighbour
+    expect(page.locator(".v-row:has(#secretKey-1) .v-input--error")).to_have_count(0)
+    assert duplicate_ids(page) == []
+
+
+def test_removing_the_only_row_leaves_a_blank_row(app_page: Page):
+    page = app_page
+    add_secret_key_value(page)
+
+    page.locator(".v-row:has(#secretKey-0) .mdi-delete").click()
+
+    expect(page.locator("textarea[id^='secretKey-']")).to_have_count(1)
+    expect(page.locator("textarea#secretKey-0")).to_have_value("")
+    expect(page.locator("textarea#secretValue-0")).to_have_value("")
+
+
+def test_remove_all_leaves_one_blank_row(app_page: Page):
+    page = app_page
+    add_secret_key_value(page)
+    page.get_by_role("button", name="Add key-value pair").click()
+    page.fill("textarea#secretKey-1", "another-key")
+
+    page.get_by_role("button", name="Remove All").click()
+
+    expect(page.locator("textarea[id^='secretKey-']")).to_have_count(1)
+    expect(page.locator("textarea#secretKey-0")).to_have_value("")
+    expect(page.locator("textarea#secretValue-0")).to_have_value("")
+
+
+def enable_sealed_secret_import(page: Page) -> list[str]:
+    """Switch the import feature on and serve two existing SealedSecrets."""
+    requested_urls: list[str] = []
+
+    def config_json(route: Route):
+        config = route.fetch().json()
+        config["enable_existing_sealed_secret_loading"] = True
+        route.fulfill(json=config)
+
+    def sealed_secrets(route: Route):
+        requested_urls.append(route.request.url)
+        route.fulfill(
+            json=[
+                {"name": "app-secrets", "keys": ["API_KEY", "TOKEN"]},
+                {"name": "db-secrets", "keys": ["PASSWORD"]},
+            ]
+        )
+
+    page.route("**/config.json", config_json)
+    page.route("**/sealed-secrets/*", sealed_secrets)
+    return requested_urls
+
+
+def import_sealed_secret(page: Page, name: str):
+    page.get_by_role("button", name="Import existing sealed secret").click()
+    # typing filters the list, whether or not it is open already
+    page.get_by_role("combobox", name="Select SealedSecret").fill(name)
+    page.get_by_role("option", name=name).click()
+
+
+def secret_keys(page: Page) -> list[str]:
+    return [
+        key.input_value() for key in page.locator("textarea[id^='secretKey-']").all()
+    ]
+
+
+def test_import_keys_of_an_existing_sealed_secret(page: Page):
+    requested_urls = enable_sealed_secret_import(page)
+    page.goto("/")
+    import_button = page.get_by_role("button", name="Import existing sealed secret")
+
+    # only offered for a namespace of the cluster
+    page.wait_for_selector("input#namespaceSelection")
+    expect(import_button).to_have_count(0)
+    namespace = namespace_select(page)
+    expect(import_button).to_be_visible()
+
+    # nothing entered yet: the keys are taken over right away
+    import_sealed_secret(page, "app-secrets")
+    expect(page.locator("textarea[id^='secretKey-']")).to_have_count(2)
+    assert secret_keys(page) == ["API_KEY", "TOKEN"]
+    assert requested_urls == [f"{page.url}sealed-secrets/{namespace}"]
+
+    # replacing entered data needs a confirmation
+    page.fill("textarea#secretValue-0", SECRET_VALUE)
+    import_sealed_secret(page, "db-secrets")
+    dialog = page.locator(".v-dialog", has_text="Replace key list?")
+    expect(dialog).to_be_visible()
+    dialog.get_by_role("button", name="Cancel").click()
+    expect(dialog).to_be_hidden()
+    assert secret_keys(page) == ["API_KEY", "TOKEN"]
+    expect(page.locator("textarea#secretValue-0")).to_have_value(SECRET_VALUE)
+
+    import_sealed_secret(page, "db-secrets")
+    expect(dialog).to_be_visible()
+    dialog.get_by_role("button", name="Continue").click()
+    expect(dialog).to_be_hidden()
+    expect(page.locator("textarea[id^='secretKey-']")).to_have_count(1)
+    assert secret_keys(page) == ["PASSWORD"]
+    expect(page.locator("textarea#secretValue-0")).to_have_value("")
+    # the list of the namespace was loaded once
+    assert len(requested_urls) == 1
+
+    # not offered for a namespace that does not exist yet
+    page.locator("#newNamespaceCheckbox").check()
+    expect(import_button).to_have_count(0)
+
+
+def test_secret_form_with_invalid_file(app_page: Page, tmp_path):
+    page = app_page
+    file_input = page.locator('input[type="file"]#fileInput-0')
+    # Try to upload a file above the 1 MB limit
+    invalid_file = tmp_path / "large_test_file.txt"
+    invalid_file.write_text("X" * (10 * ONE_MEBIBYTE))
+    file_input.set_input_files(invalid_file)
+
+    # Check for the snackbar error message
+    snackbar_message = page.locator("div[role='status']").get_by_text(
+        "File size should be less than 1 MB!"
+    )
+    expect(snackbar_message).to_be_visible()
+
+    # the rejected file is not kept, the reason is shown at the input
+    row = page.locator(".v-row:has(#fileInput-0)")
+    expect(row.locator(".v-file-input .v-messages")).to_have_text(
+        "File size should be less than 1 MB!"
+    )
+    expect(row.locator(".v-file-input .v-field__input")).not_to_contain_text(
+        "large_test_file.txt"
+    )
+    expect(page.locator("textarea#secretValue-0")).to_be_enabled()
+
+    # a file within the limit is accepted and clears the error
+    valid_file = tmp_path / "small_test_file.txt"
+    valid_file.write_text(FILE_CONTENT)
+    file_input.set_input_files(valid_file)
+    expect(row.locator(".v-file-input .v-field__input")).to_contain_text(
+        "small_test_file.txt"
+    )
+    expect(row.locator(".v-file-input .v-messages")).to_have_text("")
+    expect(page.locator("textarea#secretValue-0")).to_be_disabled()
+
+
+def test_secret_form_with_new_namespace(app_page: Page):
+    page = app_page
+    disabled_encrypt_button(page)
+    secret_name(page)
+    add_secret_key_value(page)
+
+    # a namespace that is not part of the cluster list can only be typed
+    # in after opting in via the checkbox
+    page.locator("#newNamespaceCheckbox").check()
+    namespace_input = page.locator("input#namespaceSelection")
+    namespace_input.wait_for()
+    namespace_input.fill("Not_Valid")
+    assert page.locator('button:has-text("Encrypt")').is_disabled()
+
+    namespace_input.fill("not-created-yet")
+    assert namespace_input.input_value() == "not-created-yet"
+    assert page.locator('button:has-text("Encrypt")').is_enabled()
+
+    # switching back to the cluster list starts with an empty selection
+    page.locator("#newNamespaceCheckbox").uncheck()
+    assert page.locator('button:has-text("Encrypt")').is_disabled()
+
+
+def test_secret_name_is_optional_outside_strict_scope(app_page: Page):
+    page = app_page
+    disabled_encrypt_button(page)
+    select_scope(page, "namespace-wide")
+    namespace_select(page)
+    add_secret_key_value(page)
+
+    # the name is not sealed into the secret for this scope, so it is
+    # optional, but it can still be entered for the generated YAML
+    encrypt_button = page.locator('button:has-text("Encrypt")')
+    name_input = page.locator("#secretName")
+    assert name_input.is_enabled()
+    assert encrypt_button.is_enabled()
+
+    # must be a DNS subdomain: no upper case, underscores or empty labels
+    for invalid_name in ["Not_Valid", "a_b", "a..b", "a.-b", "a" * 254]:
+        name_input.fill(invalid_name)
+        assert encrypt_button.is_disabled(), invalid_name
+
+    for valid_name in ["valid-secret-name", "my.secret-1", "a" * 253]:
+        name_input.fill(valid_name)
+        assert encrypt_button.is_enabled(), valid_name
+        # the field rule has to agree with the button state
+        assert page.locator(".v-col:has(#secretName) .v-input--error").count() == 0
+
+    # the strict scope requires the name again
+    name_input.fill("")
+    select_scope(page, "strict")
+    assert encrypt_button.is_disabled()
+
+
+def sealed_secret_yaml(page: Page) -> str:
+    """Return the generated manifest exactly as shown, whitespace included."""
+    result = page.locator("#sealed-secret-result")
+    expect(result).to_be_visible()
+    text = result.text_content()
+    # what a user selects and copies must not differ from the DOM text
+    assert result.inner_text() == text
+    return text
+
+
+def duplicate_ids(page: Page) -> list[str]:
+    return page.evaluate("""() => {
+        const ids = [...document.querySelectorAll('[id]')].map((element) => element.id)
+        return [...new Set(ids.filter((id, index) => ids.indexOf(id) !== index))]
+    }""")
+
+
+def seal_one_value(page: Page) -> str:
+    """Fill the form with one key/value pair, seal it, return the namespace."""
+    namespace = namespace_select(page)
+    secret_name(page)
+    add_secret_key_value(page)
+    click_encrypt_button(page)
+    expect(page.locator("#sealed-secret-result")).to_be_visible()
+    return namespace
+
+
+def namespace_select(page: Page) -> str:
+    """Pick the first namespace of the list and return its name."""
     input_selector = "input#namespaceSelection"
     page.wait_for_selector(input_selector, timeout=10000)
     page.click(input_selector)
@@ -156,16 +800,16 @@ def namespace_select(page: Page):
     assert (
         displayed_text == first_suggestion_text
     ), f"Expected '{first_suggestion_text}', but got '{displayed_text}'"
+    return displayed_text
 
 
 def secret_name(page: Page):
     input_selector = "#secretName"
     page.wait_for_selector(input_selector)
-    input_text = "valid-secret-name"
-    page.fill(input_selector, input_text)
+    page.fill(input_selector, SECRET_NAME)
     assert (
-        page.input_value(input_selector) == input_text
-    ), f"Expected {input_text}, but got {page.input_value(input_selector)}"
+        page.input_value(input_selector) == SECRET_NAME
+    ), f"Expected {SECRET_NAME}, but got {page.input_value(input_selector)}"
 
 
 def scope_strict(page: Page):
@@ -183,31 +827,28 @@ def select_scope(page: Page, scope: str):
 
 
 def add_secret_key_value(page: Page):
-    page.wait_for_selector("textarea#secretKey")
-    page.fill("textarea#secretKey", "my-secret-key")
-    assert page.locator("textarea#secretKey").input_value() == "my-secret-key"
-    page.wait_for_selector("textarea#secretValue")
-    page.fill("textarea#secretValue", "my-secret-value")
-    assert page.locator("textarea#secretValue").input_value() == "my-secret-value"
-    file_input = page.locator('input[type="file"]#fileInput')
+    page.wait_for_selector("textarea#secretKey-0")
+    page.fill("textarea#secretKey-0", SECRET_KEY)
+    assert page.locator("textarea#secretKey-0").input_value() == SECRET_KEY
+    page.wait_for_selector("textarea#secretValue-0")
+    page.fill("textarea#secretValue-0", SECRET_VALUE)
+    assert page.locator("textarea#secretValue-0").input_value() == SECRET_VALUE
+    file_input = page.locator('input[type="file"]#fileInput-0')
     assert (
         not file_input.is_enabled()
     ), "File input should be disabled when value is filled"
 
 
-def add_secret_key_file(page: Page):
-    page.wait_for_selector("textarea#secretKey")
-    page.fill("textarea#secretKey", "my-secret-key")
-    assert page.locator("textarea#secretKey").input_value() == "my-secret-key"
+def add_secret_key_file(page: Page, tmp_path):
+    page.wait_for_selector("textarea#secretKey-0")
+    page.fill("textarea#secretKey-0", SECRET_KEY)
+    assert page.locator("textarea#secretKey-0").input_value() == SECRET_KEY
 
-    file_input = page.locator('input[type="file"]#fileInput')
+    file_input = page.locator('input[type="file"]#fileInput-0')
     assert file_input.is_visible()
-    test_file_path = os.path.join(os.getcwd(), "test_file.txt")
-    with open(test_file_path, "w") as f:
-        f.write("This is a test file.")
-    file_input.set_input_files(test_file_path)
-    if os.path.exists(test_file_path):
-        os.remove(test_file_path)
+    test_file = tmp_path / "test_file.txt"
+    test_file.write_text(FILE_CONTENT)
+    file_input.set_input_files(test_file)
 
 
 def disabled_encrypt_button(page: Page):
@@ -217,22 +858,7 @@ def disabled_encrypt_button(page: Page):
 
 
 def click_encrypt_button(page: Page):
-    # Mock the fetchEncodedSecrets function by overriding it in the browser context
-    page.evaluate(
-        """
-        const appElement = document.querySelector('#app');
-        const vueApp = appElement.__vue_app__;
-
-        if (vueApp) {
-            vueApp._instance.proxy.fetchEncodedSecrets = function() {
-                window.fetchEncodedSecretsCalled = true;
-            };
-        }
-    """
-    )
     encrypt_button = page.locator('button:has-text("Encrypt")')
     encrypt_button.wait_for()
-    assert encrypt_button.is_enabled()
+    expect(encrypt_button).to_be_enabled()
     encrypt_button.click()
-    is_called = page.evaluate("window.fetchEncodedSecretsCalled === true")
-    assert is_called, "fetchEncodedSecrets function was not called!"

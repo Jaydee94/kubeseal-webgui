@@ -1,5 +1,4 @@
 import logging
-from os import environ
 
 import pytest
 from fastapi.testclient import TestClient
@@ -7,7 +6,6 @@ from fastapi.testclient import TestClient
 from kubeseal_webgui_api.app import app
 
 LOGGER = logging.getLogger(__name__)
-environ["ORIGIN_URL"] = "http://no-server-here"
 
 client = TestClient(app)
 

@@ -1,11 +1,9 @@
 import { createApp } from 'vue'
 import { createVuetify } from 'vuetify'
 import App from './App.vue'
-import * as components from 'vuetify/components'
-import * as directives from 'vuetify/directives'
 import { aliases, mdi } from 'vuetify/iconsets/mdi'
 
-import "@fontsource/roboto"
+import '@fontsource/roboto'
 import 'vuetify/styles' // Global CSS has to be imported
 import '@mdi/font/css/materialdesignicons.css' // Ensure you are using css-loader
 import './assets/styles.css' // Import custom global styles
@@ -15,13 +13,11 @@ const log = createLogger('app')
 
 const app = createApp(App)
 const vuetify = createVuetify({
-  components,
-  directives,
   icons: {
     defaultSet: 'mdi',
     aliases,
     sets: {
-      mdi,
+      mdi
     }
   },
   theme: {
@@ -41,7 +37,7 @@ const vuetify = createVuetify({
           surface: '#ffffff',
           'on-surface': '#212529',
           'surface-variant': '#e9ecef',
-          'on-surface-variant': '#495057',
+          'on-surface-variant': '#495057'
         }
       },
       dark: {
@@ -58,7 +54,7 @@ const vuetify = createVuetify({
           surface: '#343a40',
           'on-surface': '#f8f9fa',
           'surface-variant': '#495057',
-          'on-surface-variant': '#adb5bd',
+          'on-surface-variant': '#adb5bd'
         }
       }
     }
@@ -73,6 +69,4 @@ app.config.errorHandler = (error, instance, info) => {
 
 log.info(`Starting UI (mode: ${import.meta.env.MODE}, log level: ${getLogLevel()})`)
 
-app
-  .use(vuetify)
-  .mount('#app')
+app.use(vuetify).mount('#app')

@@ -3,3 +3,7 @@
 extend-exclude = [
     "chart/kubeseal-webgui/values.yaml"
 ]
+
+[default]
+# Abbreviated commit hashes in backticks (`caf3184`) are not words.
+extend-ignore-re = ["`[0-9a-f]{7,40}`"]

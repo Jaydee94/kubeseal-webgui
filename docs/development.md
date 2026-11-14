@@ -44,8 +44,12 @@ MOCK_ENABLED=true \
 ```
 
 `MOCK_ENABLED=true` replaces the Kubernetes client and `kubeseal` invocations
-with in-memory mocks, so you can develop without a cluster. See
-[architecture.md](architecture.md#mock-mode) for details.
+with in-memory mocks, so you can develop without a cluster and without a
+`kubeseal` binary. See [architecture.md](architecture.md#mock-mode) for
+details.
+
+Without mock mode the API runs `kubeseal --version` when it starts and
+refuses to start if `KUBESEAL_BINARY` does not point to a working binary.
 
 The API is then available at `http://localhost:5000`. Swagger UI is at
 `http://localhost:5000/docs`.
@@ -53,19 +57,19 @@ The API is then available at `http://localhost:5000`. Swagger UI is at
 ### Tests
 
 ```bash
-poetry run pytest
+poetry run pytest -m "not cluster and not container"
 ```
+
+This runs the unit tests. They need neither a cluster nor a `kubeseal`
+binary: the sealing tests use a small stand-in script.
 
 Markers defined in `pyproject.toml`:
 
 - `cluster`: tests that need a real Kubernetes cluster.
 - `container`: tests that need to run inside the API container.
 
-Skip both for a fast unit-test run:
-
-```bash
-poetry run pytest -m "not cluster and not container"
-```
+A plain `poetry run pytest` also runs the tests with these markers, which
+fail outside of their environment.
 
 ### Linting and formatting
 
@@ -73,7 +77,7 @@ poetry run pytest -m "not cluster and not container"
 poetry run ruff check .
 poetry run black --check .
 poetry run isort --check .
-poetry run mypy .
+poetry run mypy kubeseal_webgui_api
 ```
 
 `ruff`, `black`, `isort`, and `mypy` are configured in `pyproject.toml`.
@@ -95,10 +99,13 @@ This project uses npm. There is no `yarn.lock`; do not use Yarn.
 npm run dev
 ```
 
-Vite serves the SPA on `http://localhost:8080` with hot reload. By default it
-expects the API at `http://localhost:5000` (set in
-`src/composables/useConfig.js` or equivalent — check `public/config.json` for
-the runtime value).
+Vite serves the SPA on `http://localhost:8080` with hot reload and proxies
+the API routes to `http://localhost:5000` (see `server.proxy` in
+`vite.config.mjs`). The API URL the SPA uses comes from `public/config.json`,
+which `src/config.js` loads at startup; it is empty in development, so
+requests go through the proxy. `.env.development` sets
+`VITE_MOCK_NAMESPACES=true`, which makes the namespace list work without an
+API.
 
 ### Build for production
 
@@ -109,11 +116,32 @@ npm run build
 Outputs the production bundle to `ui/dist/`, which is what `Dockerfile.ui`
 copies into the nginx image.
 
+### Tests
+
+```bash
+npm test
+```
+
+runs the unit tests in `tests/unit/` with [Vitest](https://vitest.dev/).
+
+The end-to-end tests in `tests/test_ui.py` drive a browser with Python
+Playwright against the dev server; requests to the API are answered by the
+tests themselves, so no API has to run:
+
+```bash
+pip install playwright pytest-playwright
+playwright install chromium
+npm run dev &        # the tests expect the dev server on port 8080
+pytest tests/
+```
+
 ### Linting and formatting
 
 ```bash
-npm run lint     # eslint, auto-fixes where possible
-npm run format   # prettier, writes to src/
+npm run lint           # eslint, auto-fixes where possible
+npm run lint:check     # eslint, only reports
+npm run format         # prettier, writes to src/ and tests/unit/
+npm run format:check   # prettier, only reports
 ```
 
 ## Building the container images
@@ -167,8 +195,11 @@ After the script finishes, the UI is reachable at
 GitHub Actions workflows live under
 [`.github/workflows/`](../.github/workflows/). The most relevant ones are:
 
-- `main.yml`: lint, tests, basic builds on every push and PR.
-- `frontend-tests.yml`: UI test suite.
+- `main.yml`: manually triggered build and push of the API and UI images to
+  Docker Hub.
+- `checks.yml`: API (ruff, black, isort, mypy, unit tests) and UI (ESLint,
+  Prettier, unit tests, production build) checks on every pull request.
+- `frontend-tests.yml`: UI end-to-end tests (Playwright).
 - `kind.yaml`: end-to-end test on a KinD cluster (its own inline steps,
   independent of `kind-setup.sh` above — the two aren't wired together, but
   cover equivalent ground).
