@@ -35,8 +35,7 @@ Create chart name and version as used by the chart label.
 Common labels
 */}}
 {{- define "kubeseal-webgui.labels" -}}
-app: {{ template "kubeseal-webgui.name" . }}
-chart: {{ .Chart.Name }}
-release: {{ .Release.Name }}
-heritage: {{ .Release.Service }}
+{{- $labels := dict "app" (include "kubeseal-webgui.name" .) "chart" .Chart.Name "release" .Release.Name "heritage" .Release.Service -}}
+{{- $labels = merge $labels (default (dict) .Values.commonLabels) -}}
+{{- toYaml $labels -}}
 {{- end -}}

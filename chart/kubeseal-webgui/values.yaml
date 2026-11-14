@@ -1,4 +1,5 @@
 replicaCount: 1
+commonLabels: {}
 annotations: {}
 api:
   # The value of api.url should be set to the public-accessible http endpoint (ingress url or OpenShift route).
