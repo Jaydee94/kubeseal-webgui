@@ -1,34 +1,42 @@
 import logging
-from typing import List
 
 import fastapi
 
 from kubeseal_webgui_api.app_config import settings
+from kubeseal_webgui_api.logging_utils import LOGGER_NAME
 from kubeseal_webgui_api.routers.kubernetes_namespace_resolver import (
     kubernetes_namespaces_resolver,
 )
+from kubeseal_webgui_api.routers.kubernetes_sealed_secret_resolver import (
+    kubernetes_sealed_secret_resolver,
+)
+from kubeseal_webgui_api.routers.kubeseal import valid_namespace_name
 from kubeseal_webgui_api.routers.mock_namespace_resolver import mock_namespaces_resolver
 from kubeseal_webgui_api.routers.mock_sealed_secret_resolver import (
     mock_sealed_secret_resolver,
 )
 from kubeseal_webgui_api.routers.models import ExistingSealedSecret
-from kubeseal_webgui_api.routers.kubernetes_sealed_secret_resolver import (
-    kubernetes_sealed_secret_resolver,
-)
 
 router = fastapi.APIRouter()
-LOGGER = logging.getLogger("kubeseal-webgui")
-
-if settings.mock_enabled:
-    namespace_resolver = mock_namespaces_resolver
-    sealed_secret_resolver = mock_sealed_secret_resolver
-else:
-    namespace_resolver = kubernetes_namespaces_resolver
-    sealed_secret_resolver = kubernetes_sealed_secret_resolver
+LOGGER = logging.getLogger(LOGGER_NAME)
 
 
-@router.get("/namespaces", response_model=List[str])
-def get_namespaces() -> List[str]:
+def namespace_resolver() -> list[str]:
+    """List the namespaces of the cluster, or made-up ones in mock mode."""
+    if settings.mock_enabled:
+        return mock_namespaces_resolver()
+    return kubernetes_namespaces_resolver()
+
+
+def sealed_secret_resolver(namespace: str) -> list[ExistingSealedSecret]:
+    """List the SealedSecrets of a namespace, or made-up ones in mock mode."""
+    if settings.mock_enabled:
+        return mock_sealed_secret_resolver(namespace)
+    return kubernetes_sealed_secret_resolver(namespace)
+
+
+@router.get("/namespaces", response_model=list[str])
+def get_namespaces() -> list[str]:
     # Kubernetes client errors (e.g. a 403 caused by missing RBAC) are not
     # RuntimeErrors, hence the broad catch at this API boundary.
     try:
@@ -40,8 +48,17 @@ def get_namespaces() -> List[str]:
         ) from None
 
 
-@router.get("/sealed-secrets/{namespace}", response_model=List[ExistingSealedSecret])
-def get_sealed_secrets(namespace: str) -> List[ExistingSealedSecret]:
+@router.get("/sealed-secrets/{namespace}", response_model=list[ExistingSealedSecret])
+def get_sealed_secrets(namespace: str) -> list[ExistingSealedSecret]:
+    # The path segment is client input. Only a valid namespace name is passed
+    # on to the cluster and written to the log.
+    try:
+        namespace = valid_namespace_name(namespace)
+    except ValueError:
+        raise fastapi.HTTPException(
+            status_code=400, detail="Invalid namespace name."
+        ) from None
+
     try:
         return sealed_secret_resolver(namespace)
     except Exception:

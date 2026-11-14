@@ -71,10 +71,10 @@ chore(deps): bump fastapi to 0.137
 
 Before requesting review, make sure:
 
-- [ ] Tests pass locally (`poetry run pytest` for the API,
-      `npm run lint` for the UI).
+- [ ] Tests pass locally (`poetry run pytest -m "not cluster and not container"`
+      for the API, `npm test` for the UI).
 - [ ] Linters are clean (`ruff`, `black`, `isort`, `mypy` for the API;
-      `eslint` and `prettier` for the UI).
+      `npm run lint:check` and `npm run format:check` for the UI).
 - [ ] If you changed behavior, you updated the relevant page in `docs/`.
 - [ ] If you changed Helm values, you updated
       [`docs/configuration.md`](docs/configuration.md) and

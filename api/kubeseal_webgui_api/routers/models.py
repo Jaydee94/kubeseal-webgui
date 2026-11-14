@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import List, Optional, Self
+from typing import Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -21,21 +21,20 @@ class KeyValuePair(BaseModel):
 
 class ExistingSealedSecret(BaseModel):
     name: str
-    keys: List[str]
+    keys: list[str]
 
 
 class Secret(BaseModel):
     key: str
-    value: Optional[str] = None
-    file: Optional[str] = None
+    value: str | None = None
+    file: str | None = None
 
     @model_validator(mode="after")
     def value_or_file_set(self: Self) -> Self:
-        file, value = self.file, self.value
-        if file and value:
-            raise AssertionError("Only one field of 'value' or 'file' can be used")
-        if file is None and value is None:
-            raise AssertionError("One field of 'value' or 'file' has to be set")
+        if self.file is not None and self.value is not None:
+            raise ValueError("Only one field of 'value' or 'file' can be used")
+        if self.file is None and self.value is None:
+            raise ValueError("One field of 'value' or 'file' has to be set")
         return self
 
 
@@ -55,7 +54,7 @@ class Data(BaseModel):
     # The name of the secret, not a secret value. The JSON key stays "secret";
     # the attribute is called `name` so that neither readers nor static
     # analysis mistake it for sensitive data (the values live in `secrets`).
-    name: Optional[str] = Field(default=None, alias="secret")
-    namespace: Optional[str] = None
-    secrets: List[Secret]
-    scope: Optional[Scope] = None
+    name: str | None = Field(default=None, alias="secret")
+    namespace: str | None = None
+    secrets: list[Secret]
+    scope: Scope | None = None

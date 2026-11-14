@@ -59,6 +59,14 @@ jobs:
           yq -i ".ui.image.tag = \"$APP_VERSION\"" chart/kubeseal-webgui/values.yaml
           yq -i ".api.image.tag = \"$APP_VERSION\"" chart/kubeseal-webgui/values.yaml
 
+          # Keep the versions of the API and UI packages in step with the release
+          sed -i "s/^version = \".*\"/version = \"$APP_VERSION\"/" api/pyproject.toml
+          sed -i "s/^  \"version\": \".*\"/  \"version\": \"$APP_VERSION\"/" ui/package.json
+          sed -i \
+            -e "1,/\"version\": \".*\"/s/\"version\": \".*\"/\"version\": \"$APP_VERSION\"/" \
+            -e "/^    \"\": {/,/\"version\": \".*\"/s/\"version\": \".*\"/\"version\": \"$APP_VERSION\"/" \
+            ui/package-lock.json
+
           # Package the chart with the bumped chart version
           helm package chart/kubeseal-webgui --version "$CHART_VERSION" --app-version "$APP_VERSION"
           
@@ -75,7 +83,8 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
           # Add the updated files
-          git add chart/kubeseal-webgui/Chart.yaml chart/kubeseal-webgui/values.yaml
+          git add chart/kubeseal-webgui/Chart.yaml chart/kubeseal-webgui/values.yaml \
+            api/pyproject.toml ui/package.json ui/package-lock.json
           
           # Commit with a clear message
           git commit -m "chore: bump chart version to $(yq '.version' chart/kubeseal-webgui/Chart.yaml) for app version $(yq '.appVersion' chart/kubeseal-webgui/Chart.yaml) [skip ci]" || echo "No changes to commit"

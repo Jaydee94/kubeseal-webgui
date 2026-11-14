@@ -24,6 +24,18 @@ else
     echo "ui/package.json not found!"
 fi
 
+# Update the version of the root package in package-lock.json (it is stored
+# twice: at the top level and in the entry of the root package "")
+if [ -f ui/package-lock.json ]; then
+    sed -i \
+        -e "1,/\"version\": \".*\"/s/\"version\": \".*\"/\"version\": \"$VERSION\"/" \
+        -e "/^    \"\": {/,/\"version\": \".*\"/s/\"version\": \".*\"/\"version\": \"$VERSION\"/" \
+        ui/package-lock.json
+    echo "Updated ui/package-lock.json to version $VERSION"
+else
+    echo "ui/package-lock.json not found!"
+fi
+
 # Update the version and appVersion in Chart.yaml
 if [ -f chart/kubeseal-webgui/Chart.yaml ]; then
     sed -i "s/^appVersion: .*/appVersion: $VERSION/" chart/kubeseal-webgui/Chart.yaml

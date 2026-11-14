@@ -5,105 +5,137 @@ import pytest
 
 from kubeseal_webgui_api.routers.kubeseal import (
     Scope,
-    construct_kubeseal_cmd,
+    build_kubeseal_command,
     decode_base64_bytearray,
     decode_base64_string,
-    run_kubeseal,
-    valid_k8s_name,
+    seal_secrets,
+    valid_namespace_name,
+    valid_secret_name,
 )
 from kubeseal_webgui_api.routers.models import Secret
 
+VALID_EVERYWHERE = [
+    "abc",
+    "a",
+    "1",
+    "l" + "o" * 60 + "ng",
+    "some-1-too-check",
+    "ends-on-digit-1",
+    "1starts-with-it",
+]
+
+INVALID_EVERYWHERE = [
+    "",
+    None,
+    "-something",
+    "ähm",
+    "_not-valid",
+    "some_underscore",
+    "with spaces",
+    " not-trimmed ",
+    "trailing-newline\n",
+    "no-special-chars-like/,#+%",
+    "ends-on-dash-",
+    "Uppercase",
+    "U",
+    "uPPer",
+]
+
+
+@pytest.mark.parametrize("value", VALID_EVERYWHERE)
+def test_valid_namespace_name(value):
+    assert valid_namespace_name(value) == value
+
 
 @pytest.mark.parametrize(
     "value",
     [
-        "abc",
-        "l" + "o" * 60 + "ng",
-        "some-1-too-check",
-        "ends-on-digit-1",
-        "1starts-with-it",
-        "some.dots.or_underscore",
+        *INVALID_EVERYWHERE,
+        # a namespace is a DNS label: no dots, at most 63 characters
+        "some.dots",
+        "l" + "o" * 61 + "ng",
+    ],
+)
+def test_invalid_namespace_name(value):
+    with pytest.raises(ValueError, match="Invalid k8s namespace name"):
+        valid_namespace_name(value)
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        *VALID_EVERYWHERE,
+        # a secret name is a DNS subdomain: dots, up to 253 characters
+        "some.dots.in-it",
         "long-" + "a" * 248,
     ],
 )
-def test_valid_k8s_name(value):
-    # given a valid k8s-label-name
-    # when valid_k8s_name is called on the label-name
-    # then the label-name is returned unchanged
-    assert valid_k8s_name(value) == value
+def test_valid_secret_name(value):
+    assert valid_secret_name(value) == value
 
 
 @pytest.mark.parametrize(
     "value",
     [
-        "",
-        "-something",
+        *INVALID_EVERYWHERE,
         "too-l" + "o" * 247 + "ng",
-        "ähm",
-        "_not-valid",
-        "with spaces",
-        " not-trimmed ",
-        "no-special-chars-like/,#+%",
-        "ends-on-dash-",
-        "Uppercase",
-        "U",
-        "uPPer",
+        "double..dot",
+        ".starts-with-dot",
+        "ends-with-dot.",
+        "label-ends-on-dash-.next",
     ],
 )
-def test_invalid_k8s_name(value):
-    # given an invalid k8s-label-name
-    # when valid_k8s_name is called on the label-name
-    # then a ValueError is raised
-    with pytest.raises(ValueError, match="Invalid k8s name"):
-        valid_k8s_name(value)
+def test_invalid_secret_name(value):
+    with pytest.raises(ValueError, match="Invalid k8s secret name"):
+        valid_secret_name(value)
 
 
 def test_run_kubeseal_with_with_empty_string_namespace():
     # given an empty string secretNamespace
-    # when run_kubeseal is called
+    # when seal_secrets is called
     # then raise ValueError
     with pytest.raises(ValueError, match="secret_namespace was not given"):
-        run_kubeseal([Secret(key="foo", value="YmFy")], "", "secretName")
+        seal_secrets([Secret(key="foo", value="YmFy")], "", "secretName")
 
 
 def test_run_kubeseal_with_with_none_namespace():
     # given a None secretNamespace
-    # when run_kubeseal is called
+    # when seal_secrets is called
     # then raise ValueError
     with pytest.raises(ValueError, match="secret_namespace was not given"):
-        run_kubeseal([Secret(key="foo", value="YmFy")], None, "secretName")
+        seal_secrets([Secret(key="foo", value="YmFy")], None, "secretName")
 
 
 def test_run_kubeseal_with_with_empty_string_secret_name():
     # given an empty string secretName
-    # when run_kubeseal is called
+    # when seal_secrets is called
     # then raise ValueError
     with pytest.raises(ValueError, match="secret_name was not given"):
-        run_kubeseal([Secret(key="foo", value="YmFy")], "secretNamespace", "")
+        seal_secrets([Secret(key="foo", value="YmFy")], "secretNamespace", "")
 
 
 def test_run_kubeseal_with_with_none_secret_name():
     # given a None secretName
-    # when run_kubeseal is called
+    # when seal_secrets is called
     # then raise ValueError
     with pytest.raises(ValueError, match="secret_name was not given"):
-        run_kubeseal([Secret(key="foo", value="YmFy")], "secretNamespace", None)
+        seal_secrets([Secret(key="foo", value="YmFy")], "secretNamespace", None)
 
 
 def test_run_kubeseal_with_with_empty_secrets_list_but_otherwise_valid_inputs():
     # given an empty list
-    # when run_kubeseal is called
-    sealed_secrets = run_kubeseal([], "secretNamespace", "secretName")
+    # when seal_secrets is called
+    sealed_secrets = seal_secrets([], "secretNamespace", "secretName")
     # then return empty list
     assert sealed_secrets == []
 
 
-@patch("kubeseal_webgui_api.routers.kubeseal.run_kubeseal_command")
+@patch("kubeseal_webgui_api.routers.kubeseal.seal_entry")
 @pytest.mark.parametrize("scope", list(Scope))
 def test_run_kubeseal_with_scope(mock_run_command: MagicMock, scope: Scope):
     encoded_value = b64encode(b"something").decode("ascii")
     secrets = [Secret(key="foo", value=encoded_value)]
-    run_kubeseal(
+    seal_secrets(
         secrets,
         "namespace",
         "name",
@@ -112,7 +144,7 @@ def test_run_kubeseal_with_scope(mock_run_command: MagicMock, scope: Scope):
     mock_run_command.assert_called_with(secrets[0], "namespace", "name", scope)
 
 
-@patch("kubeseal_webgui_api.routers.kubeseal.run_kubeseal_command")
+@patch("kubeseal_webgui_api.routers.kubeseal.seal_entry")
 @pytest.mark.parametrize("scope", list(Scope))
 def test_run_kubeseal_with_scope_needed_params_only(
     mock_run_command: MagicMock, scope: Scope
@@ -132,7 +164,7 @@ def test_run_kubeseal_with_scope_needed_params_only(
         name = "name"
     else:
         name = None
-    run_kubeseal(
+    seal_secrets(
         secrets,
         namespace,
         name,
@@ -145,7 +177,7 @@ def test_run_kubeseal_with_scope_needed_params_only(
 @pytest.mark.cluster()
 def test_run_kubeseal_with_cli():
     # given run test against cli with test cluster
-    # when run_kubeseal is called
+    # when seal_secrets is called
     # then return valid encrypted secret
     pass
 
@@ -156,31 +188,21 @@ def test_run_kubeseal_with_cli():
 )
 def test_run_kubeseal_without_cli():
     # given k8s cluster but no kubeseal cli
-    # when run_kubeseal is called
+    # when seal_secrets is called
     # then raise RuntimeError
     with pytest.raises(RuntimeError):
-        run_kubeseal(
+        seal_secrets(
             [Secret(key="foo", value="YmFy")], "secret-namespace", "secret-name"
         )
-
-
-def test_run_kubeseal_with_invalid_secrets_list_but_otherwise_valid_inputs():
-    # given a secret list with string element
-    # when run_kubeseal is called
-    # then raise ValueError
-    with pytest.raises(
-        ValueError, match="Input of cleartext_secrets was not a list of dicts."
-    ):
-        run_kubeseal(["this-should-be-a-dict-object"], "secretNamespace", "secretName")  # type: ignore
 
 
 @pytest.mark.container()
 def test_run_kubeseal_without_k8s_cluster():
     # given kubeseal cli but no k8s cluster
-    # when run_kubeseal is called
+    # when seal_secrets is called
     # then raise RuntimeError
     with pytest.raises(RuntimeError) as error_cert_missing:
-        run_kubeseal(
+        seal_secrets(
             [Secret(key="foo", value="YmFy")], "secret-namespace", "secret-name"
         )
     assert "/kubeseal-webgui/cert/kubeseal-cert.pem: no such file or directory" in str(
@@ -208,8 +230,8 @@ def test_decode_base64_string(base64_input, expected_output):
     ("base64_input", "expected_output"),
     [
         ("YWJjZGVm", b"abcdef"),
-        ("w6TDtsO8", "äöü".encode("utf-8")),
-        ("LV8jIT8kwqc=", "-_#!?$§".encode("utf-8")),
+        ("w6TDtsO8", "äöü".encode()),
+        ("LV8jIT8kwqc=", "-_#!?$§".encode()),
     ],
 )
 def test_decode_base64_bytearray(base64_input, expected_output):
@@ -224,13 +246,18 @@ def test_decode_base64_bytearray(base64_input, expected_output):
     assert decoded == bytearray(expected_output)
 
 
-def test_construct_kubeseal_cmd_needs_no_existing_namespace():
+def test_build_kubeseal_command_needs_no_existing_namespace(monkeypatch):
     # given a namespace that does not exist in any cluster
+    monkeypatch.setattr(
+        "kubeseal_webgui_api.app_config.settings.kubeseal_binary", "kubeseal"
+    )
+    monkeypatch.setattr(
+        "kubeseal_webgui_api.app_config.settings.kubeseal_cert", "/cert.pem"
+    )
     # when the kubeseal command is constructed
     # then it only uses the offline certificate and the given names
-    cmd = construct_kubeseal_cmd(
-        "not-created-yet", "my-secret", "kubeseal", "/cert.pem", Scope.STRICT
-    )
+    cmd = build_kubeseal_command("not-created-yet", "my-secret", Scope.STRICT)
+    assert cmd[0] == "kubeseal"
     assert cmd[cmd.index("--cert") + 1] == "/cert.pem"
     assert cmd[cmd.index("--namespace") + 1] == "not-created-yet"
     assert cmd[cmd.index("--name") + 1] == "my-secret"

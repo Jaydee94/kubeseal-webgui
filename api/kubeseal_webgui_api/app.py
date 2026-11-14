@@ -1,5 +1,5 @@
-from contextlib import asynccontextmanager
 import logging
+from contextlib import asynccontextmanager
 
 import fastapi
 from fastapi.exception_handlers import request_validation_exception_handler
@@ -7,23 +7,35 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from .app_config import autofetch, fetch_sealed_secrets_cert, settings
-from .logging_utils import REQUEST_ID_HEADER, RequestIdMiddleware
+from .app_config import (
+    cors_origins,
+    fetch_sealed_secrets_cert,
+    get_kubeseal_version,
+    settings,
+)
+from .logging_utils import LOGGER_NAME, REQUEST_ID_HEADER, RequestIdMiddleware
 from .routers import config, kubernetes, kubeseal
 
-LOGGER = logging.getLogger("kubeseal-webgui")
+LOGGER = logging.getLogger(LOGGER_NAME)
 
 
 @asynccontextmanager
 async def lifespan(fastapi_app: fastapi.FastAPI):  # noqa: ANN201 skipcq: PYL-W0613
+    # Resolved here, once: a deployment with an unusable kubeseal binary has
+    # to fail at start-up and not on the first request.
+    kubeseal_version = get_kubeseal_version()
     LOGGER.info(
         "Starting kubeseal-webgui API (kubeseal version: %s, binary: '%s', "
         "certificate: '%s', certificate auto-fetch: %s, mock mode: %s)",
-        settings.kubeseal_version,
+        kubeseal_version,
         settings.kubeseal_binary,
         settings.kubeseal_cert,
-        autofetch,
+        settings.kubeseal_autofetch,
         settings.mock_enabled,
+    )
+    LOGGER.info(
+        "Cross-origin requests are allowed from: %s",
+        ", ".join(origins) or "nowhere (ORIGIN_URL is not an absolute URL)",
     )
     fetch_sealed_secrets_cert()
     LOGGER.info("Startup tasks complete.")
@@ -33,9 +45,9 @@ async def lifespan(fastapi_app: fastapi.FastAPI):  # noqa: ANN201 skipcq: PYL-W0
 
 app = fastapi.FastAPI(lifespan=lifespan)
 
-origins = [
-    "http://localhost:8080",
-]
+# Only needed when the UI is not served from the same origin as the API, as
+# with the dev server. The default is the dev server's address.
+origins = cors_origins(settings.origin_url)
 
 app.add_middleware(
     CORSMiddleware,

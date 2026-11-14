@@ -9,7 +9,7 @@ export default defineConfig({
   server: {
     port: 8080,
     proxy: {
-      "^/(secrets$|namespaces$|config$|docs|openapi\\.json)": {
+      "^/(secrets$|namespaces$|config$|sealed-secrets/|docs|openapi\\.json)": {
         target: "http://localhost:5000",
         changeOrigin: false
       }
@@ -25,5 +25,10 @@ export default defineConfig({
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
     }
+  },
+  test: {
+    // Unit tests; tests/test_ui.py holds the Playwright E2E tests.
+    include: ['tests/unit/**/*.test.js'],
+    environment: 'node'
   }
 })
