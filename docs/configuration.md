@@ -15,6 +15,7 @@ If anything looks out of date, the YAML file is the source of truth.
 | Parameter | Description | Default |
 |---|---|---|
 | `replicaCount` | Number of pod replicas. | `1` |
+| `commonLabels` | Additional labels to add to every chart-managed object. Built-in chart labels (`app`, `chart`, `release`, `heritage`) are always preserved. | `{}` |
 | `annotations` | Additional pod annotations. | `{}` |
 | `api.image.repository` | API image repository. | `ghcr.io/jaydee94/kubeseal-webgui/api` |
 | `api.image.tag` | API image tag. | Matches chart `appVersion` (see [Chart.yaml](../chart/kubeseal-webgui/Chart.yaml)). |
