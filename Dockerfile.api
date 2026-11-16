@@ -43,7 +43,7 @@ RUN apt-get update && \
 # CPython minor version. Renovate updates both python digests together in one
 # PR (see renovate.json), and the smoke test in the runtime stage fails the
 # build if they ever drift apart.
-FROM cgr.dev/chainguard/python:latest-dev@sha256:9f76d277ca81d3079eb3be24c742de3b6598f032fc9943fed6951ff99e581d02 AS build
+FROM cgr.dev/chainguard/python:latest-dev@sha256:e0df0ab3cb72380c82f8c5513538152e822a6d8994252663060adea9fdc450c2 AS build
 
 # Build stage only (discarded): the image defaults to the nonroot user, which
 # cannot create /opt/deps. The runtime stage below keeps the nonroot default.
@@ -57,7 +57,7 @@ RUN pip install --no-cache-dir --no-compile --target=/opt/deps ./src
 # --- Runtime -------------------------------------------------------------------
 # No shell, no package manager, runs as uid 65532 (nonroot). ENTRYPOINT is
 # /usr/bin/python, so CMD only carries the interpreter arguments.
-FROM cgr.dev/chainguard/python:latest@sha256:e5322b9d32064a645225b8b2419f11127bcf2d8b9927f9514f0acee1e1d25751
+FROM cgr.dev/chainguard/python:latest@sha256:b969ffa5d847b5acd28bd18b12d5b6631cb69c8289f03b309e19b68608724dc6
 
 ARG APP_PATH="/kubeseal-webgui"
 ARG APP_PORT=5000
