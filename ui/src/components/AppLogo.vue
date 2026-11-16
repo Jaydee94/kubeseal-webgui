@@ -1,6 +1,7 @@
 <template>
-  <a id="logo" href="/">
-    <img id="logo-img" alt="Kubeseal-Webgui Logo" src="@/assets/logo-2025.png" />
+  <!-- The link carries the name; the image next to it is decoration. -->
+  <a id="logo" href="/" aria-label="Kubeseal WebGui, start page">
+    <img id="logo-img" alt="" src="@/assets/logo-2025.png" />
   </a>
 </template>
 

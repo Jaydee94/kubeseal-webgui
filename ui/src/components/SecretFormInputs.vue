@@ -1,24 +1,5 @@
 <template>
   <div>
-    <v-row justify="end">
-      <v-col cols="12" sm="6">
-        <v-select
-          :model-value="scope"
-          :items="SCOPES"
-          label="Scope"
-          variant="outlined"
-          class="modern-input"
-          color="primary"
-          @update:model-value="$emit('update:scope', $event)"
-        >
-          <template #append-inner>
-            <InfoTooltip class="ml-2">
-              <span>Specify scope of the secret.<br /><i>Scopes for sealed secrets</i></span>
-            </InfoTooltip>
-          </template>
-        </v-select>
-      </v-col>
-    </v-row>
     <v-row>
       <v-col cols="12" sm="6" md="6">
         <v-text-field
@@ -50,9 +31,10 @@
           v-else
           id="namespaceSelection"
           :model-value="namespaceName"
-          :items="sortedNamespaces"
+          :items="namespaceItems"
           label="Namespace name"
           autocomplete="off"
+          auto-select-first
           variant="outlined"
           class="modern-input"
           color="primary"
@@ -80,11 +62,6 @@
                 </v-btn>
               </template>
             </v-list-item>
-            <v-divider
-              v-if="item === lastFavoriteNamespace"
-              :thickness="2"
-              class="my-2"
-            ></v-divider>
           </template>
           <template #append-inner>
             <InfoTooltip class="ml-2">
@@ -114,13 +91,13 @@
           variant="outlined"
           class="modern-input"
           color="primary"
-          :rules="secretNameRequired ? rules.validDnsSubdomain : rules.optionalDnsSubdomain"
-          :error-messages="secretNameError"
+          :error-messages="visibleSecretNameError"
           :hint="
             secretNameRequired ? '' : 'Not sealed in this scope, only used in the generated YAML.'
           "
           persistent-hint
           @update:model-value="$emit('update:secretName', $event ?? '')"
+          @blur="secretNameTouched = true"
         >
           <template #append-inner>
             <InfoTooltip class="ml-2">
@@ -136,16 +113,78 @@
             </InfoTooltip>
           </template>
         </v-text-field>
+        <v-btn
+          v-if="secretNameSuggestion"
+          id="secretNameSuggestion"
+          class="secret-name-suggestion mt-1"
+          size="small"
+          variant="tonal"
+          color="primary"
+          prepend-icon="mdi-auto-fix"
+          @click="$emit('update:secretName', secretNameSuggestion)"
+        >
+          Use <code class="ml-1">{{ secretNameSuggestion }}</code>
+        </v-btn>
       </v-col>
     </v-row>
+    <div class="scope-picker mb-2">
+      <div class="d-flex align-center mb-1">
+        <span id="scopeLabel" class="text-subtitle-2">Scope</span>
+        <InfoTooltip class="ml-2">
+          <span
+            >Specify the scope of the secret.<br /><i
+              >The scope decides where the sealed secret can be unsealed.</i
+            ></span
+          >
+        </InfoTooltip>
+      </div>
+      <v-btn-toggle
+        :model-value="scope"
+        mandatory
+        divided
+        variant="outlined"
+        color="primary"
+        density="comfortable"
+        class="scope-toggle"
+        role="group"
+        aria-labelledby="scopeLabel"
+        @update:model-value="$emit('update:scope', $event)"
+      >
+        <v-btn
+          v-for="option in SCOPES"
+          :key="option"
+          :value="option"
+          :data-scope="option"
+          :aria-pressed="scope === option"
+          class="scope-button"
+          >{{ option }}</v-btn
+        >
+      </v-btn-toggle>
+      <div id="scopeDescription" class="text-body-2 text-medium-emphasis mt-2" aria-live="polite">
+        {{ SCOPE_DESCRIPTIONS[scope] }}
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import InfoTooltip from './InfoTooltip.vue'
-import { SCOPES, scopeNeedsName, scopeNeedsNamespace } from '@/constants'
-import { rules } from '@/utils/validation'
+import {
+  SCOPE_CLUSTER_WIDE,
+  SCOPE_NAMESPACE_WIDE,
+  SCOPE_STRICT,
+  SCOPES,
+  scopeNeedsName,
+  scopeNeedsNamespace
+} from '@/constants'
+import { firstRuleMessage, isDnsSubdomain, rules, toDnsSubdomain } from '@/utils/validation'
+
+const SCOPE_DESCRIPTIONS = {
+  [SCOPE_STRICT]: 'Bound to this name and namespace',
+  [SCOPE_NAMESPACE_WIDE]: 'Any name within this namespace',
+  [SCOPE_CLUSTER_WIDE]: 'Any name in any namespace'
+}
 
 const props = defineProps({
   namespaceName: {
@@ -163,10 +202,6 @@ const props = defineProps({
   namespaces: {
     type: Array,
     required: true
-  },
-  secretNameError: {
-    type: String,
-    default: ''
   },
   favoriteNamespaces: {
     type: Set,
@@ -190,16 +225,44 @@ const favoritesInList = computed(() =>
   props.namespaces.filter((namespace) => props.favoriteNamespaces.has(namespace))
 )
 
-// Favorites first, separated from the rest by a divider after the last one.
-const sortedNamespaces = computed(() => [
-  ...favoritesInList.value,
-  ...props.namespaces.filter((namespace) => !props.favoriteNamespaces.has(namespace))
-])
-
-const lastFavoriteNamespace = computed(() => favoritesInList.value.at(-1) ?? null)
+// Favorites first. With favorites, both groups get a heading; the
+// autocomplete drops the heading of a group whose entries are all filtered out.
+const namespaceItems = computed(() => {
+  if (!favoritesInList.value.length) return props.namespaces
+  const others = props.namespaces.filter((namespace) => !props.favoriteNamespaces.has(namespace))
+  return [
+    { type: 'subheader', title: 'Favorites' },
+    ...favoritesInList.value,
+    // Without any other namespace the heading would have nothing below it.
+    ...(others.length ? [{ type: 'subheader', title: 'All namespaces' }, ...others] : [])
+  ]
+})
 
 // Only the strict scope seals the secret for one specific name.
 const secretNameRequired = computed(() => scopeNeedsName(props.scope))
+
+// A field that was never visited must not complain about being empty. A name
+// that is being typed is validated right away, an empty one only after the
+// field was left. Own state instead of Vuetify's `rules`: those do not rerun
+// when the scope switches between required and optional, which left the
+// message of the other mode behind.
+const secretNameTouched = ref(false)
+
+const visibleSecretNameError = computed(() => {
+  if (!secretNameTouched.value && !props.secretName) return ''
+  return firstRuleMessage(
+    secretNameRequired.value ? rules.validDnsSubdomain : rules.optionalDnsSubdomain,
+    props.secretName
+  )
+})
+
+// Offer the closest valid name for an invalid one, but only once the field was
+// left: while typing, every half-finished name ("my-secret-") is invalid.
+const secretNameSuggestion = computed(() =>
+  secretNameTouched.value && props.secretName && !isDnsSubdomain(props.secretName)
+    ? toDnsSubdomain(props.secretName)
+    : ''
+)
 
 // The namespace is irrelevant for cluster-wide secrets.
 const namespaceNeeded = computed(() => scopeNeedsNamespace(props.scope))
@@ -225,6 +288,30 @@ function favoriteToggleLabel(namespace) {
 </script>
 
 <style scoped>
+/* The three buttons have to fit a phone: shrink their text, then wrap. */
+.scope-toggle {
+  max-width: 100%;
+  height: auto;
+  flex-wrap: wrap;
+}
+
+/* A message that goes away (the name became valid) must go at once: Vuetify
+   fades it out while it still overlaps the next content, which looks like a
+   message that sticks around. This also covers reduced motion. */
+:deep(.v-messages__message.slide-y-transition-leave-active) {
+  transition: none;
+}
+
+.scope-button {
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: 0.8125rem;
+  padding-inline: 10px;
+  min-width: 0;
+  /* A comfortable touch target. */
+  min-height: 34px;
+}
+
 /* Same emphasis and distance to the title as a plain prepend icon. */
 .favorite-toggle {
   opacity: var(--v-medium-emphasis-opacity);

@@ -24,8 +24,47 @@ export function isDnsSubdomain(name) {
   )
 }
 
+/**
+ * Turns arbitrary text into the closest valid secret name, or '' if nothing
+ * usable is left. Used to suggest a fix, so it prefers a recognisable result
+ * ("Claude_Test Secret" -> "claude-test-secret") over a minimal edit.
+ */
+export function toDnsSubdomain(text) {
+  if (typeof text !== 'string') return ''
+  const cleaned = cleanSubdomain(
+    text
+      .normalize('NFD')
+      // Accents are dropped instead of replaced: "café" -> "cafe", not "caf-".
+      .replace(/\p{M}/gu, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9.]+/g, '-')
+  )
+  // Cutting at the limit can leave a '-' or '.' at the end, so clean again.
+  return cleanSubdomain(cleaned.slice(0, MAX_DNS_SUBDOMAIN_LENGTH))
+}
+
+// Every label must start and end with an alphanumeric, so trim '-' per label
+// and drop labels (and with them leading, trailing and repeated dots) that
+// end up empty.
+function cleanSubdomain(text) {
+  return text
+    .split('.')
+    .map((label) => label.replace(/^-+|-+$/g, ''))
+    .filter(Boolean)
+    .join('.')
+}
+
 export function isFileTooLarge(file) {
   return file.size > MAX_FILE_SIZE_BYTES
+}
+
+/** The first message of a rule list for the value, or '' if all rules pass. */
+export function firstRuleMessage(ruleList, value) {
+  for (const rule of ruleList) {
+    const result = rule(value)
+    if (result !== true) return result
+  }
+  return ''
 }
 
 export const rules = {

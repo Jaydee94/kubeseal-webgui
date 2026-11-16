@@ -1,25 +1,22 @@
 <template>
-  <v-switch
-    v-model="darkMode"
-    color="primary"
-    class="ma-4 dark-mode-switch"
-    aria-label="Dark mode"
-    hide-details
+  <v-btn
+    icon
+    variant="text"
+    class="dark-mode-toggle"
+    :aria-label="label"
+    data-testid="dark-mode-toggle"
+    @click="darkMode = !darkMode"
   >
-    <template #label>
-      <div class="d-flex align-center">
-        <v-icon
-          :icon="darkMode ? 'mdi-weather-night' : 'mdi-white-balance-sunny'"
-          class="dark-mode-icon mr-2"
-        />
-        <span class="switch-label">{{ darkMode ? 'Dark' : 'Light' }}</span>
-      </div>
-    </template>
-  </v-switch>
+    <!-- The keyed icon swaps with a short rotate/fade instead of jumping. -->
+    <transition name="theme-icon" mode="out-in">
+      <v-icon :key="icon" :icon="icon" />
+    </transition>
+    <v-tooltip activator="parent" location="bottom">{{ label }}</v-tooltip>
+  </v-btn>
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useTheme } from 'vuetify'
 import { createLogger } from '@/utils/logger'
 
@@ -56,6 +53,10 @@ function readPreferredDark() {
 const theme = useTheme()
 const darkMode = ref(readPreferredDark())
 
+// The button names the action, so it reads the same to everyone.
+const label = computed(() => (darkMode.value ? 'Switch to light theme' : 'Switch to dark theme'))
+const icon = computed(() => (darkMode.value ? 'mdi-weather-night' : 'mdi-white-balance-sunny'))
+
 function applyTheme(dark) {
   theme.change(dark ? 'dark' : 'light')
 }
@@ -70,31 +71,28 @@ watch(darkMode, (dark) => {
 </script>
 
 <style scoped>
-.dark-mode-switch {
-  transition: all var(--transition-base, 0.3s ease);
+.theme-icon-enter-active,
+.theme-icon-leave-active {
+  transition:
+    transform var(--transition-base, 0.3s ease),
+    opacity var(--transition-base, 0.3s ease);
 }
 
-.switch-label {
-  font-weight: 500;
-  transition: all var(--transition-base, 0.3s ease);
+.theme-icon-enter-from {
+  transform: rotate(-90deg) scale(0.6);
+  opacity: 0;
 }
 
-.dark-mode-icon {
-  transition: all var(--transition-base, 0.3s ease);
+.theme-icon-leave-to {
+  transform: rotate(90deg) scale(0.6);
+  opacity: 0;
 }
 
-.dark-mode-switch:hover .dark-mode-icon {
-  transform: rotate(20deg);
-}
-
-/* On a phone the icon alone has to do; the logo needs the space. */
-@media (max-width: 599px) {
-  .dark-mode-icon {
-    margin-inline-end: 0 !important;
-  }
-
-  .switch-label {
-    display: none;
+/* No spinning for people who asked for less motion; the icon just swaps. */
+@media (prefers-reduced-motion: reduce) {
+  .theme-icon-enter-active,
+  .theme-icon-leave-active {
+    transition: none;
   }
 }
 </style>

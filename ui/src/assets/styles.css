@@ -27,12 +27,25 @@
   --glass-border: rgba(255, 255, 255, 0.08);
 }
 
+/* Frosted glass: opaque enough that scrolled content is blurred beyond reading,
+   with the theme's own surface colour so it suits light and dark alike. */
 .glass-app-bar {
-  background: linear-gradient(135deg, rgba(0, 123, 255, 0.03), rgba(253, 126, 20, 0.03)) !important;
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  background: rgba(var(--v-theme-surface), 0.8) !important;
+  backdrop-filter: blur(12px) saturate(1.4);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
   border-bottom: 1px solid var(--glass-border) !important;
-  box-shadow: var(--shadow-sm) !important;
+  transition: box-shadow var(--transition-base);
+}
+
+/* Set by App.vue once the page is scrolled. */
+.glass-app-bar--scrolled {
+  box-shadow: var(--shadow-md) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glass-app-bar {
+    transition: none;
+  }
 }
 
 /* Gradient Text */

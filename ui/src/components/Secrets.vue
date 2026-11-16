@@ -22,7 +22,6 @@
             v-model:scope="scope"
             v-model:new-namespace="newNamespace"
             :namespaces="namespaces"
-            :secret-name-error="secretNameError"
             :favorite-namespaces="favoriteNamespaces"
             @toggle-favorite="toggleFavorite"
           />
@@ -221,12 +220,6 @@ const {
   hasUserEnteredData: () => secrets.value.some((entry) => !isEntryBlank(entry)),
   applyKeys: replaceEntriesWithKeys,
   onError: setErrorMessage
-})
-
-const secretNameError = computed(() => {
-  // The name is only sealed into the secret for the strict scope.
-  if (scopeNeedsName(scope.value) && !secretName.value) return 'Secret name is required.'
-  return ''
 })
 
 const incompleteSecretData = computed(() => secrets.value.some((entry) => !isEntryComplete(entry)))

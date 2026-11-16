@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { isDnsLabel, isDnsSubdomain, isFileTooLarge, rules } from '@/utils/validation'
+import {
+  firstRuleMessage,
+  isDnsLabel,
+  isDnsSubdomain,
+  isFileTooLarge,
+  rules,
+  toDnsSubdomain
+} from '@/utils/validation'
 
 /** The first message a Vuetify input would show, or `true` if all rules pass. */
 function validate(ruleList, value) {
@@ -27,6 +34,50 @@ describe('isDnsSubdomain', () => {
 
   it.each(['', null, undefined])('returns false (not undefined) for %j', (name) => {
     expect(isDnsSubdomain(name)).toBe(false)
+  })
+})
+
+describe('toDnsSubdomain', () => {
+  it.each([
+    ['Claude_Test Secret', 'claude-test-secret'],
+    ['already-valid.name', 'already-valid.name'],
+    ['  padded  ', 'padded'],
+    ['a__b   c', 'a-b-c'],
+    ['--lead-and-trail--', 'lead-and-trail'],
+    ['a..b', 'a.b'],
+    ['a.-b-.c', 'a.b.c'],
+    ['.a.', 'a'],
+    ['Café Crème', 'cafe-creme'],
+    ['MY_SECRET.v2', 'my-secret.v2']
+  ])('turns %j into %j', (text, expected) => {
+    expect(toDnsSubdomain(text)).toBe(expected)
+    expect(isDnsSubdomain(expected)).toBe(true)
+  })
+
+  it.each(['', '   ', '___', '...', '日本語', null, undefined])('returns "" for %j', (text) => {
+    expect(toDnsSubdomain(text)).toBe('')
+  })
+
+  it('caps the result at 253 characters without leaving a trailing separator', () => {
+    const result = toDnsSubdomain(`${'a'.repeat(252)}_b`)
+    expect(result).toBe('a'.repeat(252))
+    expect(isDnsSubdomain(toDnsSubdomain('a'.repeat(300)))).toBe(true)
+    expect(toDnsSubdomain('a'.repeat(300))).toHaveLength(253)
+    // cut right after a dot: the dot must not stay behind
+    expect(toDnsSubdomain(`${'a'.repeat(252)}.b`)).toBe('a'.repeat(252))
+  })
+})
+
+describe('firstRuleMessage', () => {
+  it('returns the first failing message', () => {
+    expect(firstRuleMessage(rules.validDnsSubdomain, 'Not_Valid')).toBe(
+      'Invalid char. Must be one of lower chars, digits, dashes or dots.'
+    )
+  })
+
+  it('returns an empty string if all rules pass', () => {
+    expect(firstRuleMessage(rules.validDnsSubdomain, 'valid-name')).toBe('')
+    expect(firstRuleMessage(rules.optionalDnsSubdomain, '')).toBe('')
   })
 })
 

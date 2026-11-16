@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Shackle -->
+  <path d="M10 15V10a6 6 0 0 1 12 0v5" fill="none" stroke="#3d89d0" stroke-width="3.5" stroke-linecap="round"/>
+  <!-- Body, with the orange accent of the logo in its lower corner -->
+  <path d="M5 14h22v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2z" fill="#3d89d0"/>
+  <path d="M27 21v5a2 2 0 0 1-2 2h-9z" fill="#fda040"/>
+  <!-- Keyhole -->
+  <circle cx="16" cy="19.5" r="2.3" fill="#fff"/>
+  <path d="M14.9 20.5h2.2l.6 4.5h-3.4z" fill="#fff"/>
+</svg>

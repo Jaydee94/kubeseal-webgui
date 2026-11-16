@@ -1,5 +1,6 @@
 import base64
 import json
+import re
 
 from playwright.sync_api import Page, Route, expect
 
@@ -63,7 +64,8 @@ def test_config_json_is_requested_once_per_page_load(page: Page):
 
     page.goto("/")
     # both consumers of the configuration have rendered
-    expect(page.locator(".v-footer .v-chip")).to_have_count(3)
+    open_about(page)
+    expect(page.locator(".about-versions dd")).to_have_count(3)
     expect(page.locator(".secrets-component .text-h5")).to_have_text("Test")
     # sealing needs the API URL from the configuration again
     seal_one_value(page)
@@ -71,32 +73,96 @@ def test_config_json_is_requested_once_per_page_load(page: Page):
     assert len(config_requests) == 1, config_requests
 
 
-def test_footer_shows_the_versions(page: Page):
+def open_about(page: Page):
+    page.get_by_role("button", name="About").click()
+    expect(page.locator(".about-card")).to_be_visible()
+
+
+def test_about_popover_shows_the_versions(page: Page):
     page.route(
         "**/config", lambda route: route.fulfill(json={"kubesealVersion": "0.27.1"})
     )
     page.goto("/")
+    open_about(page)
 
-    chips = page.locator(".v-footer .v-chip")
-    expect(chips).to_have_count(3)
-    assert [" ".join(text.split()) for text in chips.all_inner_texts()] == [
-        "kubesealVersion: 0.27.1",
-        "uiVersion: 2.1.0",
-        "apiVersion: 2.1.0",
+    card = page.locator(".about-card")
+    expect(card).to_contain_text("Kubeseal WebGui")
+    assert [" ".join(text.split()) for text in card.locator("dt").all_inner_texts()] == [
+        "Kubeseal",
+        "UI",
+        "API",
     ]
+    assert [" ".join(text.split()) for text in card.locator("dd").all_inner_texts()] == [
+        "0.27.1",
+        "2.1.0",
+        "2.1.0",
+    ]
+    repository = card.get_by_role("link", name="GitHub")
+    expect(repository).to_have_attribute(
+        "href", "https://github.com/Jaydee94/kubeseal-webgui"
+    )
+    expect(repository).to_have_attribute("target", "_blank")
+    expect(repository).to_have_attribute("rel", "noopener noreferrer")
 
 
-def test_footer_reports_an_unreachable_api(page: Page):
+def test_about_popover_reports_an_unreachable_api(page: Page):
     page.route(
         "**/config",
         lambda route: route.fulfill(status=500, json={"detail": "Internal Server Error"}),
     )
     page.goto("/")
+    open_about(page)
 
-    expect(page.locator(".v-footer").first).to_contain_text(
+    expect(page.locator(".about-card")).to_contain_text(
         "Could not retrieve application properties."
     )
-    expect(page.locator(".v-footer .v-chip")).to_have_count(0)
+    expect(page.locator(".about-versions")).to_have_count(0)
+
+
+def test_about_popover_works_with_the_keyboard(page: Page):
+    page.goto("/")
+    page.get_by_role("button", name="About").focus()
+    page.keyboard.press("Enter")
+    expect(page.locator(".about-card")).to_be_visible()
+    page.keyboard.press("Escape")
+    expect(page.locator(".about-card")).to_have_count(0)
+
+
+def test_nothing_is_fixed_to_the_bottom_of_the_page(page: Page):
+    page.goto("/")
+    expect(page.locator(".v-footer")).to_have_count(0)
+
+
+def test_header_stays_opaque_while_scrolling(page: Page):
+    page.goto("/")
+    page.add_style_tag(content="body { min-height: 3000px; }")
+    page.mouse.wheel(0, 400)
+    bar = page.locator(".glass-app-bar")
+    expect(bar).to_have_class(re.compile("glass-app-bar--scrolled"))
+
+    def alpha() -> float:
+        # rgba(r, g, b, a) of the bar's background
+        return float(
+            bar.evaluate("el => getComputedStyle(el).backgroundColor")
+            .rstrip(")")
+            .split(",")[-1]
+        )
+
+    # light and dark each paint their own surface colour, both mostly opaque
+    assert 0.7 <= alpha() <= 0.9
+    page.get_by_role("button", name="Switch to dark theme").click()
+    assert 0.7 <= alpha() <= 0.9
+    assert bar.evaluate("el => getComputedStyle(el).backdropFilter").startswith("blur(12px)")
+
+
+def test_page_has_one_heading_and_icons(page: Page):
+    page.goto("/")
+    expect(page.get_by_role("heading", level=1)).to_have_text("Kubeseal WebGui")
+    expect(page.get_by_role("link", name="Kubeseal WebGui, start page")).to_have_count(1)
+    expect(page.locator('link[rel="icon"][type="image/svg+xml"]')).to_have_attribute(
+        "href", "/favicon.svg"
+    )
+    assert page.request.get("/favicon.svg").ok
 
 
 # Makes the made-up namespace list of the dev server the same on every load.
@@ -126,6 +192,10 @@ def reopen_namespace_list(page: Page) -> list[str]:
     return open_namespace_list(page)
 
 
+def list_headings(page: Page) -> list[str]:
+    return page.locator(".v-overlay .v-list-subheader").all_inner_texts()
+
+
 def namespace_item(page: Page, name: str):
     return page.locator(".v-overlay .v-list-item", has_text=name)
 
@@ -147,9 +217,9 @@ def test_favorite_namespaces_are_listed_first_and_remembered(page: Page):
     names = open_namespace_list(page)
     assert names == sorted(names) and len(names) >= 5
     assert favorite_names(page) == []
-    expect(page.locator(".v-overlay .v-divider")).to_have_count(0)
+    assert list_headings(page) == []
 
-    # marking a namespace moves it to the top, above a divider
+    # marking a namespace moves it to the top, under its own heading
     favorite_toggle(page, names[3]).click()
     # toggling a favorite does not select the namespace
     expect(page.locator("input#namespaceSelection")).to_have_value("")
@@ -160,7 +230,7 @@ def test_favorite_namespaces_are_listed_first_and_remembered(page: Page):
         *names[4:],
     ]
     assert favorite_names(page) == [names[3]]
-    expect(page.locator(".v-overlay .v-divider")).to_have_count(1)
+    assert list_headings(page) == ["Favorites", "All namespaces"]
 
     favorite_toggle(page, names[1]).click()
     assert reopen_namespace_list(page) == [
@@ -171,7 +241,7 @@ def test_favorite_namespaces_are_listed_first_and_remembered(page: Page):
         *names[4:],
     ]
     assert favorite_names(page) == [names[1], names[3]]
-    expect(page.locator(".v-overlay .v-divider")).to_have_count(1)
+    assert list_headings(page) == ["Favorites", "All namespaces"]
     assert json.loads(page.evaluate("localStorage.favoriteNamespaces")) == [
         names[3],
         names[1],
@@ -247,31 +317,30 @@ def is_dark(page: Page) -> bool:
     return page.locator(".v-application.v-theme--dark").count() == 1
 
 
-def dark_mode_switch(page: Page):
-    return page.locator(".dark-mode-switch input")
+def dark_mode_toggle(page: Page):
+    return page.locator(".dark-mode-toggle")
 
 
 def test_dark_mode_follows_the_system_until_the_user_chooses(page: Page):
     page.emulate_media(color_scheme="dark")
     page.goto("/")
-    expect(page.locator(".dark-mode-switch")).to_contain_text("Dark")
+    expect(dark_mode_toggle(page)).to_have_attribute("aria-label", "Switch to light theme")
     assert is_dark(page)
-    expect(dark_mode_switch(page)).to_be_checked()
     # nothing is stored before the user makes a choice
     assert page.evaluate("localStorage.getItem('useDarkTheme')") is None
 
-    dark_mode_switch(page).click()
-    expect(page.locator(".dark-mode-switch")).to_contain_text("Light")
+    dark_mode_toggle(page).click()
+    expect(dark_mode_toggle(page)).to_have_attribute("aria-label", "Switch to dark theme")
     assert not is_dark(page)
     assert page.evaluate("localStorage.getItem('useDarkTheme')") == "false"
 
     # the choice wins over the system preference on the next visit
     page.reload()
-    expect(page.locator(".dark-mode-switch")).to_contain_text("Light")
+    expect(dark_mode_toggle(page)).to_have_attribute("aria-label", "Switch to dark theme")
     assert not is_dark(page)
 
-    dark_mode_switch(page).click()
-    expect(page.locator(".dark-mode-switch")).to_contain_text("Dark")
+    dark_mode_toggle(page).click()
+    expect(dark_mode_toggle(page)).to_have_attribute("aria-label", "Switch to light theme")
     assert is_dark(page)
     assert page.evaluate("localStorage.getItem('useDarkTheme')") == "true"
 
@@ -279,9 +348,19 @@ def test_dark_mode_follows_the_system_until_the_user_chooses(page: Page):
 def test_light_system_preference_starts_light(page: Page):
     page.emulate_media(color_scheme="light")
     page.goto("/")
-    expect(page.locator(".dark-mode-switch")).to_contain_text("Light")
+    expect(dark_mode_toggle(page)).to_have_attribute("aria-label", "Switch to dark theme")
     assert not is_dark(page)
-    expect(dark_mode_switch(page)).not_to_be_checked()
+
+
+def test_dark_mode_toggle_works_with_the_keyboard(page: Page):
+    page.emulate_media(color_scheme="light")
+    page.goto("/")
+    toggle = page.get_by_role("button", name="Switch to dark theme")
+    toggle.focus()
+    page.keyboard.press("Enter")
+    assert is_dark(page)
+    page.keyboard.press("Space")
+    assert not is_dark(page)
 
 
 def test_ui_works_without_local_storage(page: Page):
@@ -296,9 +375,9 @@ def test_ui_works_without_local_storage(page: Page):
     page.emulate_media(color_scheme="light")
     page.goto("/")
 
-    expect(page.locator(".dark-mode-switch")).to_contain_text("Light")
-    dark_mode_switch(page).click()
-    expect(page.locator(".dark-mode-switch")).to_contain_text("Dark")
+    expect(dark_mode_toggle(page)).to_have_attribute("aria-label", "Switch to dark theme")
+    dark_mode_toggle(page).click()
+    expect(dark_mode_toggle(page)).to_have_attribute("aria-label", "Switch to light theme")
     assert is_dark(page)
 
     names = open_namespace_list(page)
@@ -310,7 +389,7 @@ def test_ui_works_without_local_storage(page: Page):
 def test_logo_links_to_the_start_page(app_page: Page):
     logo = app_page.locator("a#logo")
     expect(logo).to_have_attribute("href", "/")
-    expect(logo.locator("img")).to_have_attribute("alt", "Kubeseal-Webgui Logo")
+    expect(logo).to_have_attribute("aria-label", "Kubeseal WebGui, start page")
 
 
 def test_ui_start(app_page: Page):
@@ -449,17 +528,18 @@ def test_result_cards_show_their_title_above_the_content(app_page: Page):
         assert content["y"] + content["height"] <= actions["y"], card
 
 
-def test_logo_and_theme_switch_do_not_overlap_on_a_phone(page: Page):
+def test_logo_and_header_buttons_do_not_overlap_on_a_phone(page: Page):
     page.set_viewport_size({"width": 390, "height": 800})
     page.goto("/")
     logo = page.locator("#logo-img").bounding_box()
-    switch = page.locator(".dark-mode-switch").bounding_box()
+    about = page.get_by_role("button", name="About").bounding_box()
+    toggle = dark_mode_toggle(page).bounding_box()
 
     assert logo["x"] >= 0
-    assert logo["x"] + logo["width"] <= switch["x"]
-    assert switch["x"] + switch["width"] <= 390
-    # without its visible label the switch still has a name
-    expect(page.get_by_role("checkbox", name="Dark mode")).to_have_count(1)
+    assert logo["x"] + logo["width"] <= about["x"]
+    assert about["x"] + about["width"] <= toggle["x"]
+    assert toggle["x"] + toggle["width"] <= 390
+    assert page.evaluate("document.documentElement.scrollWidth") <= 390
 
 
 def test_clear_on_result_view_returns_to_an_empty_form(app_page: Page):
@@ -757,6 +837,186 @@ def test_secret_name_is_optional_outside_strict_scope(app_page: Page):
     assert encrypt_button.is_disabled()
 
 
+def name_messages(page: Page):
+    """The messages under the secret name field, including one that is fading out.
+
+    Use `.last` to assert on the current one: a replaced message is briefly
+    still in the DOM, and a locator that matches two elements is an error.
+    """
+    return page.locator(".v-col:has(#secretName) .v-messages__message")
+
+
+def test_fresh_form_shows_no_error_before_the_field_was_visited(app_page: Page):
+    page = app_page
+    name_input = page.locator("#secretName")
+    name_input.wait_for()
+    expect(page.locator(".v-input--error")).to_have_count(0)
+    expect(page.locator(".v-messages__message")).to_have_count(0)
+
+    # leaving the empty field is what reveals the missing value
+    name_input.focus()
+    page.locator("textarea#secretKey-0").focus()
+    expect(name_messages(page).last).to_have_text(
+        "Must not be empty"
+    )
+
+    # an invalid name complains while it is typed, a valid one leaves no message
+    name_input.fill("Not_Valid")
+    expect(name_messages(page).last).to_have_text(
+        re.compile("^Invalid char")
+    )
+    name_input.fill(SECRET_NAME)
+    expect(name_messages(page)).to_have_count(0)
+    expect(page.locator(".v-col:has(#secretName) .v-input--error")).to_have_count(0)
+
+
+def test_message_of_the_other_scope_does_not_linger_on_the_secret_name(app_page: Page):
+    page = app_page
+    name_input = page.locator("#secretName")
+    select_scope(page, "namespace-wide")
+    name_input.fill("Not_Valid")
+    expect(name_messages(page).last).to_have_text(
+        re.compile("^Must consist of lower case")
+    )
+    # the same name is judged by the rules of the new scope
+    select_scope(page, "strict")
+    expect(name_messages(page).last).to_have_text(
+        re.compile("^Invalid char")
+    )
+    name_input.fill("")
+    page.locator("textarea#secretKey-0").focus()
+    expect(name_messages(page).last).to_have_text(
+        "Must not be empty"
+    )
+    select_scope(page, "namespace-wide")
+    expect(page.locator(".v-col:has(#secretName) .v-input--error")).to_have_count(0)
+
+
+def test_invalid_secret_name_offers_a_fix(app_page: Page):
+    page = app_page
+    name_input = page.locator("#secretName")
+    suggestion = page.locator("#secretNameSuggestion")
+    expect(suggestion).to_have_count(0)
+
+    # not while typing: "my-secret-" is only invalid because it is unfinished
+    name_input.fill("Claude_Test Secret")
+    expect(name_messages(page).last).to_have_text(re.compile("^Invalid char"))
+    expect(suggestion).to_have_count(0)
+
+    # once the field is left, the fix is offered
+    page.locator("textarea#secretKey-0").focus()
+    expect(suggestion).to_have_text(re.compile(r"Use\s+claude-test-secret"))
+    suggestion.click()
+    expect(name_input).to_have_value("claude-test-secret")
+    expect(suggestion).to_have_count(0)
+    expect(page.locator(".v-col:has(#secretName) .v-input--error")).to_have_count(0)
+
+    # nothing valid can be made out of this, so nothing is suggested
+    name_input.fill("___")
+    page.locator("textarea#secretKey-0").focus()
+    expect(page.locator(".v-col:has(#secretName) .v-input--error")).to_have_count(1)
+    expect(suggestion).to_have_count(0)
+
+
+def test_enter_selects_the_first_match_of_the_namespace_filter(app_page: Page):
+    page = app_page
+    names = open_namespace_list(page)
+    filter_text = names[2][:3]
+    expected = next(name for name in names if filter_text in name)
+    page.fill("input#namespaceSelection", filter_text)
+    page.keyboard.press("Enter")
+    expect(page.locator(".v-autocomplete__selection-text")).to_have_text(expected)
+    expect(page.locator(".v-overlay .v-list")).to_have_count(0)
+
+
+def test_enter_selects_a_namespace_not_a_heading_with_favorites(page: Page):
+    page.add_init_script(SEEDED_RANDOM)
+    page.goto("/")
+    page.wait_for_selector("input#namespaceSelection")
+    names = open_namespace_list(page)
+    favorite_toggle(page, names[3]).click()
+    assert reopen_namespace_list(page)[0] == names[3]
+    assert list_headings(page) == ["Favorites", "All namespaces"]
+    selected = page.locator(".v-autocomplete__selection-text")
+
+    # a filter that only matches others: the first match, not the favorite
+    filter_text = names[0]
+    page.fill("input#namespaceSelection", filter_text)
+    expect(page.locator(".v-overlay .v-list-item-title")).to_have_text([names[0]])
+    page.keyboard.press("Enter")
+    expect(selected).to_have_text(names[0])
+
+    # with an empty filter nothing is highlighted yet, so Enter must not pick
+    # anything (in particular no heading)
+    page.locator("input#namespaceSelection").fill("")
+    page.keyboard.press("Enter")
+    expect(selected).to_have_count(0)
+    expect(page.locator(".v-overlay .v-list-subheader")).to_have_text(
+        ["Favorites", "All namespaces"]
+    )
+
+    # walking down (first opening the list, then entering it) lands on the
+    # first real entry, the favorite below its heading, and Enter selects it
+    page.keyboard.press("Escape")
+    page.keyboard.press("ArrowDown")
+    expect(page.locator(".v-overlay .v-list-item-title").first).to_have_text(names[3])
+    page.keyboard.press("ArrowDown")
+    expect(page.locator("*:focus")).to_have_text(names[3])
+    page.keyboard.press("Enter")
+    expect(selected).to_have_text(names[3])
+
+
+def test_filtered_namespace_list_has_no_dangling_headings(page: Page):
+    page.add_init_script(SEEDED_RANDOM)
+    page.goto("/")
+    page.wait_for_selector("input#namespaceSelection")
+    names = open_namespace_list(page)
+    favorite_toggle(page, names[3]).click()
+    reopen_namespace_list(page)
+    assert list_headings(page) == ["Favorites", "All namespaces"]
+
+    # only the favorite is left: the heading of the others goes with them
+    page.fill("input#namespaceSelection", names[3])
+    expect(page.locator(".v-overlay .v-list-item-title")).to_have_text([names[3]])
+    assert list_headings(page) == ["Favorites"]
+
+    # only others are left: no heading of an empty favorites group
+    page.fill("input#namespaceSelection", names[0])
+    expect(page.locator(".v-overlay .v-list-item-title")).to_have_text([names[0]])
+    assert list_headings(page) == ["All namespaces"]
+
+    # headings are not entries: nothing to pick from them
+    expect(page.locator(".v-overlay .v-list-subheader[role=option]")).to_have_count(0)
+
+
+def test_scope_is_a_segmented_control_with_a_description(app_page: Page):
+    page = app_page
+    # a labelled group for assistive technology
+    group = page.get_by_role("group", name="Scope")
+    expect(group).to_have_count(1)
+    buttons = group.locator("button")
+    expect(buttons).to_have_text(["strict", "cluster-wide", "namespace-wide"])
+    description = page.locator("#scopeDescription")
+    expect(description).to_have_text("Bound to this name and namespace")
+    select_scope(page, "namespace-wide")
+    expect(description).to_have_text("Any name within this namespace")
+    select_scope(page, "cluster-wide")
+    expect(description).to_have_text("Any name in any namespace")
+    # one scope always stays selected
+    page.locator('.scope-toggle button[data-scope="cluster-wide"]').click()
+    expect(page.locator('.scope-toggle button[aria-pressed="true"]')).to_have_count(1)
+
+
+def test_form_header_fits_a_phone(page: Page):
+    page.set_viewport_size({"width": 375, "height": 800})
+    page.goto("/")
+    page.wait_for_selector("#secretName")
+    assert page.evaluate("document.documentElement.scrollWidth") <= 375
+    for selector in ["input#namespaceSelection", "#secretName", ".scope-toggle"]:
+        box = page.locator(selector).bounding_box()
+        assert box["x"] >= 0 and box["x"] + box["width"] <= 375, selector
+
+
 def sealed_secret_yaml(page: Page) -> str:
     """Return the generated manifest exactly as shown, whitespace included."""
     result = page.locator("#sealed-secret-result")
@@ -817,13 +1077,9 @@ def scope_strict(page: Page):
 
 
 def select_scope(page: Page, scope: str):
-    select_selector = "div.v-select"
-    page.wait_for_selector(select_selector)
-    page.click(select_selector)
-    item = page.locator("div.v-list-item", has_text=scope).last
-    item.wait_for()
-    item.click()
-    item.wait_for(state="hidden")
+    button = page.locator(f'.scope-toggle button[data-scope="{scope}"]')
+    button.click()
+    expect(button).to_have_attribute("aria-pressed", "true")
 
 
 def add_secret_key_value(page: Page):
