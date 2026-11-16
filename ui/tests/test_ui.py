@@ -2,6 +2,7 @@ import base64
 import json
 import re
 
+import pytest
 from playwright.sync_api import Page, Route, expect
 
 SECRET_NAME = "valid-secret-name"
@@ -502,7 +503,7 @@ def test_failed_sealing_keeps_the_form_and_shows_the_error(app_page: Page):
     # the form with everything the user entered is still there
     expect(page.locator("#sealed-secret-result")).to_have_count(0)
     expect(page.locator("#secretName")).to_have_value(SECRET_NAME)
-    expect(page.locator("textarea#secretKey-0")).to_have_value(SECRET_KEY)
+    expect(page.locator("input#secretKey-0")).to_have_value(SECRET_KEY)
     expect(page.locator("textarea#secretValue-0")).to_have_value(SECRET_VALUE)
 
     # a failed attempt does not lock the form: the user can simply try again
@@ -551,7 +552,7 @@ def test_clear_on_result_view_returns_to_an_empty_form(app_page: Page):
 
     expect(page.locator("#sealed-secret-result")).to_have_count(0)
     expect(page.locator("#secretName")).to_have_value("")
-    expect(page.locator("textarea#secretKey-0")).to_have_value("")
+    expect(page.locator("input#secretKey-0")).to_have_value("")
     expect(page.locator("textarea#secretValue-0")).to_have_value("")
     # Vuetify keeps an (empty) selection element for the empty string
     expect(page.locator(".v-autocomplete__selection-text")).to_have_text("")
@@ -609,7 +610,7 @@ def test_edit_on_result_view_returns_to_the_filled_form(app_page: Page):
 
     expect(page.locator("#sealed-secret-result")).to_have_count(0)
     expect(page.locator("#secretName")).to_have_value(SECRET_NAME)
-    expect(page.locator("textarea#secretKey-0")).to_have_value(SECRET_KEY)
+    expect(page.locator("input#secretKey-0")).to_have_value(SECRET_KEY)
     expect(page.locator("textarea#secretValue-0")).to_have_value(SECRET_VALUE)
     expect(page.locator(".v-autocomplete__selection-text")).to_have_text(namespace)
     expect(page.locator('button:has-text("Encrypt")')).to_be_enabled()
@@ -620,29 +621,31 @@ def test_removing_a_row_keeps_the_other_rows_intact(app_page: Page):
     add_button = page.get_by_role("button", name="Add key-value pair")
     add_button.click()
     add_button.click()
-    expect(page.locator("textarea[id^='secretKey-']")).to_have_count(3)
+    expect(page.locator("input[id^='secretKey-']")).to_have_count(3)
     assert duplicate_ids(page) == []
 
-    page.fill("textarea#secretKey-0", "first-key")
+    page.fill("input#secretKey-0", "first-key")
     page.fill("textarea#secretValue-0", "first value")
     # the middle row has been edited and shows a validation error
-    page.fill("textarea#secretKey-1", "second-key")
-    page.fill("textarea#secretKey-1", "")
-    expect(page.locator(".v-row:has(#secretKey-1) .v-input--error")).to_have_count(1)
-    # the key of the last row has not been touched yet
+    page.fill("input#secretKey-1", "second-key")
+    page.fill("input#secretKey-1", "")
+    expect(page.locator(".secret-row:has(#secretKey-1) .v-input--error")).to_have_count(1)
+    # the last row is valid (a new row takes the focus, so an empty key would
+    # already count as visited)
+    page.fill("input#secretKey-2", "third-key")
     page.fill("textarea#secretValue-2", "third value")
-    expect(page.locator(".v-row:has(#secretKey-2) .v-input--error")).to_have_count(0)
+    expect(page.locator(".secret-row:has(#secretKey-2) .v-input--error")).to_have_count(0)
 
     # remove the middle row with its delete icon
-    page.locator(".v-row:has(#secretKey-1) .mdi-delete").click()
+    page.get_by_role("button", name="Remove pair 2").click()
 
-    expect(page.locator("textarea[id^='secretKey-']")).to_have_count(2)
-    expect(page.locator("textarea#secretKey-0")).to_have_value("first-key")
+    expect(page.locator("input[id^='secretKey-']")).to_have_count(2)
+    expect(page.locator("input#secretKey-0")).to_have_value("first-key")
     expect(page.locator("textarea#secretValue-0")).to_have_value("first value")
-    expect(page.locator("textarea#secretKey-1")).to_have_value("")
+    expect(page.locator("input#secretKey-1")).to_have_value("third-key")
     expect(page.locator("textarea#secretValue-1")).to_have_value("third value")
     # the error went away with the removed row instead of moving to its neighbour
-    expect(page.locator(".v-row:has(#secretKey-1) .v-input--error")).to_have_count(0)
+    expect(page.locator(".secret-row:has(#secretKey-1) .v-input--error")).to_have_count(0)
     assert duplicate_ids(page) == []
 
 
@@ -650,10 +653,10 @@ def test_removing_the_only_row_leaves_a_blank_row(app_page: Page):
     page = app_page
     add_secret_key_value(page)
 
-    page.locator(".v-row:has(#secretKey-0) .mdi-delete").click()
+    page.get_by_role("button", name="Remove pair 1").click()
 
-    expect(page.locator("textarea[id^='secretKey-']")).to_have_count(1)
-    expect(page.locator("textarea#secretKey-0")).to_have_value("")
+    expect(page.locator("input[id^='secretKey-']")).to_have_count(1)
+    expect(page.locator("input#secretKey-0")).to_have_value("")
     expect(page.locator("textarea#secretValue-0")).to_have_value("")
 
 
@@ -661,13 +664,623 @@ def test_remove_all_leaves_one_blank_row(app_page: Page):
     page = app_page
     add_secret_key_value(page)
     page.get_by_role("button", name="Add key-value pair").click()
-    page.fill("textarea#secretKey-1", "another-key")
+    page.fill("input#secretKey-1", "another-key")
 
     page.get_by_role("button", name="Remove All").click()
 
-    expect(page.locator("textarea[id^='secretKey-']")).to_have_count(1)
-    expect(page.locator("textarea#secretKey-0")).to_have_value("")
+    expect(page.locator("input[id^='secretKey-']")).to_have_count(1)
+    expect(page.locator("input#secretKey-0")).to_have_value("")
     expect(page.locator("textarea#secretValue-0")).to_have_value("")
+
+
+def test_duplicate_keys_are_marked_and_block_encrypting(app_page: Page):
+    page = app_page
+    namespace_select(page)
+    secret_name(page)
+    add_secret_key_value(page)
+    page.get_by_role("button", name="Add key-value pair").click()
+    page.fill("input#secretKey-1", "other-key")
+    page.fill("textarea#secretValue-1", "other value")
+    expect(page.locator('button:has-text("Encrypt")')).to_be_enabled()
+    expect(page.locator(".v-messages__message", has_text="Duplicate key")).to_have_count(0)
+
+    # the same key in a second row marks both rows and blocks sealing
+    page.fill("input#secretKey-1", SECRET_KEY)
+    for row in ("0", "1"):
+        expect(
+            page.locator(f".secret-row:has(#secretKey-{row}) .v-messages__message")
+        ).to_have_text("Duplicate key")
+    expect(page.locator('button:has-text("Encrypt")')).to_be_disabled()
+
+    # a third row with an empty key is not a duplicate of anything
+    page.get_by_role("button", name="Add key-value pair").click()
+    expect(page.locator(".secret-row:has(#secretKey-2) .v-input--error")).to_have_count(0)
+
+    # renaming one of the rows resolves both
+    page.fill("input#secretKey-1", "other-key")
+    expect(page.locator(".v-messages__message", has_text="Duplicate key")).to_have_count(0)
+    page.get_by_role("button", name="Remove pair 3").click()
+    expect(page.locator('button:has-text("Encrypt")')).to_be_enabled()
+
+
+def test_row_layout_does_not_depend_on_the_content(app_page: Page, tmp_path):
+    page = app_page
+    page.set_viewport_size({"width": 1280, "height": 900})
+    # the column, not the input: the input gives way to the clear icon
+    key = page.locator(".secret-row__key")
+    key.wait_for()
+
+    def boxes():
+        return (
+            key.bounding_box(),
+            page.locator(".secret-row__value").bounding_box(),
+            page.evaluate("document.documentElement.scrollWidth"),
+        )
+
+    empty = boxes()
+    key_box, value_box, _ = empty
+    # key about a third, value about two thirds
+    assert 1.8 < value_box["width"] / key_box["width"] < 2.2
+
+    page.fill("input#secretKey-0", SECRET_KEY)
+    page.fill("textarea#secretValue-0", SECRET_VALUE)
+    with_value = boxes()
+    page.fill("textarea#secretValue-0", "")
+    page.locator("input#fileInput-0").set_input_files(
+        write_file(tmp_path, "layout.txt", FILE_CONTENT)
+    )
+    expect(page.locator(".secret-file")).to_be_visible()
+    with_file = boxes()
+
+    for other in (with_value, with_file):
+        assert other[0]["width"] == empty[0]["width"]
+        assert other[1]["width"] == empty[1]["width"]
+        assert other[2] <= 1280
+
+
+def test_file_is_chosen_with_the_paperclip_and_removed_with_its_chip(
+    app_page: Page, tmp_path
+):
+    page = app_page
+    page.fill("input#secretKey-0", SECRET_KEY)
+    paperclip = page.get_by_role("button", name="Upload file as value")
+
+    with page.expect_file_chooser() as chooser:
+        paperclip.click()
+    chooser.value.set_files(write_file(tmp_path, "cert.pem", FILE_CONTENT))
+
+    chip = page.locator(".secret-file")
+    expect(chip).to_contain_text("cert.pem")
+    expect(chip).to_contain_text(f"{len(FILE_CONTENT)} B")
+    expect(page.locator("textarea#secretValue-0")).to_have_count(0)
+
+    # removing the chip brings the text input back, and the file can be chosen again
+    chip.get_by_label("Remove file").click()
+    expect(chip).to_have_count(0)
+    expect(page.locator("textarea#secretValue-0")).to_have_value("")
+    page.locator("input#fileInput-0").set_input_files(
+        write_file(tmp_path, "cert.pem", FILE_CONTENT)
+    )
+    expect(chip).to_contain_text("cert.pem")
+
+
+def test_paperclip_is_off_while_a_value_is_typed(app_page: Page):
+    page = app_page
+    paperclip = page.get_by_role("button", name="Upload file as value")
+    expect(paperclip).to_be_enabled()
+    page.fill("textarea#secretValue-0", SECRET_VALUE)
+    expect(paperclip).to_be_disabled()
+    page.fill("textarea#secretValue-0", "")
+    expect(paperclip).to_be_enabled()
+
+
+def test_value_is_masked_until_revealed(app_page: Page):
+    page = app_page
+    api = SealingApi(page)
+    value = page.locator("textarea#secretValue-0")
+    text_security = "getComputedStyle(element).webkitTextSecurity"
+
+    # typing works as usual, but the characters are not shown
+    value.fill("line one\nline two")
+    expect(value).to_have_value("line one\nline two")
+    assert value.evaluate(f"(element) => {text_security}") == "disc"
+
+    reveal = page.get_by_role("button", name="Show value")
+    expect(reveal).to_have_attribute("aria-pressed", "false")
+    reveal.click()
+    assert value.evaluate(f"(element) => {text_security}") == "none"
+    page.get_by_role("button", name="Hide value").click()
+    assert value.evaluate(f"(element) => {text_security}") == "disc"
+
+    # sealing sends what was typed, not what is displayed
+    namespace_select(page)
+    secret_name(page)
+    scope_strict(page)
+    page.fill("input#secretKey-0", SECRET_KEY)
+    click_encrypt_button(page)
+    assert api.only_request["secrets"] == [
+        {"key": SECRET_KEY, "value": b64("line one\nline two")}
+    ]
+
+
+def test_rows_are_cards_and_all_actions_fit_on_a_phone(page: Page):
+    enable_sealed_secret_import(page)
+    page.set_viewport_size({"width": 375, "height": 800})
+    page.goto("/")
+    namespace_select(page)
+    page.get_by_role("button", name="Add key-value pair").click()
+
+    for name in ("Import existing sealed secret", "Remove All", "Remove pair 1"):
+        button = page.get_by_role("button", name=name)
+        expect(button).to_be_visible()
+        box = button.bounding_box()
+        assert 0 <= box["x"] and box["x"] + box["width"] <= 375, name
+    assert page.evaluate("document.documentElement.scrollWidth") <= 375
+
+    # every pair is a bordered card numbered in its header, key above value
+    rows = page.locator(".secret-row")
+    expect(rows).to_have_count(2)
+    expect(rows.nth(1).locator(".secret-row__number")).to_have_text("#2")
+    assert rows.nth(0).evaluate("(row) => getComputedStyle(row).borderTopWidth") == "1px"
+    key_box = page.locator("input#secretKey-1").bounding_box()
+    value_box = page.locator("textarea#secretValue-1").bounding_box()
+    assert key_box["y"] < value_box["y"]
+
+
+def test_row_buttons_have_accessible_names(app_page: Page):
+    page = app_page
+    for name in ("Remove pair 1", "Show value", "Upload file as value"):
+        expect(page.get_by_role("button", name=name)).to_have_count(1)
+    expect(page.get_by_role("textbox", name="Secret key")).to_have_count(1)
+    expect(page.get_by_role("textbox", name="Secret value")).to_have_count(1)
+
+
+def focused_name(page: Page) -> str:
+    """The id or accessible name of the element that has the focus."""
+    return page.evaluate(
+        "document.activeElement.id || document.activeElement.getAttribute('aria-label')"
+    )
+
+
+@pytest.mark.parametrize("width", [1280, 375])
+def test_tab_goes_through_a_row_from_key_to_remove(page: Page, width: int):
+    page.set_viewport_size({"width": width, "height": 900})
+    page.goto("/")
+    page.get_by_role("button", name="Add key-value pair").click()
+    page.fill("input#secretKey-0", SECRET_KEY)
+    page.locator("input#secretKey-0").focus()
+
+    order = []
+    for _ in range(4):
+        page.keyboard.press("Tab")
+        order.append(focused_name(page))
+    # the key field is followed by its value, the value's buttons and then
+    # remove, before anything of the next row
+    assert order == [
+        "secretValue-0",
+        "Show value",
+        "Upload file as value",
+        "Remove pair 1",
+    ]
+    page.keyboard.press("Tab")
+    assert focused_name(page) == "secretKey-1"
+
+
+def test_paperclip_explains_why_it_is_off(app_page: Page):
+    page = app_page
+    choosers = []
+    page.on("filechooser", lambda chooser: choosers.append(chooser))
+    hint = "Clear the value to upload a file instead"
+    paperclip = page.get_by_role("button", name="Upload file as value")
+    expect(paperclip).to_have_attribute("aria-disabled", "false")
+
+    page.fill("textarea#secretValue-0", SECRET_VALUE)
+    expect(paperclip).to_have_attribute("aria-disabled", "true")
+    # exposed to assistive technology ...
+    description_id = paperclip.get_attribute("aria-describedby")
+    expect(page.locator(f"[id='{description_id}']")).to_have_text(hint)
+    # ... and to sighted users, with the keyboard and with the mouse
+    tooltip = page.locator(".v-tooltip.v-overlay--active", has_text=hint)
+    page.get_by_role("button", name="Show value").focus()
+    page.keyboard.press("Tab")
+    expect(paperclip).to_be_focused()
+    expect(tooltip).to_have_text(hint)
+    page.locator("input#secretKey-0").focus()
+    expect(tooltip).to_have_count(0)
+    paperclip.hover()
+    expect(tooltip).to_have_text(hint)
+
+    # it still does nothing, with the mouse or the keyboard
+    paperclip.click(force=True)
+    page.keyboard.press("Enter")
+    page.wait_for_timeout(200)
+    assert choosers == []
+    expect(page.locator("input#fileInput-0")).to_be_disabled()
+
+    # and works again once the value is gone
+    page.fill("textarea#secretValue-0", "")
+    expect(paperclip).to_have_attribute("aria-disabled", "false")
+    expect(page.locator(f"[id='{description_id}']")).to_have_count(0)
+    with page.expect_file_chooser():
+        paperclip.click()
+
+
+def test_adding_a_pair_focuses_its_key(app_page: Page):
+    page = app_page
+    page.get_by_role("button", name="Add key-value pair").click()
+    expect(page.locator("input#secretKey-1")).to_be_focused()
+    # typing continues right there
+    page.keyboard.type("second-key")
+    expect(page.locator("input#secretKey-1")).to_have_value("second-key")
+    expect(page.locator("input#secretKey-0")).to_have_value("")
+
+    # also with the keyboard alone
+    page.get_by_role("button", name="Add key-value pair").focus()
+    page.keyboard.press("Enter")
+    expect(page.locator("input#secretKey-2")).to_be_focused()
+
+
+@pytest.mark.parametrize("shortcut", ["Control+Enter", "Meta+Enter"])
+def test_ctrl_or_cmd_enter_seals_a_ready_form(app_page: Page, shortcut: str):
+    page = app_page
+    api = SealingApi(page)
+    namespace = namespace_select(page)
+    secret_name(page)
+    page.fill("input#secretKey-0", SECRET_KEY)
+    page.fill("textarea#secretValue-0", SECRET_VALUE)
+
+    # works from the value, where plain Enter has to add a line
+    page.locator("textarea#secretValue-0").press(shortcut)
+
+    expect(page.locator("#sealed-secret-result")).to_be_visible()
+    assert api.only_request["namespace"] == namespace
+    assert api.only_request["secrets"] == [
+        {"key": SECRET_KEY, "value": b64(SECRET_VALUE)}
+    ]
+
+
+def test_ctrl_enter_does_nothing_until_the_form_is_ready(app_page: Page):
+    page = app_page
+    api = SealingApi(page)
+    namespace_select(page)
+    secret_name(page)
+    page.fill("input#secretKey-0", SECRET_KEY)
+    # no value yet
+    page.locator("input#secretKey-0").press("Control+Enter")
+    page.wait_for_timeout(700)
+    assert api.requests == []
+    expect(page.locator("#sealed-secret-result")).to_have_count(0)
+
+    # a duplicate key blocks it as well
+    page.fill("textarea#secretValue-0", SECRET_VALUE)
+    page.get_by_role("button", name="Add key-value pair").click()
+    page.fill("input#secretKey-1", SECRET_KEY)
+    page.fill("textarea#secretValue-1", SECRET_VALUE)
+    page.keyboard.press("Control+Enter")
+    page.wait_for_timeout(700)
+    assert api.requests == []
+
+    page.fill("input#secretKey-1", "other-key")
+    page.keyboard.press("Control+Enter")
+    expect(page.locator("#sealed-secret-result")).to_be_visible()
+    assert len(api.requests) == 1
+
+
+def test_plain_enter_adds_a_line_to_the_value_and_does_not_seal(app_page: Page):
+    page = app_page
+    api = SealingApi(page)
+    namespace_select(page)
+    secret_name(page)
+    page.fill("input#secretKey-0", SECRET_KEY)
+    value = page.locator("textarea#secretValue-0")
+    value.fill("one")
+    value.press("Enter")
+    value.press_sequentially("two")
+    page.wait_for_timeout(300)
+    expect(value).to_have_value("one\ntwo")
+    assert api.requests == []
+
+
+def test_ctrl_enter_is_ignored_outside_the_form(app_page: Page):
+    page = app_page
+    api = SealingApi(page)
+    namespace_select(page)
+    secret_name(page)
+    add_secret_key_value(page)
+    open_about(page)
+    page.keyboard.press("Control+Enter")
+    page.wait_for_timeout(500)
+    assert api.requests == []
+
+
+def test_shortcut_is_shown_next_to_the_encrypt_button(app_page: Page):
+    page = app_page
+    hint = page.locator(".shortcut-hint kbd")
+    expect(hint).to_be_visible()
+    expect(hint).to_have_text(re.compile(r"^(Ctrl|⌘) Enter$"))
+    expect(page.get_by_role("button", name="Encrypt")).to_have_attribute(
+        "aria-keyshortcuts", "Control+Enter Meta+Enter"
+    )
+    assert page.evaluate("document.documentElement.scrollWidth") <= 1280
+
+
+def drop_files(page: Page, files: list[tuple[str, str, str]], event: str = "drop"):
+    """Drag files over the list and drop them there.
+
+    Each file is (name, content, mime type). Playwright cannot start a native
+    drag of a file, so the events carry a DataTransfer the page builds.
+    """
+    transfer = page.evaluate_handle(
+        """(files) => {
+            const transfer = new DataTransfer()
+            for (const [name, content, type] of files) {
+                transfer.items.add(new File([content], name, { type }))
+            }
+            return transfer
+        }""",
+        files,
+    )
+    target = ".secrets-list"
+    page.dispatch_event(target, "dragenter", {"dataTransfer": transfer})
+    page.dispatch_event(target, "dragover", {"dataTransfer": transfer})
+    if event == "drop":
+        page.dispatch_event(target, "drop", {"dataTransfer": transfer})
+    return transfer
+
+
+def key_value_pairs(page: Page) -> list[tuple[str, str]]:
+    """(key, value) per row; the value of a row with a file is "<file>"."""
+    pairs = []
+    for row in page.locator(".secret-row").all():
+        key = row.locator("input[id^='secretKey-']").input_value()
+        text = row.locator("textarea")
+        pairs.append((key, text.input_value() if text.count() else "<file>"))
+    return pairs
+
+
+def test_dragging_files_over_the_list_shows_a_drop_zone(app_page: Page):
+    page = app_page
+    zone = page.locator(".drop-zone")
+    expect(zone).to_have_count(0)
+
+    transfer = drop_files(page, [("a.txt", "x", "text/plain")], event="over")
+    expect(zone).to_be_visible()
+    expect(zone).to_contain_text("Drop .env or files here")
+    # it must not catch the pointer, or the drag would flicker over the rows
+    assert zone.evaluate("(zone) => getComputedStyle(zone).pointerEvents") == "none"
+
+    page.dispatch_event(".secrets-list", "dragleave", {"dataTransfer": transfer})
+    expect(zone).to_have_count(0)
+
+
+def test_dragging_text_does_not_show_the_drop_zone(app_page: Page):
+    page = app_page
+    transfer = page.evaluate_handle(
+        """() => {
+            const transfer = new DataTransfer()
+            transfer.setData('text/plain', 'just words')
+            return transfer
+        }"""
+    )
+    page.dispatch_event(".secrets-list", "dragenter", {"dataTransfer": transfer})
+    expect(page.locator(".drop-zone")).to_have_count(0)
+
+
+def test_dropping_a_dotenv_file_creates_one_pair_per_variable(app_page: Page):
+    page = app_page
+    api = SealingApi(page)
+    namespace_select(page)
+    secret_name(page)
+    env = (
+        "# database\n"
+        "DB_HOST=db.local\n"
+        "export DB_PASSWORD='s3cr3t # not a comment'\n"
+        "\n"
+        'GREETING="hello\\nworld"\n'
+        "this line is not valid\n"
+    )
+
+    drop_files(page, [(".env", env, "")])
+
+    # the blank row made way for the three pairs
+    assert key_value_pairs(page) == [
+        ("DB_HOST", "db.local"),
+        ("DB_PASSWORD", "s3cr3t # not a comment"),
+        ("GREETING", "hello\nworld"),
+    ]
+    expect(page.locator(".drop-zone")).to_have_count(0)
+    expect(page.locator("div[role='status']")).to_have_text(
+        re.compile(r"Imported 3 keys from \.env")
+    )
+    click_encrypt_button(page)
+    expect(page.locator("#sealed-secret-result")).to_be_visible()
+    assert api.only_request["secrets"] == [
+        {"key": "DB_HOST", "value": b64("db.local")},
+        {"key": "DB_PASSWORD", "value": b64("s3cr3t # not a comment")},
+        {"key": "GREETING", "value": b64("hello\nworld")},
+    ]
+
+
+def test_dropped_pairs_are_appended_to_filled_rows(app_page: Page):
+    page = app_page
+    add_secret_key_value(page)
+
+    drop_files(page, [("prod.env", "ONE=1\nTWO=2", "")])
+
+    assert key_value_pairs(page) == [
+        (SECRET_KEY, SECRET_VALUE),
+        ("ONE", "1"),
+        ("TWO", "2"),
+    ]
+    expect(page.locator("div[role='status']")).to_have_text(
+        re.compile(r"Imported 2 keys from prod\.env")
+    )
+
+
+def test_dropped_keys_go_through_the_duplicate_check(app_page: Page):
+    page = app_page
+    add_secret_key_value(page)
+
+    drop_files(page, [(".env", f"{SECRET_KEY}=other\nBAD KEY=1\nA=1", "")])
+
+    expect(page.locator(".v-messages__message", has_text="Duplicate key")).to_have_count(2)
+    expect(page.locator('button:has-text("Encrypt")')).to_be_disabled()
+
+
+def test_dropping_another_file_creates_a_file_pair(app_page: Page):
+    page = app_page
+    api = SealingApi(page)
+    namespace_select(page)
+    secret_name(page)
+
+    drop_files(page, [("tls.crt", FILE_CONTENT, "")])
+
+    expect(page.locator("input#secretKey-0")).to_have_value("tls.crt")
+    chip = page.locator(".secret-file")
+    expect(chip).to_have_count(1)
+    expect(chip).to_contain_text("tls.crt")
+    expect(chip).to_contain_text(f"{len(FILE_CONTENT)} B")
+    expect(page.locator("div[role='status']")).to_have_text(re.compile(r"Added 1 file"))
+    click_encrypt_button(page)
+    expect(page.locator("#sealed-secret-result")).to_be_visible()
+    assert api.only_request["secrets"] == [
+        {"key": "tls.crt", "file": b64(FILE_CONTENT)}
+    ]
+
+
+def test_dropping_several_files_mixes_pairs_and_files(app_page: Page):
+    page = app_page
+
+    drop_files(
+        page,
+        [
+            (".env", "A=1\nB=2", "text/plain"),
+            ("ca.pem", "-----BEGIN CERTIFICATE-----", ""),
+            ("notes.txt", "just some words", "text/plain"),
+        ],
+    )
+
+    expect(page.locator("input[id^='secretKey-']")).to_have_count(4)
+    assert [
+        key.input_value() for key in page.locator("input[id^='secretKey-']").all()
+    ] == ["A", "B", "ca.pem", "notes.txt"]
+    expect(page.locator(".secret-file")).to_have_count(2)
+    expect(page.locator("div[role='status']")).to_have_text(
+        re.compile(r"Imported 2 keys from \.env and added 2 files")
+    )
+
+
+def test_plain_text_of_key_value_lines_is_read_as_dotenv(app_page: Page):
+    page = app_page
+
+    drop_files(
+        page,
+        [
+            ("settings.txt", "# comment\nMODE=prod\nLEVEL=info\n", "text/plain"),
+            ("token.txt", "dGVzdA==", "text/plain"),
+        ],
+    )
+
+    assert key_value_pairs(page)[:2] == [("MODE", "prod"), ("LEVEL", "info")]
+    # base64 padding is not an assignment, so this stays a file
+    expect(page.locator("input#secretKey-2")).to_have_value("token.txt")
+    expect(page.locator(".secret-file")).to_have_count(1)
+
+
+@pytest.mark.parametrize("name", ["my file.txt", "Résumé.pdf"])
+def test_dropped_file_with_an_invalid_key_shows_its_error_at_once(
+    app_page: Page, name: str
+):
+    page = app_page
+    namespace_select(page)
+    secret_name(page)
+
+    drop_files(page, [(name, FILE_CONTENT, "")])
+
+    # the key is not renamed, and the reason Encrypt is off is visible
+    expect(page.locator("input#secretKey-0")).to_have_value(name)
+    expect(page.locator(".secret-row:has(#secretKey-0) .v-messages__message")).to_contain_text(
+        "Invalid char"
+    )
+    expect(page.locator(".secret-row:has(#secretKey-0) .v-input--error")).to_have_count(1)
+    expect(page.locator('button:has-text("Encrypt")')).to_be_disabled()
+    # a valid name shows no error
+    drop_files(page, [("valid-name.txt", FILE_CONTENT, "")])
+    expect(page.locator(".secret-row:has(#secretKey-1) .v-input--error")).to_have_count(0)
+    # fixing the key by hand lifts the block
+    expect(page.locator('button:has-text("Encrypt")')).to_be_disabled()
+    page.fill("input#secretKey-0", "my-file.txt")
+    expect(page.locator('button:has-text("Encrypt")')).to_be_enabled()
+
+
+def default_prevented(page: Page, event: str, files: bool, target: str = "body") -> bool:
+    """Dispatch a drag event and say whether the page called preventDefault."""
+    return page.evaluate(
+        """([event, files, target]) => {
+            const transfer = new DataTransfer()
+            if (files) transfer.items.add(new File(['x'], 'a.txt'))
+            else transfer.setData('text/plain', 'words')
+            const dragEvent = new DragEvent(event, {
+                dataTransfer: transfer, bubbles: true, cancelable: true
+            })
+            document.querySelector(target).dispatchEvent(dragEvent)
+            return dragEvent.defaultPrevented
+        }""",
+        [event, files, target],
+    )
+
+
+def test_a_file_dropped_outside_the_list_does_not_replace_the_page(app_page: Page):
+    page = app_page
+    add_secret_key_value(page)
+    # without this the browser would open the file and the form would be lost
+    for target in ("body", ".v-app-bar", "#secretName"):
+        assert default_prevented(page, "dragover", files=True, target=target), target
+        assert default_prevented(page, "drop", files=True, target=target), target
+    # text can still be dropped into the fields
+    assert not default_prevented(page, "dragover", files=False, target="#secretName")
+    assert not default_prevented(page, "drop", files=False, target="#secretName")
+
+    # the form is still there, and dropping on the list still imports
+    expect(page.locator("input#secretKey-0")).to_have_value(SECRET_KEY)
+    drop_files(page, [(".env", "A=1", "")])
+    assert key_value_pairs(page) == [(SECRET_KEY, SECRET_VALUE), ("A", "1")]
+
+
+def test_a_file_dropped_on_the_result_view_does_not_replace_the_page(app_page: Page):
+    page = app_page
+    SealingApi(page)
+    seal_one_value(page)
+    assert default_prevented(page, "dragover", files=True)
+    assert default_prevented(page, "drop", files=True)
+
+
+def test_dropping_a_file_over_the_limit_is_rejected(app_page: Page):
+    page = app_page
+
+    drop_files(page, [("big.bin", "X" * (ONE_MEBIBYTE + 1), "")])
+
+    expect(page.locator("div[role='status']")).to_contain_text(
+        "big.bin: File size should be less than 1 MB!"
+    )
+    # nothing was added
+    assert key_value_pairs(page) == [("", "")]
+    expect(page.locator(".secret-file")).to_have_count(0)
+
+
+def test_dropping_an_empty_dotenv_file_reports_it(app_page: Page):
+    page = app_page
+
+    drop_files(page, [(".env", "# nothing here\n", "")])
+
+    expect(page.locator("div[role='status']")).to_contain_text("No KEY=VALUE pairs found")
+    assert key_value_pairs(page) == [("", "")]
+
+
+def write_file(directory, name: str, content: str):
+    path = directory / name
+    path.write_text(content)
+    return path
 
 
 def enable_sealed_secret_import(page: Page) -> list[str]:
@@ -702,7 +1315,7 @@ def import_sealed_secret(page: Page, name: str):
 
 def secret_keys(page: Page) -> list[str]:
     return [
-        key.input_value() for key in page.locator("textarea[id^='secretKey-']").all()
+        key.input_value() for key in page.locator("input[id^='secretKey-']").all()
     ]
 
 
@@ -719,7 +1332,7 @@ def test_import_keys_of_an_existing_sealed_secret(page: Page):
 
     # nothing entered yet: the keys are taken over right away
     import_sealed_secret(page, "app-secrets")
-    expect(page.locator("textarea[id^='secretKey-']")).to_have_count(2)
+    expect(page.locator("input[id^='secretKey-']")).to_have_count(2)
     assert secret_keys(page) == ["API_KEY", "TOKEN"]
     assert requested_urls == [f"{page.url}sealed-secrets/{namespace}"]
 
@@ -737,7 +1350,7 @@ def test_import_keys_of_an_existing_sealed_secret(page: Page):
     expect(dialog).to_be_visible()
     dialog.get_by_role("button", name="Continue").click()
     expect(dialog).to_be_hidden()
-    expect(page.locator("textarea[id^='secretKey-']")).to_have_count(1)
+    expect(page.locator("input[id^='secretKey-']")).to_have_count(1)
     assert secret_keys(page) == ["PASSWORD"]
     expect(page.locator("textarea#secretValue-0")).to_have_value("")
     # the list of the namespace was loaded once
@@ -763,24 +1376,21 @@ def test_secret_form_with_invalid_file(app_page: Page, tmp_path):
     expect(snackbar_message).to_be_visible()
 
     # the rejected file is not kept, the reason is shown at the input
-    row = page.locator(".v-row:has(#fileInput-0)")
-    expect(row.locator(".v-file-input .v-messages")).to_have_text(
+    row = page.locator(".secret-row:has(#fileInput-0)")
+    expect(row.locator(".secret-row__value .v-messages")).to_have_text(
         "File size should be less than 1 MB!"
     )
-    expect(row.locator(".v-file-input .v-field__input")).not_to_contain_text(
-        "large_test_file.txt"
-    )
+    expect(row).not_to_contain_text("large_test_file.txt")
     expect(page.locator("textarea#secretValue-0")).to_be_enabled()
 
     # a file within the limit is accepted and clears the error
     valid_file = tmp_path / "small_test_file.txt"
     valid_file.write_text(FILE_CONTENT)
     file_input.set_input_files(valid_file)
-    expect(row.locator(".v-file-input .v-field__input")).to_contain_text(
-        "small_test_file.txt"
-    )
-    expect(row.locator(".v-file-input .v-messages")).to_have_text("")
-    expect(page.locator("textarea#secretValue-0")).to_be_disabled()
+    expect(row.locator(".secret-file")).to_contain_text("small_test_file.txt")
+    expect(row.locator(".secret-row__value .v-messages")).to_have_count(0)
+    # the file replaces the text area
+    expect(page.locator("textarea#secretValue-0")).to_have_count(0)
 
 
 def test_secret_form_with_new_namespace(app_page: Page):
@@ -855,7 +1465,7 @@ def test_fresh_form_shows_no_error_before_the_field_was_visited(app_page: Page):
 
     # leaving the empty field is what reveals the missing value
     name_input.focus()
-    page.locator("textarea#secretKey-0").focus()
+    page.locator("input#secretKey-0").focus()
     expect(name_messages(page).last).to_have_text(
         "Must not be empty"
     )
@@ -884,7 +1494,7 @@ def test_message_of_the_other_scope_does_not_linger_on_the_secret_name(app_page:
         re.compile("^Invalid char")
     )
     name_input.fill("")
-    page.locator("textarea#secretKey-0").focus()
+    page.locator("input#secretKey-0").focus()
     expect(name_messages(page).last).to_have_text(
         "Must not be empty"
     )
@@ -904,7 +1514,7 @@ def test_invalid_secret_name_offers_a_fix(app_page: Page):
     expect(suggestion).to_have_count(0)
 
     # once the field is left, the fix is offered
-    page.locator("textarea#secretKey-0").focus()
+    page.locator("input#secretKey-0").focus()
     expect(suggestion).to_have_text(re.compile(r"Use\s+claude-test-secret"))
     suggestion.click()
     expect(name_input).to_have_value("claude-test-secret")
@@ -913,7 +1523,7 @@ def test_invalid_secret_name_offers_a_fix(app_page: Page):
 
     # nothing valid can be made out of this, so nothing is suggested
     name_input.fill("___")
-    page.locator("textarea#secretKey-0").focus()
+    page.locator("input#secretKey-0").focus()
     expect(page.locator(".v-col:has(#secretName) .v-input--error")).to_have_count(1)
     expect(suggestion).to_have_count(0)
 
@@ -1083,9 +1693,9 @@ def select_scope(page: Page, scope: str):
 
 
 def add_secret_key_value(page: Page):
-    page.wait_for_selector("textarea#secretKey-0")
-    page.fill("textarea#secretKey-0", SECRET_KEY)
-    assert page.locator("textarea#secretKey-0").input_value() == SECRET_KEY
+    page.wait_for_selector("input#secretKey-0")
+    page.fill("input#secretKey-0", SECRET_KEY)
+    assert page.locator("input#secretKey-0").input_value() == SECRET_KEY
     page.wait_for_selector("textarea#secretValue-0")
     page.fill("textarea#secretValue-0", SECRET_VALUE)
     assert page.locator("textarea#secretValue-0").input_value() == SECRET_VALUE
@@ -1096,12 +1706,11 @@ def add_secret_key_value(page: Page):
 
 
 def add_secret_key_file(page: Page, tmp_path):
-    page.wait_for_selector("textarea#secretKey-0")
-    page.fill("textarea#secretKey-0", SECRET_KEY)
-    assert page.locator("textarea#secretKey-0").input_value() == SECRET_KEY
+    page.wait_for_selector("input#secretKey-0")
+    page.fill("input#secretKey-0", SECRET_KEY)
+    assert page.locator("input#secretKey-0").input_value() == SECRET_KEY
 
     file_input = page.locator('input[type="file"]#fileInput-0')
-    assert file_input.is_visible()
     test_file = tmp_path / "test_file.txt"
     test_file.write_text(FILE_CONTENT)
     file_input.set_input_files(test_file)

@@ -3,6 +3,8 @@ import {
   createSecretEntry,
   entryHasFile,
   entryHasValue,
+  findDuplicateKeys,
+  formatFileSize,
   isEntryBlank,
   isEntryComplete
 } from '@/utils/secretEntry'
@@ -55,5 +57,49 @@ describe('entry state', () => {
 
   it('is not blank with only a file', () => {
     expect(isEntryBlank({ ...createSecretEntry(), file: someFile() })).toBe(false)
+  })
+})
+
+describe('createSecretEntry with content', () => {
+  it('takes a value or a file, as used when entries are added from files', () => {
+    const file = someFile()
+    expect(createSecretEntry({ key: 'a', value: 'x' })).toMatchObject({ key: 'a', value: 'x' })
+    const withFile = createSecretEntry({ key: 'b', file })
+    expect(withFile.file).toBe(file)
+    expect(isEntryComplete(withFile)).toBe(true)
+  })
+})
+
+describe('findDuplicateKeys', () => {
+  const keys = (...names) => names.map((key) => createSecretEntry({ key }))
+
+  it('finds nothing without duplicates', () => {
+    expect(findDuplicateKeys(keys('a', 'b', 'c')).size).toBe(0)
+    expect(findDuplicateKeys([]).size).toBe(0)
+  })
+
+  it('returns every key that occurs more than once, once', () => {
+    expect(findDuplicateKeys(keys('a', 'b', 'a', 'b', 'a', 'c'))).toEqual(new Set(['a', 'b']))
+  })
+
+  it('ignores empty keys', () => {
+    expect(findDuplicateKeys(keys('', '', 'a')).size).toBe(0)
+  })
+
+  it('compares keys exactly, since Kubernetes keys are case sensitive', () => {
+    expect(findDuplicateKeys(keys('Key', 'key')).size).toBe(0)
+  })
+})
+
+describe('formatFileSize', () => {
+  it.each([
+    [0, '0 B'],
+    [512, '512 B'],
+    [1024, '1 KB'],
+    [1536, '1.5 KB'],
+    [1024 * 1024, '1 MB'],
+    [10 * 1024 * 1024 * 1024 * 1024, '10240 GB']
+  ])('formats %i bytes as %s', (bytes, text) => {
+    expect(formatFileSize(bytes)).toBe(text)
   })
 })

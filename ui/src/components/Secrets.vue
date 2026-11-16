@@ -15,7 +15,7 @@
         elevation="1"
         variant="outlined"
       >
-        <v-form autocomplete="off">
+        <v-form autocomplete="off" @keydown="onFormKeydown">
           <SecretFormInputs
             v-model:namespace-name="namespaceName"
             v-model:secret-name="secretName"
@@ -27,12 +27,15 @@
           />
 
           <SecretsList
+            ref="secretsList"
             :entries="secrets"
+            :duplicate-keys="duplicateKeys"
             @update-entry="updateEntry"
             @select-file="selectFile"
-            @add-entry="secrets.push(createSecretEntry())"
+            @add-entry="addEntry"
             @remove-entry="removeEntry"
             @remove-all="removeAllEntries"
+            @drop-files="importDroppedFiles"
           >
             <template
               v-if="sealedSecretImportFeatureEnabled && namespaceName && !newNamespace"
@@ -91,10 +94,15 @@
                 variant="elevated"
                 :disabled="notReadyToEncode"
                 min-width="200"
+                aria-keyshortcuts="Control+Enter Meta+Enter"
                 @click="seal"
               >
                 Encrypt
               </v-btn>
+              <!-- Not shown on touch screens, which have no such keys. -->
+              <div class="shortcut-hint text-caption text-medium-emphasis mt-2" aria-hidden="true">
+                or press <kbd>{{ SHORTCUT_LABEL }}</kbd>
+              </div>
               <transition name="fade">
                 <div
                   v-if="notReadyToEncode && !blockingError"
@@ -148,13 +156,15 @@
 </template>
 
 <script setup>
-import { ref, computed, onBeforeMount, watch } from 'vue'
+import { ref, computed, nextTick, onBeforeMount, watch } from 'vue'
 import SecretFormInputs from './SecretFormInputs.vue'
 import SecretsList from './SecretsList.vue'
 import SecretsResults from './SecretsResults.vue'
 import { fetchNamespaces, fetchSealedSecrets, sealSecrets } from '@/api'
 import { loadConfig } from '@/config'
 import { useFavoriteNamespaces } from '@/composables/useFavoriteNamespaces'
+import { useDroppedFiles } from '@/composables/useDroppedFiles'
+import { useFileDropGuard } from '@/composables/useFileDropGuard'
 import { useSealedSecretImport } from '@/composables/useSealedSecretImport'
 import {
   CLIPBOARD_SNACKBAR_TIMEOUT_MS,
@@ -167,14 +177,32 @@ import {
 } from '@/constants'
 import { createLogger } from '@/utils/logger'
 import { renderSealedSecretYaml } from '@/utils/sealedSecretYaml'
-import { createSecretEntry, isEntryBlank, isEntryComplete } from '@/utils/secretEntry'
-import { isDnsLabel, isDnsSubdomain, isFileTooLarge } from '@/utils/validation'
+import {
+  createSecretEntry,
+  findDuplicateKeys,
+  isEntryBlank,
+  isEntryComplete
+} from '@/utils/secretEntry'
+import {
+  firstRuleMessage,
+  isDnsLabel,
+  isDnsSubdomain,
+  isFileTooLarge,
+  rules
+} from '@/utils/validation'
 
 defineOptions({
   name: 'SecretsManager'
 })
 
 const log = createLogger('Secrets')
+
+// Mac users know the command key, everyone else Ctrl.
+const SHORTCUT_LABEL = /Mac|iPhone|iPad/i.test(
+  navigator.userAgentData?.platform ?? navigator.platform ?? ''
+)
+  ? '⌘ Enter'
+  : 'Ctrl Enter'
 const { favoriteNamespaces, toggleFavorite } = useFavoriteNamespaces()
 
 // Configuration and data loaded from the server
@@ -188,6 +216,7 @@ const namespaceName = ref('')
 const scope = ref(DEFAULT_SCOPE)
 const newNamespace = ref(false)
 const secrets = ref([createSecretEntry()])
+const secretsList = ref(null)
 
 // Sealing and its result
 const loading = ref(false)
@@ -222,7 +251,28 @@ const {
   onError: setErrorMessage
 })
 
+const { importDroppedFiles } = useDroppedFiles({
+  entries: secrets,
+  onSuccess: showClipboardMessage,
+  onError: setErrorMessage,
+  onImported: showInvalidKeys
+})
+
+// A file dropped next to the list must not replace the page.
+useFileDropGuard('.secrets-list')
+
 const incompleteSecretData = computed(() => secrets.value.some((entry) => !isEntryComplete(entry)))
+
+// The key field shows the reason, so a key like "my file.txt" (from a dropped
+// file) must not be sealed as if nothing were wrong.
+const invalidKeyData = computed(() =>
+  secrets.value.some(
+    (entry) => entry.key !== '' && firstRuleMessage(rules.validSecretKey, entry.key) !== ''
+  )
+)
+
+// Two rows with the same key would end up as a duplicated key in the YAML.
+const duplicateKeys = computed(() => findDuplicateKeys(secrets.value))
 
 const invalidNewNamespace = computed(
   () => newNamespace.value && scopeNeedsNamespace(scope.value) && !isDnsLabel(namespaceName.value)
@@ -246,6 +296,8 @@ const notReadyToEncode = computed(
   () =>
     blockingError.value ||
     incompleteSecretData.value ||
+    invalidKeyData.value ||
+    duplicateKeys.value.size > 0 ||
     invalidNewNamespace.value ||
     invalidSecretName.value ||
     (scopeNeedsNamespace(scope.value) && namespaceName.value === '') ||
@@ -321,6 +373,26 @@ function resetForm() {
   setErrorMessage('')
 }
 
+// A new pair is meant to be typed into right away.
+async function addEntry() {
+  const entry = createSecretEntry()
+  secrets.value.push(entry)
+  await nextTick()
+  secretsList.value?.focusKey(entry.id)
+}
+
+// A dropped file is named by its file name, which is often not a valid key
+// ("my file.txt"). The key is not changed, but its error is shown right away
+// instead of after a visit, so it is clear why Encrypt is disabled.
+async function showInvalidKeys(imported) {
+  await nextTick()
+  for (const entry of imported) {
+    if (firstRuleMessage(rules.validSecretKey, entry.key) !== '') {
+      secretsList.value?.validateKey(entry.id)
+    }
+  }
+}
+
 function findEntry(id) {
   return secrets.value.find((entry) => entry.id === id)
 }
@@ -368,6 +440,14 @@ function replaceEntriesWithKeys(keys) {
   secrets.value = entries.length > 0 ? entries : [createSecretEntry()]
 }
 
+// Ctrl/Cmd+Enter seals from anywhere in the form. Plain Enter is left alone:
+// it must still add a line in the value, and it selects in the lists.
+function onFormKeydown(event) {
+  if (event.key !== 'Enter' || !(event.ctrlKey || event.metaKey) || event.isComposing) return
+  event.preventDefault()
+  if (!notReadyToEncode.value && !loading.value) seal()
+}
+
 async function seal() {
   try {
     loading.value = true
@@ -392,3 +472,23 @@ async function seal() {
   }
 }
 </script>
+
+<style scoped>
+.shortcut-hint kbd {
+  padding: 1px 6px;
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: rgba(var(--v-theme-on-surface), 0.06);
+  font-family: inherit;
+  font-size: 0.85em;
+  white-space: nowrap;
+}
+
+/* Touch screens have no Ctrl or Cmd key. */
+@media (hover: none) {
+  .shortcut-hint {
+    display: none;
+  }
+}
+</style>
