@@ -27,6 +27,9 @@ class SealingApi:
         page.route("**/secrets", self._handle)
 
     def release(self):
+        # Requests that arrive after this (the page may not have sent one yet)
+        # are answered right away instead of being held for good.
+        self.hold = False
         held, self._held = self._held, []
         for route in held:
             self._answer(route)

@@ -7,6 +7,9 @@ import { isFileTooLarge } from '@/utils/validation'
 
 const log = createLogger('drop')
 
+// Result of readDotenvPairs for a file that could not be read at all.
+const UNREADABLE = Symbol('unreadable')
+
 /**
  * Files dropped on the key/value list: a .env file becomes one pair per
  * variable, any other file becomes a pair named after the file.
@@ -46,7 +49,10 @@ export function useDroppedFiles({ entries, onSuccess, onError, onImported = () =
         continue
       }
       const pairs = await readDotenvPairs(file)
-      if (pairs === null) {
+      if (pairs === UNREADABLE) {
+        // Neither its pairs nor its content could be sealed.
+        rejected.push(`${file.name}: Could not read the file.`)
+      } else if (pairs === null) {
         imported.push(createSecretEntry({ key: file.name, file }))
         fileCount++
       } else if (pairs.length === 0) {
@@ -75,18 +81,20 @@ export function useDroppedFiles({ entries, onSuccess, onError, onImported = () =
   return { importDroppedFiles, pendingImports }
 }
 
-// The pairs of a file that is a .env file, `null` if it is not one. A file is
-// one by its name, or if it is plain text of nothing but KEY=VALUE lines.
+// The pairs of a file that is a .env file, `null` if it is not one, and
+// UNREADABLE if reading it failed. A file is one by its name, or if it is
+// plain text of nothing but KEY=VALUE lines.
 async function readDotenvPairs(file) {
   const named = isDotenvFileName(file.name)
   if (!named && file.type !== 'text/plain') return null
+  let text
   try {
-    const text = await file.text()
-    if (named || looksLikeDotenv(text)) return parseDotenv(text)
+    text = await file.text()
   } catch (error) {
     log.error(`Failed to read "${file.name}":`, error)
+    return UNREADABLE
   }
-  return null
+  return named || looksLikeDotenv(text) ? parseDotenv(text) : null
 }
 
 function describeImport(keyCount, sources, fileCount) {
