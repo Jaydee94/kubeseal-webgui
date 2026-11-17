@@ -42,6 +42,21 @@ describe('parseDotenv', () => {
     ])
   })
 
+  it('cuts at a comment after a run of whitespace of any kind', () => {
+    expect(parseDotenv('A=one \t  # note\nB=two\t#x')).toEqual([
+      { key: 'A', value: 'one' },
+      { key: 'B', value: 'two' }
+    ])
+  })
+
+  it('reads a long run of spaces without a comment in linear time', () => {
+    // `\s+#` backtracked quadratically here: seconds instead of milliseconds.
+    const value = `a${' '.repeat(200_000)}b`
+    const start = performance.now()
+    expect(parseDotenv(`A=${value}`)).toEqual([{ key: 'A', value }])
+    expect(performance.now() - start).toBeLessThan(500)
+  })
+
   it('reads a comment right after the = as an empty value', () => {
     expect(parseDotenv('A= # note\nB=   #note\nC=#hash\nD =# x')).toEqual([
       { key: 'A', value: '' },

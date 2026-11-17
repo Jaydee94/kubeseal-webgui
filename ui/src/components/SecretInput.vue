@@ -13,6 +13,7 @@
       ref="keyField"
       :model-value="entry.key"
       label="Secret key"
+      density="comfortable"
       autocomplete="off"
       spellcheck="false"
       clearable
@@ -51,10 +52,12 @@
         autocomplete="off"
         spellcheck="false"
         label="Secret value"
+        density="comfortable"
         variant="outlined"
         color="primary"
         class="secret-row__textarea modern-input"
         :class="{ 'secret-value--masked': !revealed }"
+        :rules="valueRules"
         :error-messages="entry.fileError"
         @update:model-value="$emit('update:value', $event ?? '')"
       >
@@ -64,7 +67,7 @@
             variant="text"
             size="small"
             density="comfortable"
-            :aria-label="revealed ? 'Hide value' : 'Show value'"
+            aria-label="Show value"
             :aria-pressed="revealed"
             @click="revealed = !revealed"
           >
@@ -118,12 +121,11 @@
       icon
       variant="text"
       size="small"
-      color="error"
       class="secret-row__remove"
       :aria-label="`Remove pair ${number}`"
       @click="$emit('remove')"
     >
-      <v-icon icon="mdi-delete" />
+      <v-icon icon="mdi-trash-can-outline" />
       <v-tooltip activator="parent" location="bottom">Remove pair {{ number }}</v-tooltip>
     </v-btn>
   </div>
@@ -134,6 +136,9 @@ import { computed, ref } from 'vue'
 import { entryHasFile, entryHasValue, formatFileSize } from '@/utils/secretEntry'
 import { rules } from '@/utils/validation'
 
+// Only checked once the field was edited or the form was validated, so a fresh
+// row does not start with an error.
+const valueRules = [(value) => !!value || 'Must not be empty']
 const DUPLICATE_KEY_MESSAGE = 'Duplicate key'
 const PAPERCLIP_OFF_HINT = 'Clear the value to upload a file instead'
 
@@ -187,7 +192,7 @@ defineExpose({
 
 <style scoped>
 .secret-row {
-  --secret-row-border: rgba(var(--v-border-color), var(--v-border-opacity));
+  --secret-row-border: var(--line-strong);
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto;
   grid-template-areas: 'key value remove';
@@ -215,8 +220,20 @@ defineExpose({
 
 .secret-row__remove {
   grid-area: remove;
-  /* Centre on the 56px high outlined field. */
-  margin-top: 8px;
+  /* Centre on the 48px high outlined field. */
+  margin-top: 4px;
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+  transition: color var(--transition-fast);
+}
+
+.secret-row__remove:hover,
+.secret-row__remove:focus-visible {
+  color: rgb(var(--v-theme-error));
+}
+
+/* The field's own actions are tools, not content: kept in the background. */
+.secret-row__textarea :deep(.v-field__append-inner .v-btn) {
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
 }
 
 /* Looks off, but stays focusable and hoverable so that its hint can be read. */
@@ -234,11 +251,12 @@ defineExpose({
 .secret-file {
   display: flex;
   align-items: center;
-  min-height: 56px;
-  padding: 0 12px;
+  min-height: 48px;
+  padding: 0 8px;
   margin-bottom: 22px;
   border: 1px solid var(--secret-row-border);
-  border-radius: 4px;
+  border-radius: var(--radius-md);
+  background: var(--inset-bg);
 }
 
 .secret-file__chip {
@@ -275,9 +293,10 @@ defineExpose({
       'value value';
     row-gap: 8px;
     padding: 8px 12px 0;
-    margin-bottom: 16px;
-    border: 1px solid var(--secret-row-border);
-    border-radius: 8px;
+    margin-bottom: 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background: var(--inset-bg);
   }
 
   .secret-row__number {

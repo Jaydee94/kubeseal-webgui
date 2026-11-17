@@ -24,7 +24,9 @@ function readValue(raw) {
     // An unquoted value ends at a ` #` comment, which can be the whole value;
     // a '#' inside a word is data.
     if (text.length < raw.length && text.startsWith('#')) return ''
-    return text.replace(/\s+#.*$/, '').trim()
+    // One whitespace before '#' is enough: trim() drops the rest of the run,
+    // and `\s+#` would backtrack quadratically on a long run of spaces.
+    return text.replace(/\s#.*$/, '').trim()
   }
 
   let value = ''

@@ -1,7 +1,7 @@
 // Name validation as Kubernetes defines it (RFC 1123) and the rule arrays the
 // Vuetify inputs use. A rule returns `true` or the message to show.
 
-import { FILE_TOO_LARGE_MESSAGE, MAX_FILE_SIZE_BYTES } from '@/constants'
+import { MAX_FILE_SIZE_BYTES } from '@/constants'
 
 const MAX_DNS_LABEL_LENGTH = 63
 const MAX_DNS_SUBDOMAIN_LENGTH = 253
@@ -34,7 +34,7 @@ export function toDnsSubdomain(text) {
   const cleaned = cleanSubdomain(
     text
       .normalize('NFD')
-      // Accents are dropped instead of replaced: "café" -> "cafe", not "caf-".
+      // Accents are dropped instead of replaced: "Résumé" -> "resume", not "r-sum-".
       .replace(/\p{M}/gu, '')
       .toLowerCase()
       .replace(/[^a-z0-9.]+/g, '-')
@@ -100,7 +100,5 @@ export const rules = {
     (value) =>
       (!!value && /^[a-z0-9_.-]*$/i.test(value)) ||
       'Invalid char. Must be one of lower chars, digits, dash, underscore or dot.'
-  ],
-  // A single-file input validates one File, a multi-file input an array.
-  fileSize: [(files) => !files || ![files].flat().some(isFileTooLarge) || FILE_TOO_LARGE_MESSAGE]
+  ]
 }

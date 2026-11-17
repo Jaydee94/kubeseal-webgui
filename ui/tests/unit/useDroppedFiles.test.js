@@ -29,7 +29,45 @@ describe('useDroppedFiles', () => {
       ['B', 'two']
     ])
     expect(state.onSuccess).toHaveBeenCalledWith('Imported 2 keys from .env')
-    expect(state.onImported).toHaveBeenCalledWith(state.entries.value)
+  })
+
+  it('passes only the new rows to onImported, not the whole list', async () => {
+    const old = createSecretEntry({ key: 'old', value: 'x' })
+    const state = setup([old])
+
+    await state.importDroppedFiles([file('.env', 'A=1\nB=two')])
+
+    expect(state.onImported).toHaveBeenCalledTimes(1)
+    const [newRows] = state.onImported.mock.calls[0]
+    expect(newRows.map(({ key }) => key)).toEqual(['A', 'B'])
+    // the very rows that are now in the list, so that they can be focused
+    expect(newRows).toEqual(state.entries.value.slice(1))
+    expect(newRows).not.toContain(old)
+  })
+
+  it('counts an import as pending until its files are read', async () => {
+    const state = setup()
+    let release
+    const slow = file('.env', 'A=1')
+    slow.text = () => new Promise((resolve) => (release = () => resolve('A=1')))
+
+    const done = state.importDroppedFiles([slow])
+    expect(state.pendingImports.value).toBe(1)
+
+    release()
+    await done
+    expect(state.pendingImports.value).toBe(0)
+    expect(pairs(state.entries)).toEqual([['A', '1']])
+  })
+
+  it('is no longer pending when reading fails', async () => {
+    const state = setup()
+    const broken = file('.env', 'A=1')
+    broken.text = () => Promise.reject(new Error('gone'))
+
+    await state.importDroppedFiles([broken])
+
+    expect(state.pendingImports.value).toBe(0)
   })
 
   it('appends to rows that are filled in', async () => {
@@ -42,6 +80,30 @@ describe('useDroppedFiles', () => {
       ['A', '1']
     ])
     expect(state.onSuccess).toHaveBeenCalledWith('Imported 1 key from prod.env')
+  })
+
+  it('removes every blank row, also between and after filled ones', async () => {
+    const state = setup([
+      createSecretEntry(),
+      createSecretEntry({ key: 'old', value: 'x' }),
+      createSecretEntry(),
+      createSecretEntry()
+    ])
+
+    await state.importDroppedFiles([file('.env', 'A=1')])
+
+    expect(pairs(state.entries)).toEqual([
+      ['old', 'x'],
+      ['A', '1']
+    ])
+  })
+
+  it('leaves the rows alone if nothing could be imported', async () => {
+    const state = setup([createSecretEntry(), createSecretEntry()])
+
+    await state.importDroppedFiles([file('.env', '# nothing here')])
+
+    expect(state.entries.value).toHaveLength(2)
   })
 
   it('keeps any other file as a file named after it', async () => {

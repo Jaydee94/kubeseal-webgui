@@ -16,16 +16,31 @@ ONE_MEBIBYTE = 1024 * 1024
 class SealingApi:
     """Stand-in for `POST /secrets`: there is no API behind the dev server."""
 
-    def __init__(self, page: Page, status: int = 200, body=None):
+    def __init__(self, page: Page, status: int = 200, body=None, hold: bool = False):
         self.requests: list[dict] = []
         self.status = status
         self.body = body
+        # With `hold` a request is not answered until `release()`, so that a
+        # test can look at the page while it is sealing.
+        self.hold = hold
+        self._held: list[Route] = []
         page.route("**/secrets", self._handle)
+
+    def release(self):
+        held, self._held = self._held, []
+        for route in held:
+            self._answer(route)
 
     def _handle(self, route: Route):
         assert route.request.method == "POST"
+        self.requests.append(route.request.post_data_json)
+        if self.hold:
+            self._held.append(route)
+        else:
+            self._answer(route)
+
+    def _answer(self, route: Route):
         payload = route.request.post_data_json
-        self.requests.append(payload)
         body = self.body
         if body is None:
             body = [
@@ -65,40 +80,50 @@ def test_config_json_is_requested_once_per_page_load(page: Page):
 
     page.goto("/")
     # both consumers of the configuration have rendered
-    open_about(page)
-    expect(page.locator(".about-versions dd")).to_have_count(3)
-    expect(page.locator(".secrets-component .text-h5")).to_have_text("Test")
+    expect(page.locator("footer .version-pill")).to_have_count(3)
+    # the display name labels the environment in the header
+    expect(page.locator("header .env-badge")).to_contain_text("Test")
     # sealing needs the API URL from the configuration again
     seal_one_value(page)
 
     assert len(config_requests) == 1, config_requests
 
 
-def open_about(page: Page):
-    page.get_by_role("button", name="About").click()
-    expect(page.locator(".about-card")).to_be_visible()
-
-
-def test_about_popover_shows_the_versions(page: Page):
+def mock_application_properties(page: Page, kubeseal_version: str = "0.27.1"):
+    """Answer `GET /config` (there is no API behind the dev server)."""
     page.route(
-        "**/config", lambda route: route.fulfill(json={"kubesealVersion": "0.27.1"})
+        "**/config", lambda route: route.fulfill(json={"kubesealVersion": kubeseal_version})
     )
-    page.goto("/")
-    open_about(page)
 
-    card = page.locator(".about-card")
-    expect(card).to_contain_text("Kubeseal WebGui")
-    assert [" ".join(text.split()) for text in card.locator("dt").all_inner_texts()] == [
-        "Kubeseal",
-        "UI",
-        "API",
+
+def footer_versions(page: Page) -> list[tuple[str, str]]:
+    """The (label, value) pills of the footer, whitespace normalised."""
+    pills = page.locator("footer .version-pill")
+    return [
+        (
+            " ".join(pill.locator("dt").inner_text().split()),
+            " ".join(pill.locator("dd").inner_text().split()),
+        )
+        for pill in pills.all()
     ]
-    assert [" ".join(text.split()) for text in card.locator("dd").all_inner_texts()] == [
-        "0.27.1",
-        "2.1.0",
-        "2.1.0",
+
+
+def test_footer_shows_the_versions(page: Page):
+    mock_application_properties(page)
+    page.goto("/")
+
+    footer = page.locator("footer")
+    expect(footer).to_contain_text("Kubeseal WebGui")
+    expect(footer.locator(".version-pill")).to_have_count(3)
+    assert footer_versions(page) == [
+        ("kubeseal", "0.27.1"),
+        ("UI", "2.1.0"),
+        ("API", "2.1.0"),
     ]
-    repository = card.get_by_role("link", name="GitHub")
+    # loaded: a green dot, no message
+    expect(footer.locator(".status-dot--ok")).to_have_count(1)
+    expect(footer.locator(".status-message")).to_have_count(0)
+    repository = footer.get_by_role("link", name="GitHub")
     expect(repository).to_have_attribute(
         "href", "https://github.com/Jaydee94/kubeseal-webgui"
     )
@@ -106,32 +131,158 @@ def test_about_popover_shows_the_versions(page: Page):
     expect(repository).to_have_attribute("rel", "noopener noreferrer")
 
 
-def test_about_popover_reports_an_unreachable_api(page: Page):
+def test_footer_reports_an_unreachable_api(page: Page):
     page.route(
         "**/config",
         lambda route: route.fulfill(status=500, json={"detail": "Internal Server Error"}),
     )
     page.goto("/")
-    open_about(page)
 
-    expect(page.locator(".about-card")).to_contain_text(
-        "Could not retrieve application properties."
-    )
-    expect(page.locator(".about-versions")).to_have_count(0)
+    footer = page.locator("footer")
+    expect(footer).to_contain_text("Could not retrieve application properties.")
+    expect(footer.locator(".status-dot--error")).to_have_count(1)
+    expect(footer.locator(".status-dot--ok")).to_have_count(0)
+    expect(footer.locator(".version-pill")).to_have_count(0)
+    # the link to the repository does not depend on the properties
+    expect(footer.get_by_role("link", name="GitHub")).to_be_visible()
 
 
-def test_about_popover_works_with_the_keyboard(page: Page):
+def test_footer_shows_that_it_is_loading(page: Page):
+    pending: list[Route] = []
+
+    def hold(route: Route) -> None:
+        pending.append(route)
+
+    page.route("**/config", hold)
     page.goto("/")
-    page.get_by_role("button", name="About").focus()
-    page.keyboard.press("Enter")
-    expect(page.locator(".about-card")).to_be_visible()
-    page.keyboard.press("Escape")
-    expect(page.locator(".about-card")).to_have_count(0)
+
+    footer = page.locator("footer")
+    expect(footer).to_contain_text("Loading application properties.")
+    expect(footer.locator(".version-pill")).to_have_count(0)
+    expect(footer.locator(".status-dot")).to_have_count(0)
+
+    pending[0].fulfill(json={"kubesealVersion": "0.27.1"})
+    expect(footer.locator(".version-pill")).to_have_count(3)
+    expect(footer).not_to_contain_text("Loading application properties.")
 
 
-def test_nothing_is_fixed_to_the_bottom_of_the_page(page: Page):
+def test_footer_link_is_reachable_with_the_keyboard(page: Page):
+    page.goto("/")
+    link = page.locator("footer").get_by_role("link", name="GitHub")
+    # the last stop of the page when tabbing from the top
+    for _ in range(60):
+        page.keyboard.press("Tab")
+        if page.evaluate("document.activeElement === document.querySelector('footer a')"):
+            break
+    expect(link).to_be_focused()
+    # a native link: Enter follows it, no script needed
+    assert page.evaluate("document.activeElement.tagName") == "A"
+
+
+def test_header_has_no_about_button_any_more(page: Page):
+    page.goto("/")
+    expect(page.get_by_role("button", name="About")).to_have_count(0)
+    expect(page.locator(".about-card, .about-versions")).to_have_count(0)
+    # the theme toggle is still there
+    expect(dark_mode_toggle(page)).to_be_visible()
+
+
+def test_footer_is_part_of_the_page_not_fixed_to_the_viewport(page: Page):
+    mock_application_properties(page)
     page.goto("/")
     expect(page.locator(".v-footer")).to_have_count(0)
+    footer = page.locator("footer")
+    expect(footer).to_be_visible()
+    assert footer.evaluate("el => getComputedStyle(el).position") == "static"
+    content = page.locator(".v-main").bounding_box()
+    # below all the content, wherever the page is scrolled to
+    assert content["y"] + content["height"] <= footer.bounding_box()["y"] + 1
+    page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+    box = footer.bounding_box()
+    assert abs(box["y"] + box["height"] - page.viewport_size["height"]) <= 1, box
+    assert page.evaluate("document.documentElement.scrollWidth") <= page.viewport_size["width"]
+
+
+def test_footer_is_pushed_to_the_bottom_of_a_short_page(page: Page):
+    mock_application_properties(page)
+    page.set_viewport_size({"width": 1280, "height": 2000})
+    page.goto("/")
+    box = page.locator("footer").bounding_box()
+    assert abs(box["y"] + box["height"] - 2000) <= 1, box
+    # no scrollbar for a footer that is only pushed down
+    assert page.evaluate("document.documentElement.scrollHeight") <= 2000
+
+
+@pytest.mark.parametrize("width", [375, 1280])
+def test_footer_never_covers_content(page: Page, width: int):
+    page.set_viewport_size({"width": width, "height": 600})
+    page.goto("/")
+    # the scroll position does not matter for something that is not fixed
+    namespace_select(page)
+    secret_name(page)
+    add_secret_key_value(page)
+    page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+    footer = page.locator("footer")
+    encrypt = page.get_by_role("button", name="Encrypt")
+    expect(encrypt).to_be_visible()
+    assert not boxes_overlap(encrypt.bounding_box(), footer.bounding_box())
+    assert encrypt.bounding_box()["y"] + encrypt.bounding_box()["height"] <= footer.bounding_box()["y"]
+
+    SealingApi(page)
+    click_encrypt_button(page)
+    expect(page.locator("#sealed-secret-result")).to_be_visible()
+    page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+    footer_box = footer.bounding_box()
+    for name in ("Clear", "Edit Secrets"):
+        button = page.get_by_role("button", name=name).bounding_box()
+        assert not boxes_overlap(button, footer_box), name
+        assert button["y"] + button["height"] <= footer_box["y"], name
+    # still the last thing of the scrolled page
+    assert footer_box["y"] + footer_box["height"] <= 600 + 1
+    assert page.evaluate("document.documentElement.scrollWidth") <= width
+
+
+@pytest.mark.parametrize("width", [375, 1280])
+def test_footer_fits_the_screen_and_stacks_on_a_phone(page: Page, width: int):
+    mock_application_properties(page)
+    page.set_viewport_size({"width": width, "height": 800})
+    page.goto("/")
+    footer = page.locator("footer")
+    expect(footer.locator(".version-pill")).to_have_count(3)
+    assert page.evaluate("document.documentElement.scrollWidth") <= width
+    footer_box = footer.bounding_box()
+    brand = footer.locator(".app-footer__brand").bounding_box()
+    pills = footer.locator(".version-pills").bounding_box()
+    link = footer.get_by_role("link", name="GitHub").bounding_box()
+    for box in (brand, pills, link):
+        assert inside(box, footer_box)
+        assert box["x"] >= 0 and box["x"] + box["width"] <= width
+    assert not boxes_overlap(brand, link) and not boxes_overlap(brand, pills)
+    assert not boxes_overlap(pills, link)
+    if width < 600:
+        # the pills get a row of their own below brand and link
+        assert pills["y"] >= max(brand["y"] + brand["height"], link["y"] + link["height"]) - 1
+    else:
+        # one row: brand at the left, pills and link at the right
+        assert abs((pills["y"] + pills["height"] / 2) - (brand["y"] + brand["height"] / 2)) <= 12
+        assert link["x"] + link["width"] <= footer_box["x"] + footer_box["width"]
+
+
+def test_footer_follows_the_theme(page: Page):
+    mock_application_properties(page)
+    page.goto("/")
+    footer = page.locator("footer")
+    expect(footer.locator(".version-pill")).to_have_count(3)
+
+    def colours() -> tuple[str, str]:
+        return footer.evaluate(
+            "el => [getComputedStyle(el).color, getComputedStyle(el).borderTopColor]"
+        )
+
+    before = colours()
+    page.get_by_role("button", name=re.compile("^Switch to (dark|light) theme$")).click()
+    page.wait_for_timeout(300)
+    assert colours() != before
 
 
 def test_header_stays_opaque_while_scrolling(page: Page):
@@ -151,7 +302,10 @@ def test_header_stays_opaque_while_scrolling(page: Page):
 
     # light and dark each paint their own surface colour, both mostly opaque
     assert 0.7 <= alpha() <= 0.9
+    dark_before = is_dark(page)
     page.get_by_role("button", name="Switch to dark theme").click()
+    # the toggle really switched, so that the second check sees the other surface
+    assert is_dark(page) != dark_before
     assert 0.7 <= alpha() <= 0.9
     assert bar.evaluate("el => getComputedStyle(el).backdropFilter").startswith("blur(12px)")
 
@@ -393,6 +547,29 @@ def test_logo_links_to_the_start_page(app_page: Page):
     expect(logo).to_have_attribute("aria-label", "Kubeseal WebGui, start page")
 
 
+def test_dark_theme_has_a_logo_with_light_lettering(page: Page):
+    page.goto("/")
+    logo = page.locator("#logo-img")
+    light_src = logo.get_attribute("src")
+    assert "logo-2025-dark" not in light_src
+
+    page.get_by_role("button", name="Switch to dark theme").click()
+    expect(logo).to_have_attribute("src", re.compile("logo-2025-dark"))
+    # decorative: the link carries the name
+    expect(logo).to_have_attribute("alt", "")
+    # the image really loaded (an uncached file may still be downloading)
+    page.wait_for_function(
+        """() => {
+            const img = document.querySelector('#logo-img')
+            return img.src.includes('logo-2025-dark') && img.complete && img.naturalWidth > 0
+        }""",
+        timeout=5000,
+    )
+
+    page.get_by_role("button", name="Switch to light theme").click()
+    expect(logo).to_have_attribute("src", light_src)
+
+
 def test_ui_start(app_page: Page):
     assert app_page.title() == "Kubeseal WebGui - Sealed Secrets Management"
 
@@ -408,14 +585,14 @@ def test_secret_form_with_value(app_page: Page):
     add_secret_key_value(page)
     click_encrypt_button(page)
 
-    # exact text: this is what users copy into their manifests
+    # exact text: this is what users copy into their manifests (the strict
+    # scope has no annotations line)
     assert sealed_secret_yaml(page) == (
         "apiVersion: bitnami.com/v1alpha1\n"
         "kind: SealedSecret\n"
         "metadata:\n"
         f"  name: {SECRET_NAME}\n"
         f"  namespace: {namespace}\n"
-        "  annotations: {}\n"
         "spec:\n"
         "  encryptedData: \n"
         f"    {SECRET_KEY}: {SEALED_VALUE}"
@@ -430,7 +607,7 @@ def test_secret_form_with_value(app_page: Page):
     # one card per key with the sealed value
     key_card = page.locator(".secret-key-card")
     expect(key_card).to_have_count(1)
-    expect(key_card.locator(".v-card-title")).to_have_text(SECRET_KEY)
+    expect(key_card.locator(".secret-key-card__name")).to_have_text(SECRET_KEY)
     expect(key_card.locator("code")).to_have_text(SEALED_VALUE)
 
 
@@ -507,8 +684,7 @@ def test_failed_sealing_keeps_the_form_and_shows_the_error(app_page: Page):
     expect(page.locator("textarea#secretValue-0")).to_have_value(SECRET_VALUE)
 
     # a failed attempt does not lock the form: the user can simply try again
-    # (once the form has faded back in after the progress indicator)
-    expect(page.locator(".fade-enter-active, .fade-leave-active")).to_have_count(0)
+    expect(page.locator('button:has-text("Encrypt")')).to_be_enabled()
     api.status, api.body = 200, None
     click_encrypt_button(page)
     expect(page.locator("#sealed-secret-result")).to_be_visible()
@@ -524,23 +700,27 @@ def test_result_cards_show_their_title_above_the_content(app_page: Page):
     for card in (".result-card", ".secret-key-card"):
         title = page.locator(f"{card} .v-card-title").bounding_box()
         content = page.locator(f"{card} pre").bounding_box()
-        actions = page.locator(f"{card} .copy-btn").bounding_box()
+        buttons = page.locator(f"{card} .v-card-title .v-btn")
+        expect(page.locator(f"{card} .v-card-title .copy-btn")).to_have_count(1)
+        last = buttons.last.bounding_box()
         assert title["y"] + title["height"] <= content["y"], card
-        assert content["y"] + content["height"] <= actions["y"], card
+        # the buttons sit in the header, at its right
+        for button in buttons.all():
+            box = button.bounding_box()
+            assert title["y"] <= box["y"] and box["y"] + box["height"] <= title["y"] + title["height"], card
+        assert last["x"] + last["width"] >= title["x"] + title["width"] - 32, card
 
 
 def test_logo_and_header_buttons_do_not_overlap_on_a_phone(page: Page):
-    page.set_viewport_size({"width": 390, "height": 800})
+    page.set_viewport_size({"width": 375, "height": 800})
     page.goto("/")
     logo = page.locator("#logo-img").bounding_box()
-    about = page.get_by_role("button", name="About").bounding_box()
     toggle = dark_mode_toggle(page).bounding_box()
 
     assert logo["x"] >= 0
-    assert logo["x"] + logo["width"] <= about["x"]
-    assert about["x"] + about["width"] <= toggle["x"]
-    assert toggle["x"] + toggle["width"] <= 390
-    assert page.evaluate("document.documentElement.scrollWidth") <= 390
+    assert logo["x"] + logo["width"] <= toggle["x"]
+    assert toggle["x"] + toggle["width"] <= 375
+    assert page.evaluate("document.documentElement.scrollWidth") <= 375
 
 
 def test_clear_on_result_view_returns_to_an_empty_form(app_page: Page):
@@ -567,21 +747,37 @@ def test_copy_buttons_copy_the_displayed_text(app_page: Page):
     seal_one_value(page)
     displayed_yaml = sealed_secret_yaml(page)
 
-    copy_manifest = page.locator(".result-card .copy-btn")
+    # the first button of the manifest card (its label changes while it is copied)
+    copy_manifest = page.locator(".result-card .copy-btn").first
     copy_manifest.click()
 
     expect(page.locator(".v-snackbar").get_by_text("Sealed secret copied to clipboard!")).to_be_visible()
     assert page.evaluate("navigator.clipboard.readText()") == displayed_yaml
     # the button confirms the copy for a moment, then offers it again
+    expect(copy_manifest).to_have_text("Copied!")
     expect(copy_manifest.locator(".mdi-check")).to_have_count(1)
-    expect(copy_manifest.locator(".mdi-content-copy")).to_have_count(1, timeout=5000)
+    expect(copy_manifest).to_have_text("Copy", timeout=5000)
+    expect(copy_manifest.locator(".mdi-content-copy")).to_have_count(1)
 
-    page.locator(".secret-key-card .copy-btn").click()
+    page.locator(".secret-key-card").get_by_role("button", name=f"Copy {SECRET_KEY}").click()
 
     expect(
         page.locator(".v-snackbar").get_by_text(f'Secret key "{SECRET_KEY}" copied to clipboard!')
     ).to_be_visible()
     assert page.evaluate("navigator.clipboard.readText()") == SEALED_VALUE
+
+
+def test_copy_buttons_of_the_result_have_distinct_names(app_page: Page):
+    page = app_page
+    SealingApi(page, body=[
+        {"key": "ONE", "value": SEALED_VALUE},
+        {"key": "TWO", "value": SEALED_VALUE},
+    ])
+    seal_one_value(page)
+
+    # each button's name starts with its visible text "Copy" and says what it copies
+    for name in ("Copy manifest", "Copy ONE", "Copy TWO"):
+        expect(page.get_by_role("button", name=name, exact=True)).to_have_count(1)
 
 
 def test_copy_works_without_the_async_clipboard_api(page: Page):
@@ -594,7 +790,7 @@ def test_copy_works_without_the_async_clipboard_api(page: Page):
     seal_one_value(page)
     assert page.evaluate("navigator.clipboard === undefined")
 
-    copy_manifest = page.locator(".result-card .copy-btn")
+    copy_manifest = page.get_by_role("button", name="Copy manifest")
     expect(copy_manifest).to_be_visible()
     copy_manifest.click()
 
@@ -614,6 +810,439 @@ def test_edit_on_result_view_returns_to_the_filled_form(app_page: Page):
     expect(page.locator("textarea#secretValue-0")).to_have_value(SECRET_VALUE)
     expect(page.locator(".v-autocomplete__selection-text")).to_have_text(namespace)
     expect(page.locator('button:has-text("Encrypt")')).to_be_enabled()
+
+
+@pytest.mark.parametrize("reduced_motion", [True, False])
+def test_focus_follows_the_view_swaps(page: Page, reduced_motion: bool):
+    page.emulate_media(reduced_motion="reduce" if reduced_motion else "no-preference")
+    page.goto("/")
+    SealingApi(page)
+    # the first appearance of the form must not grab the focus
+    page.locator("input#namespaceSelection").wait_for()
+    assert page.evaluate("document.activeElement === document.body")
+
+    seal_one_value(page)
+    # the result is announced by its title, not left to the removed form
+    expect(page.locator(".result-card__title")).to_be_focused()
+
+    page.get_by_role("button", name="Edit Secrets").click()
+    expect(page.locator("input#namespaceSelection")).to_be_focused()
+
+    click_encrypt_button(page)
+    expect(page.locator(".result-card__title")).to_be_focused()
+    page.get_by_role("button", name="Clear").click()
+    expect(page.locator("input#namespaceSelection")).to_be_focused()
+
+
+def test_edit_focuses_the_secret_name_of_a_cluster_wide_secret(app_page: Page):
+    page = app_page
+    SealingApi(page)
+    page.locator("input#secretKey-0").wait_for()
+    select_scope(page, "cluster-wide")
+    secret_name(page)
+    add_secret_key_value(page)
+    click_encrypt_button(page)
+    expect(page.locator("#sealed-secret-result")).to_be_visible()
+
+    page.get_by_role("button", name="Edit Secrets").click()
+
+    # the namespace is disabled for this scope
+    expect(page.locator("#secretName")).to_be_focused()
+
+
+def test_form_stays_visible_while_sealing(app_page: Page):
+    page = app_page
+    api = SealingApi(page, hold=True)
+    namespace_select(page)
+    secret_name(page)
+    add_secret_key_value(page)
+    click_encrypt_button(page)
+
+    button = page.get_by_role("button", name="Sealing…")
+    expect(button).to_be_disabled()
+    expect(button).to_have_attribute("aria-busy", "true")
+    expect(button.locator(".mdi-lock-open-variant")).to_have_count(1)
+    # no spinner instead of the form: everything entered is still on screen
+    expect(page.locator(".v-progress-circular")).to_have_count(0)
+    expect(page.locator("#secretName")).to_be_visible()
+    expect(page.locator("input#secretKey-0")).to_have_value(SECRET_KEY)
+    expect(page.locator("textarea#secretValue-0")).to_be_visible()
+
+    # screen readers hear that something is happening (the form is inert)
+    expect(page.locator(".seal-status")).to_have_text("Sealing…")
+
+    # neither the button nor the shortcut seals a second time
+    page.keyboard.press("Control+Enter")
+    page.keyboard.press("Meta+Enter")
+    page.wait_for_timeout(200)
+    assert len(api.requests) == 1
+
+    # the sealed secret closes the lock, then the result replaces the form
+    api.release()
+    expect(button.locator(".mdi-lock")).to_have_count(1)
+    expect(page.locator("#sealed-secret-result")).to_be_visible()
+    expect(page.locator("#secretName")).to_have_count(0)
+    expect(page.locator(".seal-status")).to_have_text("Sealed secret ready.")
+    assert len(api.requests) == 1
+
+
+def test_failed_sealing_gives_the_form_back(app_page: Page):
+    page = app_page
+    api = SealingApi(page, status=500, body={"detail": "boom"}, hold=True)
+    namespace_select(page)
+    secret_name(page)
+    add_secret_key_value(page)
+    click_encrypt_button(page)
+    expect(page.get_by_role("button", name="Sealing…")).to_be_disabled()
+
+    api.release()
+
+    expect(page.get_by_role("button", name="Encrypt")).to_be_enabled()
+    expect(page.get_by_role("button", name="Encrypt")).to_be_focused()
+    expect(page.locator("#secretName")).to_be_editable()
+    assert len(api.requests) == 1
+
+
+# While Vue swaps the views it puts these classes on them for the duration of
+# the transition, and the form is a .modern-card that has a transition of its own,
+# so the probe is such a card. (The classes are on for a single frame when there
+# is no transition, too short to observe, hence the probe.)
+SWAP_PROBE = """(state) => {
+    const probe = document.createElement('div')
+    probe.className = `modern-card swap-${state}-active`
+    document.body.appendChild(probe)
+    const duration = getComputedStyle(probe).transitionDuration
+    probe.remove()
+    return duration
+}"""
+
+
+@pytest.mark.parametrize("reduced_motion", [True, False])
+def test_swap_to_the_result_is_instant_for_reduced_motion(page: Page, reduced_motion: bool):
+    page.emulate_media(reduced_motion="reduce" if reduced_motion else "no-preference")
+    page.goto("/")
+    SealingApi(page)
+    seal_one_value(page)
+
+    durations = {state: page.evaluate(SWAP_PROBE, state) for state in ("enter", "leave")}
+    if reduced_motion:
+        assert durations == {"enter": "0s", "leave": "0s"}
+    else:
+        assert durations == {"enter": "0.28s, 0.28s", "leave": "0.15s, 0.15s"}
+    # and the result is there to use at once
+    expect(page.get_by_role("button", name="Edit Secrets")).to_be_visible()
+
+
+def test_lock_snaps_shut_unless_motion_is_reduced(app_page: Page):
+    page = app_page
+    api = SealingApi(page, hold=True)
+    namespace_select(page)
+    secret_name(page)
+    add_secret_key_value(page)
+    click_encrypt_button(page)
+    page.get_by_role("button", name="Sealing…").wait_for()
+    api.release()
+
+    lock = page.locator(".encrypt-btn .mdi-lock.lock-snap")
+    expect(lock).to_have_count(1)
+    assert lock.evaluate("el => getComputedStyle(el).animationName") == "lock-snap"
+    page.emulate_media(reduced_motion="reduce")
+    assert lock.evaluate("el => getComputedStyle(el).animationName") == "none"
+
+
+def test_result_shows_a_summary_of_what_was_sealed(app_page: Page):
+    page = app_page
+    SealingApi(page)
+    namespace = seal_one_value(page)
+
+    summary = page.get_by_role("group", name="Summary")
+    expect(summary.locator(".v-chip")).to_have_text(["1 key", namespace, "strict scope"])
+
+
+def test_summary_counts_keys_and_names_cluster_wide(app_page: Page):
+    page = app_page
+    SealingApi(page)
+    select_scope(page, "cluster-wide")
+    add_secret_key_value(page)
+    page.get_by_role("button", name="Add key-value pair").click()
+    page.fill("input#secretKey-1", "second")
+    page.fill("textarea#secretValue-1", "value")
+    click_encrypt_button(page)
+
+    summary = page.get_by_role("group", name="Summary")
+    expect(summary.locator(".v-chip")).to_have_text(["2 keys", "cluster-wide"])
+
+
+def test_manifest_is_highlighted_and_wraps(app_page: Page):
+    page = app_page
+    long_value = "Ag" + "A" * 3000
+    SealingApi(page, body=[{"key": SECRET_KEY, "value": long_value}])
+    seal_one_value(page)
+
+    result = page.locator("#sealed-secret-result")
+    expect(result.locator(".yaml-key").first).to_have_text("apiVersion")
+    expect(result.locator(".yaml-key")).to_have_text(
+        ["apiVersion", "kind", "metadata", "name", "namespace", "spec", "encryptedData", SECRET_KEY]
+    )
+    expect(result.locator(".yaml-punctuation").first).to_have_text(":")
+    # the colours are there, and differ between keys and values
+    key_color = result.locator(".yaml-key").first.evaluate("el => getComputedStyle(el).color")
+    text_color = result.evaluate("el => getComputedStyle(el).color")
+    assert key_color != text_color
+    # still the plain manifest for selecting and copying
+    assert sealed_secret_yaml(page).endswith(f"    {SECRET_KEY}: {long_value}")
+    # long values wrap instead of scrolling sideways
+    box = page.locator(".result-card pre")
+    assert box.evaluate("el => el.scrollWidth <= el.clientWidth + 1")
+    assert page.evaluate("document.documentElement.scrollWidth") <= 1280
+
+
+def test_manifest_has_no_empty_annotations_for_the_strict_scope(app_page: Page):
+    page = app_page
+    SealingApi(page)
+    seal_one_value(page)
+    assert "annotations" not in sealed_secret_yaml(page)
+
+
+def test_download_saves_the_manifest_named_after_the_secret(app_page: Page):
+    page = app_page
+    SealingApi(page)
+    seal_one_value(page)
+    displayed_yaml = sealed_secret_yaml(page)
+
+    with page.expect_download() as download_info:
+        page.get_by_role("button", name="Download .yaml").click()
+
+    download = download_info.value
+    assert download.suggested_filename == f"{SECRET_NAME}.yaml"
+    with open(download.path(), encoding="utf-8") as saved:
+        assert saved.read() == displayed_yaml
+    expect(page.locator(".v-snackbar").get_by_text(f"Downloaded {SECRET_NAME}.yaml")).to_be_visible()
+
+
+def test_download_without_a_secret_name_is_called_sealed_secret(app_page: Page):
+    page = app_page
+    SealingApi(page)
+    select_scope(page, "cluster-wide")
+    add_secret_key_value(page)
+    click_encrypt_button(page)
+    expect(page.locator("#sealed-secret-result")).to_be_visible()
+
+    with page.expect_download() as download_info:
+        page.get_by_role("button", name="Download .yaml").click()
+
+    assert download_info.value.suggested_filename == "sealed-secret.yaml"
+
+
+@pytest.mark.parametrize("width", [375, 1280])
+def test_snackbars_stay_clear_of_the_result_actions(page: Page, width: int):
+    page.set_viewport_size({"width": width, "height": 800})
+    page.goto("/")
+    page.context.grant_permissions(["clipboard-read", "clipboard-write"])
+    SealingApi(page)
+    seal_one_value(page)
+
+    page.get_by_role("button", name="Copy manifest").click()
+    snackbar = page.locator(".v-snackbar__wrapper", has_text="Sealed secret copied")
+    expect(snackbar).to_be_visible()
+    # let its entry transition finish
+    page.wait_for_timeout(400)
+    toast = snackbar.bounding_box()
+    bar = page.locator(".glass-app-bar").bounding_box()
+
+    assert toast["y"] >= bar["y"] + bar["height"], "the snackbar is below the app bar"
+    assert toast["x"] >= 0 and toast["x"] + toast["width"] <= width
+    # the actions of the card are not covered either, at the top of the page
+    # (a page scrolled further puts any content under the snackbar)
+    page.evaluate("window.scrollTo(0, 0)")
+    page.wait_for_timeout(300)
+    for button in page.locator(".result-card .v-card-title .v-btn").all():
+        assert not boxes_overlap(toast, button.bounding_box()), button.inner_text()
+    page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+    page.wait_for_timeout(100)
+    for name in ("Clear", "Edit Secrets"):
+        button = page.get_by_role("button", name=name).bounding_box()
+        assert not boxes_overlap(toast, button), name
+    # and a click on them goes through
+    page.get_by_role("button", name="Edit Secrets").click()
+    expect(page.locator("#secretName")).to_be_visible()
+
+
+def test_an_error_replaces_a_success_message_instead_of_overlapping_it(app_page: Page):
+    page = app_page
+    drop_files(
+        page,
+        [
+            (".env", "A=1\nB=2", ""),
+            ("big.bin", "x" * (ONE_MEBIBYTE + 1), "application/octet-stream"),
+        ],
+    )
+
+    expect(page.locator(".v-snackbar").get_by_text("File size should be less than 1 MB!")).to_be_visible()
+    # the import itself is not affected
+    assert key_value_pairs(page) == [("A", "1"), ("B", "2")]
+    expect(page.locator(".v-snackbar").get_by_text("Imported 2 keys")).to_have_count(0)
+
+
+def boxes_overlap(a: dict, b: dict) -> bool:
+    return not (
+        a["x"] + a["width"] <= b["x"]
+        or b["x"] + b["width"] <= a["x"]
+        or a["y"] + a["height"] <= b["y"]
+        or b["y"] + b["height"] <= a["y"]
+    )
+
+
+def inside(box: dict, container: dict) -> bool:
+    return (
+        box["x"] >= container["x"] - 0.5
+        and box["x"] + box["width"] <= container["x"] + container["width"] + 0.5
+        and box["y"] >= container["y"] - 0.5
+        and box["y"] + box["height"] <= container["y"] + container["height"] + 0.5
+    )
+
+
+@pytest.mark.parametrize("width", [375, 1280])
+def test_result_fits_the_screen_with_long_keys_and_values(page: Page, width: int):
+    page.set_viewport_size({"width": width, "height": 800})
+    page.goto("/")
+    long_key = "A_VERY_LONG_KEY_" + "X" * 44
+    SealingApi(page, body=[
+        {"key": "POSTGRES_PASSWORD", "value": "Ag" + "B" * 2000},
+        {"key": long_key, "value": SEALED_VALUE},
+        {"key": "short", "value": SEALED_VALUE},
+    ])
+    namespace_select(page)
+    secret_name(page)
+    add_secret_key_value(page)
+    click_encrypt_button(page)
+    expect(page.locator("#sealed-secret-result")).to_be_visible()
+
+    assert page.evaluate("document.documentElement.scrollWidth") <= width
+    main_card = page.locator(".result-card").bounding_box()
+    assert main_card["x"] >= 0 and main_card["x"] + main_card["width"] <= width
+    for button in page.locator(".result-card .v-card-title .v-btn").all():
+        assert inside(button.bounding_box(), main_card), button.inner_text()
+
+    cards = page.locator(".secret-key-card")
+    expect(cards).to_have_count(3)
+    for card in cards.all():
+        card_box = card.bounding_box()
+        assert card_box["x"] >= 0 and card_box["x"] + card_box["width"] <= width
+        copy = card.get_by_role("button", name=re.compile("^Copy "))
+        expect(copy).to_be_visible()
+        assert inside(copy.bounding_box(), card_box), card.inner_text()
+    # a cut-off name is still available in full
+    expect(page.locator(".secret-key-card__name", has_text="A_VERY_LONG")).to_have_attribute(
+        "title", long_key
+    )
+
+
+LONG_SEALED_VALUE = "Ag" + "Bx9Qz" * 200
+
+
+def seal_with_values(page: Page, values: dict[str, str]):
+    SealingApi(page, body=[{"key": key, "value": value} for key, value in values.items()])
+    seal_one_value(page)
+
+
+def key_card(page: Page, key: str):
+    return page.locator(".secret-key-card").filter(
+        has=page.locator(".secret-key-card__name", has_text=key)
+    )
+
+
+@pytest.mark.parametrize("width", [375, 1280])
+def test_long_values_are_cut_to_an_excerpt_until_expanded(page: Page, width: int):
+    page.set_viewport_size({"width": width, "height": 800})
+    page.goto("/")
+    seal_with_values(page, {"LONG": LONG_SEALED_VALUE})
+    card = key_card(page, "LONG")
+    value = card.locator("pre")
+    toggle = card.get_by_role("button", name="Show all of LONG")
+    expect(toggle).to_have_text("Show all")
+    expect(toggle).to_have_attribute("aria-expanded", "false")
+
+    # visually about three lines (plus the padding of the block) ...
+    line_height = card.locator("code").evaluate("el => parseFloat(getComputedStyle(el).lineHeight)")
+    clamped = value.bounding_box()["height"]
+    assert clamped <= line_height * 3 + 40, clamped
+    card_height = card.bounding_box()["height"]
+    # ... while the whole value is still there to select and copy
+    assert card.locator("code").text_content() == LONG_SEALED_VALUE
+    assert card.locator("code").inner_text() == LONG_SEALED_VALUE
+
+    toggle = card.get_by_role("button", name="Show less of LONG")
+    card.get_by_role("button", name="Show all of LONG").click()
+    expect(toggle).to_have_text("Show less")
+    expect(toggle).to_have_attribute("aria-expanded", "true")
+    expanded = value.bounding_box()["height"]
+    assert expanded > clamped * 2, (expanded, clamped)
+    # the code is not cut off any more: its box holds all of its text
+    assert card.locator("code").evaluate("el => el.scrollHeight <= el.clientHeight + 1")
+    assert card.bounding_box()["height"] > card_height
+
+    toggle.click()
+    expect(card.get_by_role("button", name="Show all of LONG")).to_have_attribute(
+        "aria-expanded", "false"
+    )
+    assert value.bounding_box()["height"] == clamped
+    assert page.evaluate("document.documentElement.scrollWidth") <= width
+
+
+def test_short_values_have_no_toggle(app_page: Page):
+    page = app_page
+    seal_with_values(page, {"SHORT": SEALED_VALUE, "LONG": LONG_SEALED_VALUE})
+
+    expect(page.get_by_role("button", name=re.compile("^Show (all|less)"))).to_have_count(1)
+    expect(key_card(page, "SHORT").get_by_role("button", name=re.compile("^Show "))).to_have_count(0)
+    expect(key_card(page, "SHORT").locator("code")).to_have_text(SEALED_VALUE)
+
+
+def test_long_value_cards_have_the_same_height(page: Page):
+    page.set_viewport_size({"width": 1280, "height": 800})
+    page.goto("/")
+    seal_with_values(
+        page,
+        {"ONE": LONG_SEALED_VALUE, "TWO": "Ag" + "Kd7Lm" * 120, "THREE": "Ag" + "Qw3Rt" * 400},
+    )
+    heights = [card.bounding_box()["height"] for card in page.locator(".secret-key-card").all()]
+    assert max(heights) - min(heights) <= 2, heights
+
+
+def test_copy_copies_the_whole_value_not_the_excerpt(app_page: Page):
+    page = app_page
+    page.context.grant_permissions(["clipboard-read", "clipboard-write"])
+    seal_with_values(page, {"LONG": LONG_SEALED_VALUE})
+
+    key_card(page, "LONG").get_by_role("button", name="Copy LONG").click()
+
+    assert page.evaluate("navigator.clipboard.readText()") == LONG_SEALED_VALUE
+
+
+def test_the_toggle_follows_the_width_of_the_card(page: Page):
+    # fits three lines on a desktop, needs more on a phone
+    page.set_viewport_size({"width": 1280, "height": 800})
+    page.goto("/")
+    seal_with_values(page, {"MEDIUM": "Ag" + "Bx9Qz" * 30})
+    toggle = key_card(page, "MEDIUM").get_by_role("button", name=re.compile("^Show "))
+    expect(toggle).to_have_count(0)
+
+    page.set_viewport_size({"width": 375, "height": 800})
+    expect(toggle).to_have_count(1)
+    page.set_viewport_size({"width": 1280, "height": 800})
+    expect(toggle).to_have_count(0)
+
+
+def test_a_single_key_card_is_centred(app_page: Page):
+    page = app_page
+    SealingApi(page)
+    seal_one_value(page)
+
+    card = page.locator(".secret-key-card").bounding_box()
+    area = page.locator(".key-cards").bounding_box()
+    left, right = card["x"] - area["x"], area["x"] + area["width"] - (card["x"] + card["width"])
+    assert abs(left - right) <= 2
 
 
 def test_removing_a_row_keeps_the_other_rows_intact(app_page: Page):
@@ -785,11 +1414,15 @@ def test_value_is_masked_until_revealed(app_page: Page):
     expect(value).to_have_value("line one\nline two")
     assert value.evaluate(f"(element) => {text_security}") == "disc"
 
+    # the name stays the same, only the pressed state tells what it does
     reveal = page.get_by_role("button", name="Show value")
     expect(reveal).to_have_attribute("aria-pressed", "false")
     reveal.click()
+    expect(reveal).to_have_attribute("aria-pressed", "true")
+    expect(reveal).to_have_attribute("aria-label", "Show value")
     assert value.evaluate(f"(element) => {text_security}") == "none"
-    page.get_by_role("button", name="Hide value").click()
+    reveal.click()
+    expect(reveal).to_have_attribute("aria-pressed", "false")
     assert value.evaluate(f"(element) => {text_security}") == "disc"
 
     # sealing sends what was typed, not what is displayed
@@ -814,7 +1447,7 @@ def test_rows_are_cards_and_all_actions_fit_on_a_phone(page: Page):
         button = page.get_by_role("button", name=name)
         expect(button).to_be_visible()
         box = button.bounding_box()
-        assert 0 <= box["x"] and box["x"] + box["width"] <= 375, name
+        assert box["x"] >= 0 and box["x"] + box["width"] <= 375, name
     assert page.evaluate("document.documentElement.scrollWidth") <= 375
 
     # every pair is a bordered card numbered in its header, key above value
@@ -869,7 +1502,11 @@ def test_tab_goes_through_a_row_from_key_to_remove(page: Page, width: int):
 def test_paperclip_explains_why_it_is_off(app_page: Page):
     page = app_page
     choosers = []
-    page.on("filechooser", lambda chooser: choosers.append(chooser))
+
+    def remember(chooser) -> None:
+        choosers.append(chooser)
+
+    page.on("filechooser", remember)
     hint = "Clear the value to upload a file instead"
     paperclip = page.get_by_role("button", name="Upload file as value")
     expect(paperclip).to_have_attribute("aria-disabled", "false")
@@ -966,6 +1603,51 @@ def test_ctrl_enter_does_nothing_until_the_form_is_ready(app_page: Page):
     assert len(api.requests) == 1
 
 
+def test_ctrl_enter_on_an_incomplete_form_shows_what_is_missing(app_page: Page):
+    page = app_page
+    api = SealingApi(page)
+    page.locator("input#secretKey-0").wait_for()
+    # nothing was visited, so nothing complains yet
+    expect(page.locator(".v-messages__message")).to_have_count(0)
+
+    page.locator("input#secretKey-0").press("Control+Enter")
+
+    assert api.requests == []
+    # the namespace, name, key and value that are missing say so...
+    expect(page.locator(".v-input--error")).to_have_count(4)
+    for field in ("input#namespaceSelection", "#secretName", "input#secretKey-0", "textarea#secretValue-0"):
+        expect(page.locator(f".v-input:has({field}) .v-messages__message")).to_have_text(
+            "Must not be empty"
+        )
+    # ...and the first of them is where the user continues
+    expect(page.locator("input#namespaceSelection")).to_be_focused()
+
+    # filled in, the errors go and the shortcut seals
+    namespace_select(page)
+    secret_name(page)
+    add_secret_key_value(page)
+    expect(page.locator(".v-input--error")).to_have_count(0)
+    page.keyboard.press("Control+Enter")
+    expect(page.locator("#sealed-secret-result")).to_be_visible()
+
+
+def test_ctrl_enter_on_an_invalid_form_shows_the_invalid_field(app_page: Page):
+    page = app_page
+    api = SealingApi(page)
+    namespace_select(page)
+    add_secret_key_value(page)
+    # a second row that was never filled in
+    page.get_by_role("button", name="Add key-value pair").click()
+    expect(page.locator("input#secretKey-1")).to_be_focused()
+    expect(page.locator(".v-messages__message")).to_have_count(0)
+    page.locator("input#secretKey-1").press("Control+Enter")
+
+    assert api.requests == []
+    expect(page.locator(".v-input--error")).to_have_count(3)
+    expect(page.locator("#secretName")).to_be_visible()
+    expect(page.locator("#secretName")).to_be_focused()
+
+
 def test_plain_enter_adds_a_line_to_the_value_and_does_not_seal(app_page: Page):
     page = app_page
     api = SealingApi(page)
@@ -987,7 +1669,8 @@ def test_ctrl_enter_is_ignored_outside_the_form(app_page: Page):
     namespace_select(page)
     secret_name(page)
     add_secret_key_value(page)
-    open_about(page)
+    # focus on the page outside the form
+    dark_mode_toggle(page).focus()
     page.keyboard.press("Control+Enter")
     page.wait_for_timeout(500)
     assert api.requests == []
@@ -1115,6 +1798,23 @@ def test_dropped_pairs_are_appended_to_filled_rows(app_page: Page):
     expect(page.locator("div[role='status']")).to_have_text(
         re.compile(r"Imported 2 keys from prod\.env")
     )
+
+
+def test_dropped_pairs_replace_every_blank_row(app_page: Page):
+    page = app_page
+    # "Add key-value pair" twice leaves three blank rows behind
+    add_pair = page.get_by_role("button", name="Add key-value pair")
+    add_pair.click()
+    add_pair.click()
+    expect(page.locator(".secret-row")).to_have_count(3)
+
+    drop_files(page, [("prod.env", "ONE=1\nTWO=2", "")])
+
+    assert key_value_pairs(page) == [("ONE", "1"), ("TWO", "2")]
+    # nothing incomplete is left, so the form can be sealed once it is addressed
+    namespace_select(page)
+    secret_name(page)
+    expect(page.locator('button:has-text("Encrypt")')).to_be_enabled()
 
 
 def test_dropped_keys_go_through_the_duplicate_check(app_page: Page):
@@ -1604,8 +2304,14 @@ def test_scope_is_a_segmented_control_with_a_description(app_page: Page):
     # a labelled group for assistive technology
     group = page.get_by_role("group", name="Scope")
     expect(group).to_have_count(1)
+    # at the top, full width, above the namespace and the secret name
+    scope = page.locator(".scope-picker").bounding_box()
+    namespace = page.locator("input#namespaceSelection").bounding_box()
+    name = page.locator("#secretName").bounding_box()
+    assert scope["y"] + scope["height"] <= min(namespace["y"], name["y"])
+    assert scope["width"] > namespace["width"] + name["width"]
     buttons = group.locator("button")
-    expect(buttons).to_have_text(["strict", "cluster-wide", "namespace-wide"])
+    expect(buttons).to_have_text(["strict", "namespace-wide", "cluster-wide"])
     description = page.locator("#scopeDescription")
     expect(description).to_have_text("Bound to this name and namespace")
     select_scope(page, "namespace-wide")
@@ -1615,6 +2321,28 @@ def test_scope_is_a_segmented_control_with_a_description(app_page: Page):
     # one scope always stays selected
     page.locator('.scope-toggle button[data-scope="cluster-wide"]').click()
     expect(page.locator('.scope-toggle button[aria-pressed="true"]')).to_have_count(1)
+
+
+def test_action_bar_says_what_encrypt_will_seal(app_page: Page):
+    page = app_page
+    bar = page.locator(".action-bar")
+    expect(bar).to_contain_text("Please complete all required fields to encrypt")
+    namespace = namespace_select(page)
+    secret_name(page)
+    add_secret_key_value(page)
+    expect(bar).to_contain_text("Ready to seal")
+    expect(bar.locator(".meta")).to_have_text(f"1 key · {namespace} · strict")
+    # cluster-wide secrets have no namespace
+    select_scope(page, "cluster-wide")
+    expect(bar.locator(".meta")).to_have_text("1 key · cluster-wide")
+
+
+def test_header_is_transparent_until_content_scrolls_under_it(page: Page):
+    page.goto("/")
+    bar = page.locator(".glass-app-bar")
+    expect(bar).not_to_have_class(re.compile("glass-app-bar--scrolled"))
+    color = bar.evaluate("el => getComputedStyle(el).backgroundColor")
+    assert color in ("transparent", "rgba(0, 0, 0, 0)"), color
 
 
 def test_form_header_fits_a_phone(page: Page):

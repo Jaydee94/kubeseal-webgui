@@ -1,12 +1,53 @@
 <template>
   <div>
-    <v-row>
-      <v-col cols="12" sm="6" md="6">
+    <!-- First, because it decides what the fields below need: the namespace
+         and the secret name. -->
+    <div class="scope-picker mb-5">
+      <div class="d-flex align-center mb-2">
+        <span id="scopeLabel" class="eyebrow">Scope</span>
+        <InfoTooltip class="ml-1 info-icon">
+          <span
+            >Specify the scope of the secret.<br /><i
+              >The scope decides where the sealed secret can be unsealed.</i
+            ></span
+          >
+        </InfoTooltip>
+      </div>
+      <div class="scope-picker__row">
+        <v-btn-toggle
+          :model-value="scope"
+          mandatory
+          variant="text"
+          color="primary"
+          density="comfortable"
+          class="scope-toggle"
+          role="group"
+          aria-labelledby="scopeLabel"
+          @update:model-value="$emit('update:scope', $event)"
+        >
+          <v-btn
+            v-for="option in SCOPES"
+            :key="option"
+            :value="option"
+            :data-scope="option"
+            :aria-pressed="scope === option"
+            class="scope-button"
+            >{{ option }}</v-btn
+          >
+        </v-btn-toggle>
+        <div id="scopeDescription" class="scope-description text-body-2" aria-live="polite">
+          {{ SCOPE_DESCRIPTIONS[scope] }}
+        </div>
+      </div>
+    </div>
+    <v-row dense class="target-fields">
+      <v-col cols="12" sm="6">
         <v-text-field
           v-if="newNamespace"
           id="namespaceSelection"
           :model-value="namespaceName"
           label="New namespace name"
+          density="comfortable"
           autocomplete="off"
           clearable
           variant="outlined"
@@ -18,7 +59,7 @@
           @update:model-value="$emit('update:namespaceName', $event ?? '')"
         >
           <template #append-inner>
-            <InfoTooltip class="ml-2">
+            <InfoTooltip class="ml-2 info-icon">
               <span
                 >Name of a namespace that does not exist yet.<br /><i
                   >The secret is sealed for exactly this name, so double-check it for typos.</i
@@ -33,13 +74,17 @@
           :model-value="namespaceName"
           :items="namespaceItems"
           label="Namespace name"
+          density="comfortable"
           autocomplete="off"
           auto-select-first
           variant="outlined"
           class="modern-input"
           color="primary"
           :disabled="!namespaceNeeded"
+          :error-messages="visibleNamespaceError"
+          hide-details="auto"
           @update:model-value="$emit('update:namespaceName', $event)"
+          @blur="namespaceTouched = true"
         >
           <!-- `item` is the namespace name (Vuetify 4 passes the raw item). -->
           <template #item="{ props: itemProps, item }">
@@ -64,7 +109,7 @@
             </v-list-item>
           </template>
           <template #append-inner>
-            <InfoTooltip class="ml-2">
+            <InfoTooltip class="ml-2 info-icon">
               Select the target namespace where the sealed secret will be deployed.
             </InfoTooltip>
           </template>
@@ -81,11 +126,12 @@
           @update:model-value="$emit('update:newNamespace', !!$event)"
         />
       </v-col>
-      <v-col cols="12" sm="6" md="6">
+      <v-col cols="12" sm="6">
         <v-text-field
           id="secretName"
           :model-value="secretName"
           :label="secretNameRequired ? 'Secret name' : 'Secret name (optional)'"
+          density="comfortable"
           autocomplete="off"
           clearable
           variant="outlined"
@@ -100,7 +146,7 @@
           @blur="secretNameTouched = true"
         >
           <template #append-inner>
-            <InfoTooltip class="ml-2">
+            <InfoTooltip class="ml-2 info-icon">
               <span
                 >Specify name of the secret.<br /><i
                   >The secret name must be of type: DNS Subdomain.</i
@@ -127,43 +173,6 @@
         </v-btn>
       </v-col>
     </v-row>
-    <div class="scope-picker mb-2">
-      <div class="d-flex align-center mb-1">
-        <span id="scopeLabel" class="text-subtitle-2">Scope</span>
-        <InfoTooltip class="ml-2">
-          <span
-            >Specify the scope of the secret.<br /><i
-              >The scope decides where the sealed secret can be unsealed.</i
-            ></span
-          >
-        </InfoTooltip>
-      </div>
-      <v-btn-toggle
-        :model-value="scope"
-        mandatory
-        divided
-        variant="outlined"
-        color="primary"
-        density="comfortable"
-        class="scope-toggle"
-        role="group"
-        aria-labelledby="scopeLabel"
-        @update:model-value="$emit('update:scope', $event)"
-      >
-        <v-btn
-          v-for="option in SCOPES"
-          :key="option"
-          :value="option"
-          :data-scope="option"
-          :aria-pressed="scope === option"
-          class="scope-button"
-          >{{ option }}</v-btn
-        >
-      </v-btn-toggle>
-      <div id="scopeDescription" class="text-body-2 text-medium-emphasis mt-2" aria-live="polite">
-        {{ SCOPE_DESCRIPTIONS[scope] }}
-      </div>
-    </div>
   </div>
 </template>
 
@@ -256,6 +265,23 @@ const visibleSecretNameError = computed(() => {
   )
 })
 
+// The namespace of the list is never invalid, only missing: reported after the
+// field was left or Encrypt was tried (a new namespace has its own rules).
+const namespaceTouched = ref(false)
+
+const visibleNamespaceError = computed(() =>
+  namespaceTouched.value && namespaceNeeded.value && !props.namespaceName ? 'Must not be empty' : ''
+)
+
+// What the fields would show after they were visited, for a form that the user
+// tried to submit without having visited them all.
+defineExpose({
+  showErrors() {
+    secretNameTouched.value = true
+    namespaceTouched.value = true
+  }
+})
+
 // Offer the closest valid name for an invalid one, but only once the field was
 // left: while typing, every half-finished name ("my-secret-") is invalid.
 const secretNameSuggestion = computed(() =>
@@ -288,11 +314,61 @@ function favoriteToggleLabel(namespace) {
 </script>
 
 <style scoped>
-/* The three buttons have to fit a phone: shrink their text, then wrap. */
+.scope-picker__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+/* A segmented control: a recessed track with the chosen option raised. */
 .scope-toggle {
   max-width: 100%;
   height: auto;
   flex-wrap: wrap;
+  padding: 3px;
+  gap: 2px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--inset-bg);
+}
+
+.scope-button {
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  padding-inline: 12px;
+  min-width: 0;
+  /* A comfortable touch target. */
+  min-height: 32px;
+  border-radius: 7px !important;
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+}
+
+.scope-button.v-btn--active {
+  background: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-primary));
+  box-shadow:
+    0 1px 2px rgba(16, 24, 40, 0.12),
+    0 0 0 1px var(--line);
+}
+
+.v-theme--dark .scope-button.v-btn--active {
+  background: rgba(255, 255, 255, 0.09);
+}
+
+/* The raised look says "chosen"; Vuetify's tint on top would muddy it. */
+.scope-button.v-btn--active :deep(.v-btn__overlay) {
+  opacity: 0;
+}
+
+.scope-description {
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+}
+
+.info-icon {
+  opacity: 0.7;
 }
 
 /* A message that goes away (the name became valid) must go at once: Vuetify
@@ -300,16 +376,6 @@ function favoriteToggleLabel(namespace) {
    message that sticks around. This also covers reduced motion. */
 :deep(.v-messages__message.slide-y-transition-leave-active) {
   transition: none;
-}
-
-.scope-button {
-  text-transform: none;
-  letter-spacing: normal;
-  font-size: 0.8125rem;
-  padding-inline: 10px;
-  min-width: 0;
-  /* A comfortable touch target. */
-  min-height: 34px;
 }
 
 /* Same emphasis and distance to the title as a plain prepend icon. */

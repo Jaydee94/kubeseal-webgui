@@ -1,3 +1,4 @@
+import { ref } from 'vue'
 import { FILE_TOO_LARGE_MESSAGE } from '@/constants'
 import { isDotenvFileName, looksLikeDotenv, parseDotenv } from '@/utils/dotenv'
 import { createLogger } from '@/utils/logger'
@@ -14,11 +15,26 @@ const log = createLogger('drop')
  * @param {import('vue').Ref<object[]>} options.entries the rows of the list
  * @param {(message: string) => void} options.onSuccess shows what was imported
  * @param {(message: string) => void} options.onError shows what was refused
- * @param {(entries: object[]) => void} [options.onImported] gets the new rows,
- *   once they are in the list
+ * @param {(entries: object[]) => void} [options.onImported] gets the new rows
+ *   (only those), once they are in the list
+ * @returns {{ importDroppedFiles: (files: File[]) => Promise<void>,
+ *   pendingImports: import('vue').Ref<number> }}
  */
 export function useDroppedFiles({ entries, onSuccess, onError, onImported = () => {} }) {
+  // Drops whose files are still being read. Sealing waits for them, or it
+  // would seal the list as it was before the import.
+  const pendingImports = ref(0)
+
   async function importDroppedFiles(files) {
+    pendingImports.value++
+    try {
+      await importFiles(files)
+    } finally {
+      pendingImports.value--
+    }
+  }
+
+  async function importFiles(files) {
     const imported = []
     const importedFrom = []
     let fileCount = 0
@@ -42,9 +58,10 @@ export function useDroppedFiles({ entries, onSuccess, onError, onImported = () =
     }
 
     if (imported.length > 0) {
-      // A fresh form starts with one blank row that the import should replace
-      // instead of leaving it behind.
-      const keep = entries.value.length === 1 && isEntryBlank(entries.value[0]) ? [] : entries.value
+      // Blank rows (the one of a fresh form, or any "Add pair" that was never
+      // filled) are placeholders that the import replaces instead of leaving
+      // behind, where they would keep Encrypt disabled.
+      const keep = entries.value.filter((entry) => !isEntryBlank(entry))
       entries.value = [...keep, ...imported]
       onImported(imported)
     }
@@ -55,7 +72,7 @@ export function useDroppedFiles({ entries, onSuccess, onError, onImported = () =
     if (summary) onSuccess(summary)
   }
 
-  return { importDroppedFiles }
+  return { importDroppedFiles, pendingImports }
 }
 
 // The pairs of a file that is a .env file, `null` if it is not one. A file is

@@ -15,13 +15,12 @@
       </div>
     </div>
 
-    <v-divider class="my-6" />
-
     <!-- Wraps, so that every action stays reachable on a narrow screen. -->
-    <div class="d-flex flex-wrap justify-space-between align-center ga-2 mb-3">
-      <div class="d-flex align-center">
-        <v-card-subtitle class="text-subtitle-2 px-0 mr-2">Secret Key-Value Pairs</v-card-subtitle>
-        <InfoTooltip>
+    <div class="panel__header justify-space-between mb-4">
+      <div class="d-flex align-center ga-2">
+        <h2 id="pairsTitle" class="panel__title">Key-value pairs</h2>
+        <span class="count-badge" aria-hidden="true">{{ entries.length }}</span>
+        <InfoTooltip class="info-icon">
           <span
             >Specify sensitive value and corresponding key of the secret.<br /><i
               >The key must be of type: DNS Subdomain</i
@@ -29,14 +28,13 @@
           >
         </InfoTooltip>
       </div>
-      <div class="d-flex flex-wrap align-center">
+      <div class="d-flex flex-wrap align-center ga-2">
         <slot name="header-actions" />
         <v-btn
-          prepend-icon="mdi-delete-sweep"
+          prepend-icon="mdi-delete-sweep-outline"
           variant="text"
-          color="error"
           size="small"
-          class="text-caption"
+          class="btn-ghost result-action remove-all"
           @click="$emit('remove-all')"
         >
           Remove All
@@ -57,21 +55,15 @@
       @remove="$emit('remove-entry', entry.id)"
     />
 
-    <v-row>
-      <v-col>
-        <v-btn
-          block
-          variant="outlined"
-          style="border-style: dashed; border-width: 2px; opacity: 0.8"
-          prepend-icon="mdi-plus"
-          color="primary"
-          class="mb-4"
-          @click="$emit('add-entry')"
-        >
-          Add key-value pair
-        </v-btn>
-      </v-col>
-    </v-row>
+    <v-btn
+      block
+      variant="text"
+      prepend-icon="mdi-plus"
+      class="add-pair mt-1"
+      @click="$emit('add-entry')"
+    >
+      Add key-value pair
+    </v-btn>
   </div>
 </template>
 
@@ -165,12 +157,34 @@ function droppedFiles(dataTransfer) {
   position: relative;
 }
 
+.info-icon {
+  opacity: 0.7;
+}
+
+.remove-all:hover {
+  color: rgb(var(--v-theme-error));
+}
+
+/* A quiet dashed slot where the next pair would go. */
+.add-pair.v-btn {
+  height: 44px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-md);
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+  font-weight: 500;
+}
+
+.add-pair.v-btn:hover {
+  border-color: rgba(var(--v-theme-primary), 0.6);
+  color: rgb(var(--v-theme-primary));
+}
+
 /* Covers the section without catching the pointer, so the drag events keep
    going to the rows below. */
 .drop-zone {
   position: absolute;
   /* A little wider than the rows, so the border does not touch their fields. */
-  inset: 0 -8px;
+  inset: -8px -12px;
   z-index: 2;
   display: flex;
   justify-content: center;

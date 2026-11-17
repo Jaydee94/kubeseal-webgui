@@ -4,7 +4,6 @@
     variant="text"
     class="dark-mode-toggle"
     :aria-label="label"
-    data-testid="dark-mode-toggle"
     @click="darkMode = !darkMode"
   >
     <!-- The keyed icon swaps with a short rotate/fade instead of jumping. -->

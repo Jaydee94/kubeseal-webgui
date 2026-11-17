@@ -1,66 +1,272 @@
-/* Modern Design System - Global Styles */
+/* Design system: calm slate surfaces, hairline borders, one accent per job.
+   Blue (primary) is for actions, orange (secondary) for attention, everything
+   else is neutral so that the content stands out. */
 
-/* CSS Custom Properties */
 :root {
-  /* Gradients */
-  --gradient-primary: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
-  --gradient-secondary: linear-gradient(135deg, #fd7e14 0%, #e8590c 100%);
+  /* Corners */
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-full: 9999px;
 
-  /* Glassmorphism - Minimal */
-  --glass-border: rgba(255, 255, 255, 0.1);
+  /* Hairlines and panels follow the theme's border colour (dark lines on
+     light, light lines on dark), so they need no override per theme. */
+  --line: rgba(var(--v-border-color), var(--v-border-opacity));
+  --line-strong: rgba(var(--v-border-color), calc(var(--v-border-opacity) * 1.8));
+  --panel-bg: rgba(var(--v-theme-surface), 0.86);
+  --panel-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 6px 24px -12px rgba(16, 24, 40, 0.12);
+  --panel-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  --inset-bg: rgba(var(--v-theme-on-surface), 0.035);
 
-  /* Shadows - Minimal */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.08);
+  --font-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
 
-  /* Transitions */
+  /* Motion */
   --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-base: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
-  /* Border Radius */
-  --radius-md: 12px;
-  --radius-full: 9999px;
+  /* Page backdrop: a faint wash of the two brand colours. */
+  --backdrop:
+    radial-gradient(1100px 520px at 0% -8%, rgba(10, 108, 255, 0.07), transparent 70%),
+    radial-gradient(900px 480px at 100% -4%, rgba(240, 122, 26, 0.06), transparent 70%);
 }
 
-/* Dark Mode Overrides - Minimal */
 .v-theme--dark {
-  --glass-border: rgba(255, 255, 255, 0.08);
+  --panel-bg: rgba(var(--v-theme-surface), 0.62);
+  --panel-shadow: 0 1px 0 rgba(0, 0, 0, 0.3), 0 12px 32px -16px rgba(0, 0, 0, 0.6);
+  --panel-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --inset-bg: rgba(0, 0, 0, 0.22);
+  --backdrop:
+    radial-gradient(1100px 560px at 0% -10%, rgba(76, 157, 255, 0.11), transparent 70%),
+    radial-gradient(1000px 560px at 100% 0%, rgba(255, 148, 71, 0.09), transparent 70%);
 }
 
-/* Frosted glass: opaque enough that scrolled content is blurred beyond reading,
-   with the theme's own surface colour so it suits light and dark alike. */
+.v-application {
+  background-image: var(--backdrop) !important;
+  background-attachment: fixed !important;
+  background-repeat: no-repeat !important;
+}
+
+/* ------------------------------------------------------------------ */
+/* Header                                                              */
+/* ------------------------------------------------------------------ */
+
+/* Frosted glass: opaque enough that scrolled content is blurred beyond
+   reading, in the page's own colour so that it blends into the backdrop. */
 .glass-app-bar {
-  background: rgba(var(--v-theme-surface), 0.8) !important;
+  /* Transparent at the top of the page, so the bar is one with the backdrop;
+     frosted as soon as content scrolls underneath. */
+  background: transparent !important;
   backdrop-filter: blur(12px) saturate(1.4);
   -webkit-backdrop-filter: blur(12px) saturate(1.4);
-  border-bottom: 1px solid var(--glass-border) !important;
-  transition: box-shadow var(--transition-base);
+  border-bottom: 1px solid transparent !important;
+  /* No fade of the background: content must never scroll under a bar that
+     is still half transparent. */
+  transition:
+    box-shadow var(--transition-base),
+    border-color var(--transition-base);
 }
 
-/* Set by App.vue once the page is scrolled. */
+/* Set by App.vue once the page is scrolled: only then does the bar need a
+   line to set it apart from what is underneath. */
 .glass-app-bar--scrolled {
-  box-shadow: var(--shadow-md) !important;
+  background: rgba(var(--v-theme-background), 0.78) !important;
+  border-bottom-color: var(--line) !important;
+  box-shadow: 0 4px 16px -8px rgba(0, 0, 0, 0.18) !important;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .glass-app-bar {
-    transition: none;
+/* ------------------------------------------------------------------ */
+/* Building blocks                                                     */
+/* ------------------------------------------------------------------ */
+
+/* The one container of the layout: a quiet card with a hairline. */
+.panel {
+  background: var(--panel-bg) !important;
+  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  border: 1px solid var(--line) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--panel-shadow), var(--panel-highlight) !important;
+  color: rgb(var(--v-theme-on-surface));
+}
+
+.panel__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+}
+
+.panel__title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  margin: 0;
+}
+
+/* Small capitals above a value or a group: "SCOPE", "MANIFEST". */
+.eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+}
+
+/* Secondary facts set in monospace: "2 keys · payments · strict". */
+.meta {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+}
+
+/* A count next to a title. */
+.count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: rgba(var(--v-theme-on-surface), 0.07);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(var(--v-theme-on-surface), var(--v-high-emphasis-opacity));
+}
+
+/* Ghost buttons: hairline, no fill, like secondary toolbar actions. */
+.btn-ghost.v-btn {
+  border: 1px solid var(--line-strong);
+  background: rgba(var(--v-theme-surface), 0.4);
+}
+
+.v-theme--dark .btn-ghost.v-btn {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+kbd {
+  display: inline-block;
+  padding: 1px 6px;
+  border: 1px solid var(--line-strong);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: rgba(var(--v-theme-on-surface), 0.04);
+  font-family: var(--font-mono);
+  font-size: 0.75em;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------ */
+/* Form fields                                                         */
+/* ------------------------------------------------------------------ */
+
+.modern-input .v-field {
+  border-radius: var(--radius-md) !important;
+  background: rgba(var(--v-theme-surface), 0.55);
+  transition:
+    box-shadow var(--transition-fast),
+    background var(--transition-fast);
+}
+
+.v-theme--dark .modern-input .v-field {
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.modern-input .v-field__outline {
+  --v-field-border-opacity: 0.14;
+}
+
+.modern-input .v-field:hover .v-field__outline {
+  --v-field-border-opacity: 0.28;
+}
+
+/* A soft focus ring in the primary colour around the field. */
+.modern-input .v-field--focused {
+  box-shadow: 0 0 0 3px rgba(var(--v-theme-primary), 0.16);
+}
+
+.modern-input .v-field--error.v-field--focused {
+  box-shadow: 0 0 0 3px rgba(var(--v-theme-error), 0.16);
+}
+
+/* ------------------------------------------------------------------ */
+/* Primary action                                                      */
+/* ------------------------------------------------------------------ */
+
+.encrypt-btn {
+  font-size: 0.9375rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0 !important;
+  border-radius: var(--radius-md) !important;
+  height: 44px !important;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.18) inset,
+    0 6px 16px -6px rgba(var(--v-theme-primary), 0.55) !important;
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast),
+    filter var(--transition-fast) !important;
+}
+
+.encrypt-btn .v-icon {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.encrypt-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.06);
+}
+
+.encrypt-btn:hover .v-icon {
+  transform: rotate(-10deg);
+}
+
+.encrypt-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.encrypt-btn:disabled {
+  box-shadow: none !important;
+}
+
+/* While sealing the button is disabled, but it keeps its look: it is busy,
+   not unavailable. */
+.encrypt-btn--sealing {
+  cursor: progress;
+}
+
+.encrypt-btn--sealing .v-btn__overlay {
+  opacity: 0 !important;
+}
+
+/* The lock closes with a small snap. */
+.lock-snap {
+  animation: lock-snap 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes lock-snap {
+  0% {
+    transform: scale(1.5) rotate(-18deg);
+  }
+  55% {
+    transform: scale(0.85) rotate(4deg);
+  }
+  100% {
+    transform: scale(1) rotate(0);
   }
 }
 
-/* Gradient Text */
-.text-gradient-primary {
-  background: var(--gradient-primary);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
+/* ------------------------------------------------------------------ */
+/* Transitions                                                         */
+/* ------------------------------------------------------------------ */
 
 .transition-fast {
   transition: all var(--transition-fast);
 }
 
-/* Fade Animations */
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity var(--transition-base);
@@ -71,155 +277,50 @@
   opacity: 0;
 }
 
-/* Modern Card Styles - Minimal */
-.modern-card {
-  border-radius: var(--radius-md) !important;
-  transition: all var(--transition-fast) !important;
-  overflow: hidden;
-  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+/* Form <-> result: the old view is gone before the new one slides in.
+   (.modern-card is kept in the selector for views that still carry it.) */
+.swap-enter-active,
+.modern-card.swap-enter-active {
+  transition:
+    opacity 0.28s ease-out,
+    transform 0.28s ease-out !important;
 }
 
-.modern-card:hover {
-  box-shadow: var(--shadow-md) !important;
-  border-color: rgba(var(--v-theme-primary), 0.3);
+.swap-leave-active,
+.modern-card.swap-leave-active {
+  transition:
+    opacity 0.15s ease-in,
+    transform 0.15s ease-in !important;
 }
 
-/* Card Accents */
-.result-card {
-  border-top: 4px solid rgb(var(--v-theme-success)) !important;
+.swap-enter-from {
+  opacity: 0;
+  transform: translateY(12px);
 }
 
-.secret-key-card {
-  border-left: 4px solid rgb(var(--v-theme-primary)) !important;
+.swap-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
 }
 
-.encrypt-btn {
-  border-radius: var(--radius-md) !important;
-  font-size: 1.1rem !important;
-  font-weight: 600 !important;
-  letter-spacing: 0.5px !important;
-  text-transform: none !important;
-  background: rgb(var(--v-theme-primary)) !important;
-  color: rgb(var(--v-theme-on-primary)) !important;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  box-shadow: 0 4px 12px rgba(var(--v-theme-primary), 0.25) !important;
-  height: 56px !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+/* ------------------------------------------------------------------ */
+/* Result view                                                         */
+/* ------------------------------------------------------------------ */
+
+/* Cards of a row are as tall as the tallest one, which is tidy as long as the
+   values are clamped. Once one is expanded its neighbours would only grow
+   a lot of empty space, so then every card keeps its own height. */
+.key-cards:has(.secret-key-card--expanded) {
+  align-items: flex-start;
 }
 
-.encrypt-btn .v-icon {
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.encrypt-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(var(--v-theme-primary), 0.35) !important;
-  filter: brightness(1.05);
-}
-
-.encrypt-btn:hover .v-icon {
-  transform: scale(1.1) rotate(-10deg);
-}
-
-.encrypt-btn:active:not(:disabled) {
-  transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(var(--v-theme-primary), 0.25) !important;
-}
-
-/* Smooth Scroll */
-html {
-  scroll-behavior: smooth;
-}
-
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.05);
-  border-radius: var(--radius-full);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--gradient-primary);
-  border-radius: var(--radius-full);
-  transition: background var(--transition-base);
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--gradient-secondary);
-}
-
-/* Focus Styles */
-.v-field--focused {
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2) !important;
-}
-
-/* Modern Input Styles */
-.modern-input .v-field__outline {
-  --v-field-border-opacity: 0.15;
-}
-
-.modern-input.v-input--is-focused .v-field__outline {
-  --v-field-border-opacity: 0.5;
-}
-
-.modern-input .v-field--focused {
-  box-shadow: 0 0 0 4px rgba(0, 123, 255, 0.1);
-}
-
-/* Add colored left border on focus for better visibility */
-.modern-input.v-input--is-focused .v-field__input {
-  border-left: 3px solid rgb(var(--v-theme-primary));
-  padding-left: calc(var(--v-field-padding-start) - 3px);
-  border-top-left-radius: 0;
-  border-bottom-left-radius: 0;
-}
-
-.modern-input .v-field {
-  border-radius: var(--radius-md) !important;
-  transition: all var(--transition-base) !important;
-}
-
-.modern-input .v-field:hover {
-  box-shadow: var(--shadow-sm) !important;
-}
-
-/* Page layout */
-.secrets-component {
-  max-width: 1600px;
-  margin: 0 auto;
-  min-height: 400px;
-}
-
-.secrets-form {
-  animation: fadeIn 0.5s ease;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.modern-input {
-  transition: all var(--transition-fast);
-}
-
-/* Code blocks of the result view */
+/* Code blocks: a recessed well inside the panel. */
 pre:has(code) {
-  background-color: rgba(var(--v-theme-on-surface), 0.05);
+  background-color: var(--inset-bg);
   color: rgb(var(--v-theme-on-surface));
   padding: 12px;
   border-radius: var(--radius-md);
-  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border: 1px solid var(--line);
 }
 
 pre > code {
@@ -228,17 +329,135 @@ pre > code {
   color: inherit !important;
 }
 
+/* Long values wrap instead of scrolling sideways. */
 .result-code {
   border-radius: var(--radius-md);
-  padding: 1rem;
-  font-size: 0.875rem;
+  padding: 14px 16px;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
   line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* Syntax highlighting of the manifest. Both themes need colours of their own
+   to stay readable on the tinted code background. */
+:root {
+  --yaml-key: #0550ae;
+  --yaml-string: #116329;
+  --yaml-value: #a04100;
+  --yaml-comment: #57606a;
+  --yaml-punctuation: #6e7781;
+}
+
+.v-theme--dark {
+  --yaml-key: #8cc4ff;
+  --yaml-string: #7ee787;
+  --yaml-value: #ffb27a;
+  --yaml-comment: #9ea7b0;
+  --yaml-punctuation: #8b95a3;
+}
+
+.yaml-key {
+  color: var(--yaml-key);
+}
+
+.yaml-string {
+  color: var(--yaml-string);
+}
+
+.yaml-value {
+  color: var(--yaml-value);
+}
+
+.yaml-comment {
+  color: var(--yaml-comment);
+  font-style: italic;
+}
+
+.yaml-punctuation {
+  color: var(--yaml-punctuation);
+}
+
+/* A button's own size is lost to the reset that makes buttons inherit their
+   font size, so inside a card title it would be as large as the title. */
+.result-action {
+  font-size: 0.8125rem;
+  font-weight: 500;
 }
 
 .copy-btn {
   transition: all var(--transition-fast) !important;
 }
 
-.copy-btn:hover {
-  transform: scale(1.1);
+/* ------------------------------------------------------------------ */
+/* Page                                                                */
+/* ------------------------------------------------------------------ */
+
+/* One readable column: wide enough for two fields side by side, narrow
+   enough that the eye does not have to travel. */
+.secrets-component {
+  max-width: 960px;
+  margin: 0 auto;
+  min-height: 400px;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Quiet scrollbars that do not compete with the content. */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(var(--v-theme-on-surface), 0.16);
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(var(--v-theme-on-surface), 0.3);
+}
+
+/* Snackbars: a dark pill with a coloured icon instead of a full-colour bar. */
+.toast .v-snackbar__wrapper {
+  border-radius: var(--radius-md) !important;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px -12px rgba(0, 0, 0, 0.45) !important;
+}
+
+/* No motion for those who asked for none: the views then switch instantly. */
+@media (prefers-reduced-motion: reduce) {
+  .glass-app-bar,
+  .fade-enter-active,
+  .fade-leave-active,
+  .swap-enter-active,
+  .swap-leave-active,
+  .modern-card.swap-enter-active,
+  .modern-card.swap-leave-active {
+    transition: none !important;
+  }
+
+  .lock-snap {
+    animation: none;
+  }
+
+  .encrypt-btn,
+  .encrypt-btn .v-icon {
+    transition: none !important;
+  }
+}
+
+/* Outlined secondary buttons (Copy) share the ghost hairline. */
+.copy-btn.v-btn--variant-outlined {
+  border-color: var(--line-strong);
+  color: rgb(var(--v-theme-on-surface)) !important;
 }

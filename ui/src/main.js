@@ -20,41 +20,58 @@ const vuetify = createVuetify({
       mdi
     }
   },
+  // Calm defaults for every button: no shouting capitals, softer corners.
+  defaults: {
+    VBtn: { class: 'text-none', rounded: 'lg' },
+    VChip: { rounded: 'lg' }
+  },
+  // Neutral slate surfaces carry the layout; the brand blue (actions) and
+  // orange (attention) of the logo are kept as the only accents.
   theme: {
     defaultTheme: 'light',
     themes: {
       light: {
         dark: false,
         colors: {
-          primary: '#007bff',
-          secondary: '#fd7e14',
+          primary: '#0a6cff',
+          secondary: '#f07a1a',
           accent: '#17a2b8',
-          error: '#fd7e14',
-          info: '#0dcaf0',
-          success: '#28a745',
-          warning: '#ffc107',
-          background: '#f8f9fa',
+          error: '#e8590c',
+          info: '#0b8bd9',
+          success: '#1f9d55',
+          warning: '#e0a100',
+          background: '#f2f4f7',
           surface: '#ffffff',
-          'on-surface': '#212529',
-          'surface-variant': '#e9ecef',
-          'on-surface-variant': '#495057'
+          'on-surface': '#161b26',
+          'surface-variant': '#e9ecf1',
+          'on-surface-variant': '#4a5263'
+        },
+        variables: {
+          'border-color': '#0f1729',
+          'border-opacity': 0.1
         }
       },
       dark: {
         dark: true,
         colors: {
-          primary: '#3d94f6',
-          secondary: '#fd8c3c',
+          primary: '#4c9dff',
+          // Dark text on the light blue: white would only reach about 3:1.
+          'on-primary': '#07111f',
+          secondary: '#ff9447',
           accent: '#20c997',
-          error: '#fd8c3c',
-          info: '#0dcaf0',
-          success: '#28a745',
-          warning: '#ffc107',
-          background: '#212529',
-          surface: '#343a40',
-          'on-surface': '#f8f9fa',
-          'surface-variant': '#495057',
-          'on-surface-variant': '#adb5bd'
+          error: '#ff8a4c',
+          info: '#38bdf8',
+          success: '#3ecf8e',
+          warning: '#f5c451',
+          background: '#0d1117',
+          surface: '#161b23',
+          'on-surface': '#e8ebf1',
+          'surface-variant': '#232a35',
+          'on-surface-variant': '#a3acbb'
+        },
+        variables: {
+          'border-color': '#ffffff',
+          'border-opacity': 0.09
         }
       }
     }

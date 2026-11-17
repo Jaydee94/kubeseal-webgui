@@ -171,24 +171,9 @@ describe('rules.validSecretKey', () => {
 
 describe('file size', () => {
   const limit = 1024 * 1024
-  const message = 'File size should be less than 1 MB!'
 
   it('allows exactly 1 MiB and rejects one byte more', () => {
     expect(isFileTooLarge({ size: limit })).toBe(false)
     expect(isFileTooLarge({ size: limit + 1 })).toBe(true)
-  })
-
-  it('validates the single file of a single-file input', () => {
-    expect(validate(rules.fileSize, { size: 20 })).toBe(true)
-    expect(validate(rules.fileSize, { size: limit + 1 })).toBe(message)
-  })
-
-  it('validates the file list of a multi-file input', () => {
-    expect(validate(rules.fileSize, [{ size: 20 }, { size: limit }])).toBe(true)
-    expect(validate(rules.fileSize, [{ size: 20 }, { size: limit + 1 }])).toBe(message)
-  })
-
-  it.each([null, undefined])('accepts an empty input (%j)', (value) => {
-    expect(validate(rules.fileSize, value)).toBe(true)
   })
 })
