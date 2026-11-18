@@ -35,6 +35,7 @@
               ref="secretsList"
               :entries="secrets"
               :duplicate-keys="duplicateKeys"
+              :importing="pendingImports > 0"
               @update-entry="updateEntry"
               @select-file="selectFile"
               @add-entry="addEntry"

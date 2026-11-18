@@ -35,6 +35,7 @@
           variant="text"
           size="small"
           class="btn-ghost result-action remove-all"
+          :disabled="importing"
           @click="$emit('remove-all')"
         >
           Remove All
@@ -82,6 +83,12 @@ defineProps({
   duplicateKeys: {
     type: Set,
     default: () => new Set()
+  },
+  // Dropped files are still being read. Their rows are added once that is
+  // done, so clearing the list now would not leave it empty.
+  importing: {
+    type: Boolean,
+    default: false
   }
 })
 
