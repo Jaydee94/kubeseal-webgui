@@ -6,7 +6,7 @@ export const SCOPE_CLUSTER_WIDE = 'cluster-wide'
 export const SCOPE_NAMESPACE_WIDE = 'namespace-wide'
 
 // In the order they are offered in the scope selection.
-export const SCOPES = [SCOPE_STRICT, SCOPE_CLUSTER_WIDE, SCOPE_NAMESPACE_WIDE]
+export const SCOPES = [SCOPE_STRICT, SCOPE_NAMESPACE_WIDE, SCOPE_CLUSTER_WIDE]
 export const DEFAULT_SCOPE = SCOPE_STRICT
 
 /** Only the strict scope seals the secret for one specific name. */

@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { renderSealedSecretYaml, scopeAnnotations } from '@/utils/sealedSecretYaml'
+import {
+  manifestFileName,
+  renderSealedSecretYaml,
+  scopeAnnotations
+} from '@/utils/sealedSecretYaml'
 
 // These are the strings tests/test_ui.py pins for the result view. Users copy
 // this text into their repositories, so every character matters, including
@@ -19,7 +23,6 @@ describe('renderSealedSecretYaml', () => {
         'metadata:\n' +
         '  name: valid-secret-name\n' +
         '  namespace: my-namespace\n' +
-        '  annotations: {}\n' +
         'spec:\n' +
         '  encryptedData: \n' +
         '    my-secret-key: AgSealedValue'
@@ -60,6 +63,15 @@ describe('renderSealedSecretYaml', () => {
     expect(yaml).toContain('  annotations: { sealedsecrets.bitnami.com/cluster-wide: "true" }\n')
   })
 
+  it('leaves out the annotations of the strict scope only', () => {
+    const entries = [{ key: 'a', value: 'AgA' }]
+    const render = (scope) => renderSealedSecretYaml({ name: 'n', namespace: 'ns', scope, entries })
+
+    expect(render('strict')).not.toContain('annotations')
+    expect(render('namespace-wide')).toContain('  annotations: {')
+    expect(render('cluster-wide')).toContain('  annotations: {')
+  })
+
   it('renders one line per key, in the given order', () => {
     const yaml = renderSealedSecretYaml({
       name: 'n',
@@ -72,7 +84,7 @@ describe('renderSealedSecretYaml', () => {
       ]
     })
 
-    expect(yaml.split('\n').slice(7)).toEqual([
+    expect(yaml.split('\n').slice(6)).toEqual([
       '  encryptedData: ',
       '    tls.key: AgKey',
       '    tls.crt: AgCrt',
@@ -93,10 +105,20 @@ describe('renderSealedSecretYaml', () => {
 
 describe('scopeAnnotations', () => {
   it.each([
-    ['strict', '{}'],
+    ['strict', null],
     ['namespace-wide', '{ sealedsecrets.bitnami.com/namespace-wide: "true" }'],
     ['cluster-wide', '{ sealedsecrets.bitnami.com/cluster-wide: "true" }']
   ])('%s -> %s', (scope, annotations) => {
     expect(scopeAnnotations(scope)).toBe(annotations)
+  })
+})
+
+describe('manifestFileName', () => {
+  it('is named after the secret', () => {
+    expect(manifestFileName('db-credentials')).toBe('db-credentials.yaml')
+  })
+
+  it('falls back to a generic name without a secret name', () => {
+    expect(manifestFileName('')).toBe('sealed-secret.yaml')
   })
 })
