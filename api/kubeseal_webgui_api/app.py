@@ -5,7 +5,8 @@ import fastapi
 from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.openapi.docs import get_swagger_ui_html
+from fastapi.responses import HTMLResponse, JSONResponse
 
 from .app_config import (
     cors_origins,
@@ -43,7 +44,8 @@ async def lifespan(fastapi_app: fastapi.FastAPI):  # noqa: ANN201 skipcq: PYL-W0
     LOGGER.info("Shutting down kubeseal-webgui API.")
 
 
-app = fastapi.FastAPI(lifespan=lifespan)
+# /docs is defined below, see swagger_ui().
+app = fastapi.FastAPI(lifespan=lifespan, docs_url=None)
 
 # Only needed when the UI is not served from the same origin as the API, as
 # with the dev server. The default is the dev server's address.
@@ -95,3 +97,13 @@ app.include_router(
 @app.get("/")
 def root() -> dict[str, str]:
     return {"status": "Kubeseal-WebGui API"}
+
+
+@app.get("/docs", include_in_schema=False)
+def swagger_ui() -> HTMLResponse:
+    # The schema is loaded by a URL relative to this page. FastAPI's own /docs
+    # page uses "/openapi.json", which misses the API when the UI's nginx
+    # serves it under a path prefix (e.g. https://example.com/kubeseal-webgui/docs).
+    return get_swagger_ui_html(
+        openapi_url="openapi.json", title=f"{app.title} - Swagger UI"
+    )

@@ -48,6 +48,7 @@ grants `list` on `namespaces` and `get`/`list` on
 | `ingress.annotations` | Additional annotations on the `Ingress`. | `{}` |
 | `ingress.ingressClassName` | `ingressClassName` to set on the `Ingress`. | `""` |
 | `ingress.hostname` | Hostname for the ingress route. | `kubeseal-webgui.example.com` |
+| `ingress.path` | Path the UI is served under, e.g. `/kubeseal-webgui` (see [installation.md](installation.md#under-a-path-prefix)). Include it in `api.url`. | `/` |
 | `ingress.tls.enabled` | Enable TLS on the ingress route. | `false` |
 | `ingress.tls.secretName` | Name of the TLS secret (must exist in the release namespace). | `""` |
 
@@ -57,6 +58,7 @@ grants `list` on `namespaces` and `get`/`list` on
 |---|---|---|
 | `route.enabled` | Create an OpenShift `Route`. | `false` |
 | `route.hostname` | Hostname of the route. Empty lets OpenShift assign one. | `""` |
+| `route.path` | Path the UI is served under, see `ingress.path`. | `/` |
 | `route.tls.enabled` | Enable TLS on the route. | `true` |
 | `route.tls.termination` | TLS termination mode (`edge`, `reencrypt`, `passthrough`). | `edge` |
 | `route.tls.insecureEdgeTerminationPolicy` | What to do with HTTP traffic (`None`, `Allow`, `Redirect`). | `None` |
@@ -140,3 +142,5 @@ You only need to set one value:
   bundled chart this is usually the same URL as the UI itself, because the
   UI's nginx reverse-proxies API paths to the in-pod API container (see
   [`ui/nginx-default.conf`](../ui/nginx-default.conf)).
+  Under a path prefix it includes the path. An empty value makes the UI call
+  the API relative to its own address.

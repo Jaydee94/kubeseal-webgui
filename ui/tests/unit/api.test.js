@@ -16,7 +16,7 @@ describe('api', () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async (url, options = {}) => {
-        if (url === '/config.json') {
+        if (url === 'config.json') {
           return new Response(JSON.stringify({ api_url: API_URL }))
         }
         requests.push({ url, ...options })
@@ -116,11 +116,38 @@ describe('api', () => {
     expect(JSON.parse(requests[0].body).secrets).toEqual([{ key: 'empty', value: '' }])
   })
 
+  it('calls the API next to the page when no API URL is configured', async () => {
+    requests = []
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url, options = {}) => {
+        if (url === 'config.json') {
+          return new Response(JSON.stringify({ api_url: '' }))
+        }
+        requests.push({ url, ...options })
+        return new Response('[]')
+      })
+    )
+    await api.fetchNamespaces()
+    // relative, so that it also works under a path prefix
+    expect(requests).toEqual([{ url: 'namespaces' }])
+  })
+
+  it('joins the API URL and an endpoint with exactly one slash', () => {
+    expect(api.joinApiUrl('', 'secrets')).toBe('secrets')
+    expect(api.joinApiUrl(undefined, 'secrets')).toBe('secrets')
+    expect(api.joinApiUrl('https://example.com', 'secrets')).toBe('https://example.com/secrets')
+    expect(api.joinApiUrl('https://example.com/kubeseal-webgui/', 'secrets')).toBe(
+      'https://example.com/kubeseal-webgui/secrets'
+    )
+    expect(api.joinApiUrl('/kubeseal-webgui', 'config')).toBe('/kubeseal-webgui/config')
+  })
+
   it('reads config.json once for several API calls', async () => {
     stubFetch([])
     await api.fetchNamespaces()
     await api.fetchSealedSecrets('default')
-    const configRequests = fetch.mock.calls.filter(([url]) => url === '/config.json')
+    const configRequests = fetch.mock.calls.filter(([url]) => url === 'config.json')
     expect(configRequests).toHaveLength(1)
   })
 })

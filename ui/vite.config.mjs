@@ -6,6 +6,9 @@ import vuetify from 'vite-plugin-vuetify'
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  // Relative asset URLs, so that one build works at the root of a host and
+  // under any path prefix (e.g. https://example.com/kubeseal-webgui/).
+  base: './',
   server: {
     port: 8080,
     proxy: {

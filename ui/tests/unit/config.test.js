@@ -77,7 +77,7 @@ describe('loadConfig', () => {
     const [first, second] = await Promise.all([loadConfig(), loadConfig()])
     const third = await loadConfig()
 
-    expect(fetchMock).toHaveBeenCalledExactlyOnceWith('/config.json', {})
+    expect(fetchMock).toHaveBeenCalledExactlyOnceWith('config.json', {})
     expect(first.apiUrl).toBe('https://kubeseal.example.com')
     expect(second).toBe(first)
     expect(third).toBe(first)

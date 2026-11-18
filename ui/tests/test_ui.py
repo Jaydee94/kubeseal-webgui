@@ -318,7 +318,7 @@ def test_page_has_one_heading_and_icons(page: Page):
     expect(page.get_by_role("heading", level=1)).to_have_text("Kubeseal WebGui")
     expect(page.get_by_role("link", name="Kubeseal WebGui, start page")).to_have_count(1)
     expect(page.locator('link[rel="icon"][type="image/svg+xml"]')).to_have_attribute(
-        "href", "/favicon.svg"
+        "href", "./favicon.svg"
     )
     assert page.request.get("/favicon.svg").ok
 
@@ -546,7 +546,8 @@ def test_ui_works_without_local_storage(page: Page):
 
 def test_logo_links_to_the_start_page(app_page: Page):
     logo = app_page.locator("a#logo")
-    expect(logo).to_have_attribute("href", "/")
+    # Relative, so that it also leads to the start page under a path prefix.
+    expect(logo).to_have_attribute("href", "./")
     expect(logo).to_have_attribute("aria-label", "Kubeseal WebGui, start page")
 
 

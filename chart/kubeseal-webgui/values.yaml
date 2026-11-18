@@ -83,6 +83,10 @@ ingress:
   annotations: {}
   ingressClassName: ""
   hostname: "kubeseal-webgui.example.com"
+  # Path the UI is served under, e.g. "/kubeseal-webgui" to share a hostname
+  # with another application. The prefix is passed on to the pod unchanged;
+  # set api.url to the full URL including the path (or to "").
+  path: "/"
   tls:
     enabled: false
     secretName: ""
@@ -91,6 +95,8 @@ ingress:
 route:
   enabled: false
   hostname: ""
+  # Path the UI is served under, see ingress.path.
+  path: "/"
   tls:
     enabled: true
     termination: edge
