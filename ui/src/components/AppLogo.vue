@@ -39,8 +39,15 @@ const dark = computed(() => theme.current.value.dark)
   vertical-align: middle;
   transition: all var(--transition-fast, 0.15s ease);
   /* The image is cropped to the artwork, so this is the visible height. */
-  height: 38px;
+  height: 46px;
   width: auto;
   margin: 0;
+}
+
+/* On a phone the badge and the toggle need their share of the bar. */
+@media (max-width: 599px) {
+  #logo-img {
+    height: 38px;
+  }
 }
 </style>

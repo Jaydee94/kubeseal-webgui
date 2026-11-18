@@ -4,20 +4,25 @@
       :elevation="0"
       class="glass-app-bar"
       :class="{ 'glass-app-bar--scrolled': scrolled }"
-      height="64"
+      height="72"
     >
-      <!-- Same width as the content below, so logo and panels line up. -->
+      <!-- Same width as the content below. Three columns of which the outer two
+           share the rest equally, so the logo stays centred whatever the
+           badge and the toggle need. -->
       <div class="app-bar__inner">
+        <div class="app-bar__start">
+          <!-- Which installation this is (display_name of config.json), so
+               that nobody seals for the wrong cluster by mistake. -->
+          <span v-if="displayName" class="env-badge" :title="`Environment: ${displayName}`">
+            <v-icon class="env-badge__icon" icon="mdi-tag-outline" size="14" aria-hidden="true" />
+            <span class="d-sr-only">Environment:</span>
+            <span class="env-badge__name">{{ displayName }}</span>
+          </span>
+        </div>
         <AppLogo />
-        <!-- Which installation this is (display_name of config.json), so that
-             nobody seals for the wrong cluster by mistake. -->
-        <span v-if="displayName" class="env-badge" :title="`Environment: ${displayName}`">
-          <span class="env-badge__dot" aria-hidden="true" />
-          <span class="d-sr-only">Environment:</span>
-          <span class="env-badge__name">{{ displayName }}</span>
-        </span>
-        <v-spacer />
-        <DarkMode />
+        <div class="app-bar__end">
+          <DarkMode />
+        </div>
       </div>
     </v-app-bar>
     <v-main>
@@ -62,7 +67,8 @@ onBeforeUnmount(() => window.removeEventListener('scroll', updateScrolled))
 
 <style scoped>
 .app-bar__inner {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   gap: 12px;
   width: 100%;
@@ -70,6 +76,16 @@ onBeforeUnmount(() => window.removeEventListener('scroll', updateScrolled))
   max-width: calc(960px + 2 * 16px);
   margin: 0 auto;
   padding: 0 16px;
+}
+
+.app-bar__start {
+  display: flex;
+  min-width: 0;
+}
+
+.app-bar__end {
+  display: flex;
+  justify-content: flex-end;
 }
 
 /* The bar's own padding would push the inner row off the content column. */
@@ -85,10 +101,10 @@ onBeforeUnmount(() => window.removeEventListener('scroll', updateScrolled))
 .env-badge {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
   height: 28px;
-  padding: 0 10px;
+  padding: 0 10px 0 8px;
   border: 1px solid var(--line);
   border-radius: var(--radius-full);
   background: rgba(var(--v-theme-surface), 0.5);
@@ -97,13 +113,10 @@ onBeforeUnmount(() => window.removeEventListener('scroll', updateScrolled))
   color: rgba(var(--v-theme-on-surface), var(--v-high-emphasis-opacity));
 }
 
-.env-badge__dot {
+/* A label tag: the name is the label of this installation. */
+.env-badge__icon {
   flex: none;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: rgb(var(--v-theme-secondary));
-  box-shadow: 0 0 0 3px rgba(var(--v-theme-secondary), 0.18);
+  color: rgb(var(--v-theme-secondary));
 }
 
 .env-badge__name {
