@@ -72,7 +72,11 @@ helm install kubeseal-webgui \
   when UI and API are served together as by this chart.
 - The prefix is made of the characters `A-Z a-z 0-9 . _ ~ -`, one or more
   path segments (`/tools/kubeseal-webgui` works too). Rendering fails for
-  anything else.
+  anything else, for `.` and `..` segments, and for a prefix that ends like a
+  path the UI serves itself: `/secrets`, `/namespaces`, `/config`, `/docs`,
+  `/openapi.json`, `/config.json`, `/index.html`, `/favicon.ico`,
+  `/favicon.svg`, `/sealed-secrets/<name>` or `/assets/<name>` (so
+  `/team/config` is rejected, `/team-config` is fine).
 - No rewrite annotation is needed: the UI's nginx accepts requests with and
   without the prefix. An ingress or gateway that strips the prefix (e.g.
   `nginx.ingress.kubernetes.io/rewrite-target`, a Traefik `StripPrefix`
