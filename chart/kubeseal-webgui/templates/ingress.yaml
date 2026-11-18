@@ -31,6 +31,6 @@ spec:
             name: {{ include "kubeseal-webgui.fullname" . }}
             port:
               number: 8080
-        path: /
+        path: {{ include "kubeseal-webgui.servedPath" .Values.ingress.path }}
         pathType: Prefix
 {{- end }}

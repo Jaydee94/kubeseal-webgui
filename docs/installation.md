@@ -52,6 +52,37 @@ into their browser.
 To enable TLS, set `ingress.tls.enabled=true` and point `ingress.tls.secretName`
 at a TLS secret that already exists in the release namespace.
 
+### Under a path prefix
+
+To share a hostname with another application, serve the UI under a path, e.g.
+`https://apps.example.com/kubeseal-webgui/`:
+
+```bash
+helm install kubeseal-webgui \
+  oci://ghcr.io/jaydee94/kubeseal-webgui/charts/kubeseal-webgui \
+  --namespace kubeseal-webgui --create-namespace \
+  --set ingress.enabled=true \
+  --set ingress.hostname=apps.example.com \
+  --set ingress.path=/kubeseal-webgui \
+  --set api.url=https://apps.example.com/kubeseal-webgui
+```
+
+- `api.url` includes the path. It may also be empty (`--set api.url=""`): the
+  UI then calls the API relative to its own address, which is always right
+  when UI and API are served together as by this chart.
+- The prefix is made of the characters `A-Z a-z 0-9 . _ ~ -`, one or more
+  path segments (`/tools/kubeseal-webgui` works too). Rendering fails for
+  anything else.
+- No rewrite annotation is needed: the UI's nginx accepts requests with and
+  without the prefix. An ingress or gateway that strips the prefix (e.g.
+  `nginx.ingress.kubernetes.io/rewrite-target`, a Traefik `StripPrefix`
+  middleware or a Gateway API `URLRewrite` filter) works as well. Only then,
+  a request for the prefix without trailing slash (`/kubeseal-webgui`) is
+  redirected by the page itself, after the browser has already asked the
+  host's root for the page's stylesheet and script; these requests fail
+  harmlessly.
+- On OpenShift, set `route.path` instead of `ingress.path`.
+
 ### On OpenShift (Route)
 
 ```bash

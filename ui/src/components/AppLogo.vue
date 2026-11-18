@@ -1,6 +1,6 @@
 <template>
   <!-- The link carries the name; the image next to it is decoration. -->
-  <a id="logo" href="/" aria-label="Kubeseal WebGui, start page">
+  <a id="logo" href="./" aria-label="Kubeseal WebGui, start page">
     <img id="logo-img" alt="" :src="dark ? logoDark : logoLight" />
   </a>
 </template>

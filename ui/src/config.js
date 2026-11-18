@@ -34,7 +34,8 @@ export function normalizeConfig(raw) {
  */
 export function loadConfig() {
   if (!pendingConfig) {
-    const request = requestJson('/config.json').then(normalizeConfig)
+    // Relative: the UI may be served under a path prefix.
+    const request = requestJson('config.json').then(normalizeConfig)
     pendingConfig = request
     request.catch(() => {
       if (pendingConfig === request) pendingConfig = null

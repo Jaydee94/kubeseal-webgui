@@ -42,3 +42,20 @@ Common labels
 {{- $_ := set $labels "heritage" .Release.Service -}}
 {{- toYaml $labels -}}
 {{- end -}}
+
+{{/*
+The path the UI is served under (ingress.path, route.path): "/" or a prefix
+like "/kubeseal-webgui", without trailing slash. The UI's nginx only accepts
+prefixes made of [A-Za-z0-9._~-] path segments, so anything else fails here
+instead of rendering an ingress that cannot work.
+*/}}
+{{- define "kubeseal-webgui.servedPath" -}}
+{{- $path := . | default "/" | toString -}}
+{{- if ne $path "/" -}}
+{{- $path = trimSuffix "/" $path -}}
+{{- end -}}
+{{- if not (regexMatch "^(/|(/[A-Za-z0-9._~-]+)+)$" $path) -}}
+{{- fail (printf "invalid path %q: use \"/\" or a prefix like \"/kubeseal-webgui\" made of the characters A-Z a-z 0-9 . _ ~ -" .) -}}
+{{- end -}}
+{{- $path -}}
+{{- end -}}

@@ -275,3 +275,57 @@ jobs:
           POD_IPV6=$(kubectl get pod "$POD_NAME" -n kubeseal-webgui -o jsonpath='{.status.podIPs[*].ip}' | tr ' ' '\n' | grep ':')
           kubectl exec curl-test -- curl -v -f -g -6 "http://[$POD_IPV6]:8080/namespaces"
           kubectl delete pod curl-test
+      - name: Serve under a path prefix
+        run: |
+          # The same images and chart, now under /kubeseal-webgui on the same
+          # host (issue #271). ingress-nginx passes the prefix on unchanged,
+          # so this checks the prefix handling of the UI's nginx.
+          HOST=$(hostname -f)
+          BASE="http://${HOST}:80/kubeseal-webgui"
+          helm template \
+            --release-name e2e-test \
+            --namespace kubeseal-webgui \
+            --set api.image.tag=snapshot \
+            --set api.url="${BASE}" \
+            --set autoFetchCertResources=null \
+            --set image.pullPolicy=Never \
+            --set ingress.enabled=true \
+            --set ingress.hostname="${HOST}" \
+            --set ingress.path=/kubeseal-webgui \
+            --set resources=null \
+            --set sealedSecrets.autoFetchCert=true \
+            --set ui.image.tag=snapshot \
+            --set securityContext.runAsUser=1042 \
+            chart/kubeseal-webgui \
+          | kubectl apply -f - --namespace kubeseal-webgui
+          # config.json is mounted with subPath, which a running pod does not
+          # pick up.
+          kubectl rollout restart --namespace kubeseal-webgui deployment/e2e-test-kubeseal-webgui
+          kubectl rollout status --namespace kubeseal-webgui deployment/e2e-test-kubeseal-webgui --timeout=240s
+
+          for i in $(seq 1 24); do
+            curl -sf "${BASE}/namespaces" > /dev/null && break
+            sleep 5
+          done
+
+          set -x
+          # without the trailing slash: redirected, relative to the request
+          test "$(curl -s -o /dev/null -w '%{http_code}' "${BASE}")" = 301
+          curl -sI "${BASE}" | grep -i '^location: /kubeseal-webgui/'
+          # start page, its relative assets and config.json
+          page=$(curl -sf "${BASE}/")
+          asset=$(echo "${page}" | grep -o 'src="./assets/[^"]*"' | cut -d'"' -f2)
+          test -n "${asset}"
+          curl -sf -o /dev/null "${BASE}/${asset#./}"
+          curl -sf "${BASE}/config.json" | jq -e --arg url "${BASE}" '.api_url == $url'
+          # the API, without the prefix
+          curl -sf "${BASE}/namespaces" | jq -e 'index("kube-system") != null'
+          curl -sf "${BASE}/config" > /dev/null
+          curl -sf "${BASE}/sealed-secrets/kube-system" > /dev/null
+          curl -sf "${BASE}/docs" | grep -q "url: 'openapi.json'"
+          curl -sf "${BASE}/openapi.json" > /dev/null
+          echo '{"secret": "a","namespace": "kube-system","scope": "strict","secrets": [{"key": "a","value": "YQ=="}]}' \
+          | curl -sf -H 'content-type: application/json' -X POST --data @- "${BASE}/secrets" \
+          | jq -e '.[0].key == "a"'
+          # the root of the host is no longer routed to kubeseal-webgui
+          test "$(curl -s -o /dev/null -w '%{http_code}' "http://${HOST}:80/namespaces")" = 404

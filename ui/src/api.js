@@ -8,9 +8,21 @@ import { entryHasFile } from '@/utils/secretEntry'
 
 const MOCK_NAMESPACE_COUNT = 10
 
+/**
+ * The URL of an API endpoint (`path` without a leading "/"). Without a
+ * configured API URL the result is relative to the page, so the API is found
+ * next to the UI, also under a path prefix.
+ */
+export function joinApiUrl(baseUrl, path) {
+  if (!baseUrl) {
+    return path
+  }
+  return `${baseUrl.replace(/\/+$/, '')}/${path}`
+}
+
 async function apiUrl(path) {
   const { apiUrl: baseUrl } = await loadConfig()
-  return `${baseUrl}${path}`
+  return joinApiUrl(baseUrl, path)
 }
 
 /** Names of the namespaces in the cluster (made up with VITE_MOCK_NAMESPACES=true). */
@@ -18,17 +30,17 @@ export async function fetchNamespaces() {
   if (import.meta.env.VITE_MOCK_NAMESPACES === 'true') {
     return mockNamespacesResolver(MOCK_NAMESPACE_COUNT)
   }
-  return requestJson(await apiUrl('/namespaces'))
+  return requestJson(await apiUrl('namespaces'))
 }
 
 /** The SealedSecrets of a namespace as [{ name, keys }, ...]. */
 export async function fetchSealedSecrets(namespace) {
-  return requestJson(await apiUrl(`/sealed-secrets/${encodeURIComponent(namespace)}`))
+  return requestJson(await apiUrl(`sealed-secrets/${encodeURIComponent(namespace)}`))
 }
 
 /** Settings of the API, e.g. { kubesealVersion }. */
 export async function fetchApiConfig() {
-  return requestJson(await apiUrl('/config'))
+  return requestJson(await apiUrl('config'))
 }
 
 // A row holds a file or a text value. Anything without a file is sent as a
@@ -55,7 +67,7 @@ export async function sealSecrets({ secretName, namespaceName, scope, entries })
 
   // requestJson logs method, URL and status only -- never this body, which
   // contains the cleartext secrets.
-  return requestJson(await apiUrl('/secrets'), {
+  return requestJson(await apiUrl('secrets'), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'

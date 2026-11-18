@@ -3,6 +3,18 @@
 
 <head>
   <meta charset="utf-8">
+  <!--
+    All URLs of the app are relative, so the page must be loaded from a path
+    that ends in "/": under https://example.com/kubeseal-webgui they would
+    resolve against https://example.com/. The UI's nginx redirects such
+    requests itself; this covers an ingress that strips the path prefix, where
+    nginx only sees "/".
+  -->
+  <script>
+    if (!location.pathname.endsWith('/') && !location.pathname.endsWith('/index.html')) {
+      location.replace(location.pathname + '/' + location.search + location.hash)
+    }
+  </script>
   <meta
     http-equiv="X-UA-Compatible"
     content="IE=edge"
@@ -29,11 +41,11 @@
   <link
     rel="icon"
     type="image/svg+xml"
-    href="/favicon.svg"
+    href="./favicon.svg"
   >
   <link
     rel="icon"
-    href="/favicon.ico"
+    href="./favicon.ico"
     sizes="32x32"
   >
   <title>
