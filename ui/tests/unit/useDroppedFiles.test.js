@@ -60,14 +60,33 @@ describe('useDroppedFiles', () => {
     expect(pairs(state.entries)).toEqual([['A', '1']])
   })
 
-  it('is no longer pending when reading fails', async () => {
+  it('reports a file that cannot be read and keeps the other imports', async () => {
     const state = setup()
     const broken = file('.env', 'A=1')
     broken.text = () => Promise.reject(new Error('gone'))
 
-    await state.importDroppedFiles([broken])
+    await state.importDroppedFiles([broken, file('prod.env', 'B=2')])
 
     expect(state.pendingImports.value).toBe(0)
+    // not added as a file row named ".env"
+    expect(pairs(state.entries)).toEqual([['B', '2']])
+    expect(state.onError).toHaveBeenCalledWith('.env: Could not read the file.')
+    expect(state.onSuccess).toHaveBeenCalledWith('Imported 1 key from prod.env')
+    expect(state.onImported).toHaveBeenCalledTimes(1)
+  })
+
+  it('reports an unreadable file as the only drop without touching the list', async () => {
+    const state = setup()
+    const broken = file('notes.txt', 'A=1', 'text/plain')
+    broken.text = () => Promise.reject(new Error('gone'))
+
+    await state.importDroppedFiles([broken])
+
+    expect(state.entries.value).toHaveLength(1)
+    expect(state.entries.value[0].key).toBe('')
+    expect(state.onError).toHaveBeenCalledWith('notes.txt: Could not read the file.')
+    expect(state.onSuccess).not.toHaveBeenCalled()
+    expect(state.onImported).not.toHaveBeenCalled()
   })
 
   it('appends to rows that are filled in', async () => {

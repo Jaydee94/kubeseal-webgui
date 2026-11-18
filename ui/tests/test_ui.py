@@ -27,6 +27,9 @@ class SealingApi:
         page.route("**/secrets", self._handle)
 
     def release(self):
+        # Requests that arrive after this (the page may not have sent one yet)
+        # are answered right away instead of being held for good.
+        self.hold = False
         held, self._held = self._held, []
         for route in held:
             self._answer(route)
@@ -1709,6 +1712,33 @@ def drop_files(page: Page, files: list[tuple[str, str, str]], event: str = "drop
     if event == "drop":
         page.dispatch_event(target, "drop", {"dataTransfer": transfer})
     return transfer
+
+
+def test_remove_all_waits_for_dropped_files_that_are_still_read(app_page: Page):
+    page = app_page
+    # Hold every file read until the test lets it go.
+    page.evaluate(
+        """() => {
+            const read = File.prototype.text
+            window.releaseReads = []
+            File.prototype.text = function () {
+                return new Promise((resolve) => window.releaseReads.push(() => resolve(read.call(this))))
+            }
+        }"""
+    )
+    remove_all = page.get_by_role("button", name="Remove All")
+    expect(remove_all).to_be_enabled()
+
+    drop_files(page, [(".env", "A=1\nB=2", "")])
+    # clearing now would not stick: the rows arrive once the file is read
+    expect(remove_all).to_be_disabled()
+    expect(page.get_by_role("button", name="Encrypt")).to_be_disabled()
+
+    page.evaluate("() => window.releaseReads.forEach((release) => release())")
+    expect(remove_all).to_be_enabled()
+    assert key_value_pairs(page) == [("A", "1"), ("B", "2")]
+    remove_all.click()
+    assert key_value_pairs(page) == [("", "")]
 
 
 def key_value_pairs(page: Page) -> list[tuple[str, str]]:
