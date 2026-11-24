@@ -8,6 +8,7 @@ const CHART_CONFIG = {
   api_url: 'https://kubeseal.example.com',
   display_name: 'Production',
   enable_existing_sealed_secret_loading: true,
+  default_scope: 'namespace-wide',
   kubeseal_webgui_ui_version: '4.14.0',
   kubeseal_webgui_api_version: '4.14.1'
 }
@@ -31,6 +32,7 @@ describe('normalizeConfig', () => {
       apiUrl: 'https://kubeseal.example.com',
       displayName: 'Production',
       importEnabled: true,
+      defaultScope: 'namespace-wide',
       uiVersion: '4.14.0',
       apiVersion: '4.14.1'
     })
@@ -41,11 +43,24 @@ describe('normalizeConfig', () => {
     expect(normalizeConfig(config).importEnabled).toBe(false)
   })
 
+  it.each(['strict', 'namespace-wide', 'cluster-wide'])('accepts the default scope %s', (scope) => {
+    expect(normalizeConfig({ default_scope: scope }).defaultScope).toBe(scope)
+  })
+
+  // A typo must not widen where a secret can be unsealed.
+  it.each(['', 'Namespace-Wide', 'namespace_wide', 'global', 1, true, null])(
+    'falls back to the strict scope for the default scope %j',
+    (scope) => {
+      expect(normalizeConfig({ default_scope: scope }).defaultScope).toBe('strict')
+    }
+  )
+
   it.each([{}, null, undefined])('has safe defaults for %j', (raw) => {
     expect(normalizeConfig(raw)).toEqual({
       apiUrl: '',
       displayName: '',
       importEnabled: false,
+      defaultScope: 'strict',
       uiVersion: undefined,
       apiVersion: undefined
     })

@@ -1,11 +1,19 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_SCOPE, SCOPES, scopeNeedsName, scopeNeedsNamespace } from '@/constants'
+import { DEFAULT_SCOPE, SCOPES, scopeNeedsName, scopeNeedsNamespace, toScope } from '@/constants'
 
 // Has to agree with `Scope.needs_name` / `Scope.needs_namespace` in the API.
 describe('scopes', () => {
   it('offers the three scopes of sealed secrets, strict first', () => {
     expect(SCOPES).toEqual(['strict', 'namespace-wide', 'cluster-wide'])
     expect(DEFAULT_SCOPE).toBe('strict')
+  })
+
+  it.each(SCOPES)('%s is a scope', (scope) => {
+    expect(toScope(scope)).toBe(scope)
+  })
+
+  it.each(['', 'Strict', 'cluster', undefined, null, 42])('%j is not a scope', (value) => {
+    expect(toScope(value)).toBe(DEFAULT_SCOPE)
   })
 
   it.each([

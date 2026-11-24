@@ -251,6 +251,8 @@ const { favoriteNamespaces, toggleFavorite } = useFavoriteNamespaces()
 // in the header, see App.vue)
 const sealedSecretImportFeatureEnabled = ref(false)
 const namespaces = ref([])
+// The scope of a new form, from config.json.
+const defaultScope = ref(DEFAULT_SCOPE)
 
 // The form
 const secretName = ref('')
@@ -387,6 +389,12 @@ onBeforeMount(async () => {
     return
   }
   sealedSecretImportFeatureEnabled.value = config.importEnabled
+  defaultScope.value = config.defaultScope
+  // The form can be used while config.json loads: a scope picked meanwhile
+  // is kept.
+  if (scope.value === DEFAULT_SCOPE) {
+    scope.value = config.defaultScope
+  }
   await loadNamespaces()
 })
 
@@ -435,7 +443,7 @@ function resetForm() {
   secretName.value = ''
   namespaceName.value = ''
   newNamespace.value = false
-  scope.value = DEFAULT_SCOPE
+  scope.value = defaultScope.value
   secrets.value = [createSecretEntry()]
   sealedSecrets.value = []
   resetSealedSecretImport()

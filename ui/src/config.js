@@ -2,7 +2,11 @@
 // (see public/config.json for the development version), so one container
 // image works in every environment.
 
+import { toScope } from '@/constants'
+import { createLogger } from '@/utils/logger'
 import { requestJson } from '@/utils/http'
+
+const log = createLogger('config')
 
 let pendingConfig = null
 
@@ -17,12 +21,25 @@ export function toBoolean(value) {
   return false
 }
 
+/**
+ * The scope the form starts with. Anything that is not a scope falls back to
+ * the strict one, so a typo never widens where a secret can be unsealed.
+ */
+function defaultScope(value) {
+  const scope = toScope(value)
+  if (value != null && value !== '' && scope !== value) {
+    log.warn(`Unknown default_scope ${JSON.stringify(value)} in config.json, using "${scope}".`)
+  }
+  return scope
+}
+
 /** Translate the snake_case keys of config.json into the shape the UI uses. */
 export function normalizeConfig(raw) {
   return {
     apiUrl: raw?.api_url ?? '',
     displayName: raw?.display_name ?? '',
     importEnabled: toBoolean(raw?.enable_existing_sealed_secret_loading),
+    defaultScope: defaultScope(raw?.default_scope),
     uiVersion: raw?.kubeseal_webgui_ui_version,
     apiVersion: raw?.kubeseal_webgui_api_version
   }

@@ -30,6 +30,12 @@ fullnameOverride: ""
 displayName: ""
 # Optional feature flag to load existing SealedSecret keys from a namespace in the UI.
 enableExistingSealedSecretLoading: false
+# The scope the UI starts with, and returns to on "Clear": "strict",
+# "namespace-wide" or "cluster-wide". Users can still pick another one for
+# each secret. Careful with "cluster-wide": a secret sealed with it can be
+# unsealed in any namespace, and a user who does not look at the scope seals
+# that way without noticing.
+defaultScope: strict
 # Set this value to specify a ServiceAccount that is allowed to list namespaces.
 # Leave empty to use the ServiceAccount shipped with this chart.
 # If you use a custom ServiceAccount, it must be able to list namespaces in your cluster.
