@@ -40,6 +40,9 @@ export function normalizeConfig(raw) {
     displayName: raw?.display_name ?? '',
     importEnabled: toBoolean(raw?.enable_existing_sealed_secret_loading),
     defaultScope: defaultScope(raw?.default_scope),
+    // On unless switched off: a config.json without the key (an older chart)
+    // keeps the namespace list.
+    namespaceListingEnabled: toBoolean(raw?.enable_namespace_listing ?? true),
     uiVersion: raw?.kubeseal_webgui_ui_version,
     apiVersion: raw?.kubeseal_webgui_api_version
   }

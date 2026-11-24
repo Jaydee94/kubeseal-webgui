@@ -59,9 +59,19 @@ enableExistingSealedSecretLoading: false
 # unsealed in any namespace, and a user who does not look at the scope seals
 # that way without noticing.
 defaultScope: strict
-# Set this value to specify a ServiceAccount that is allowed to list namespaces.
-# Leave empty to use the ServiceAccount shipped with this chart.
-# If you use a custom ServiceAccount, it must be able to list namespaces in your cluster.
+# Let the UI offer the namespaces of the cluster to pick from. Set to false
+# where the API may not list namespaces (no cluster-wide RBAC, e.g. as an
+# OpenShift project admin): the namespace is then typed in, and the chart
+# leaves the "namespaces" rule out of its ClusterRole. Together with
+# enableExistingSealedSecretLoading=false it creates no ClusterRole or
+# ClusterRoleBinding at all.
+enableNamespaceListing: true
+# Set this value to use an existing ServiceAccount instead of the one shipped
+# with this chart (and its ClusterRole). Leave empty to use the chart's.
+# A custom ServiceAccount needs the permissions of the features in use:
+# "list" on namespaces for enableNamespaceListing=true, and "get"/"list" on
+# sealedsecrets.bitnami.com (in the namespaces used) for
+# enableExistingSealedSecretLoading=true.
 customServiceAccountName: ""
 affinity: {}
 tolerations: []

@@ -2170,6 +2170,79 @@ def test_import_keys_of_an_existing_sealed_secret(page: Page):
     expect(import_button).to_have_count(0)
 
 
+def disable_namespace_listing(page: Page, import_enabled: bool = False) -> list[str]:
+    """Serve config.json with `enable_namespace_listing: false`; return the
+    URLs of the requests to /namespaces."""
+    namespace_requests: list[str] = []
+
+    def config_json(route: Route):
+        config = route.fetch().json()
+        config["enable_namespace_listing"] = False
+        config["enable_existing_sealed_secret_loading"] = import_enabled
+        route.fulfill(json=config)
+
+    page.route("**/config.json", config_json)
+    page.on(
+        "request",
+        lambda request: (
+            namespace_requests.append(request.url)
+            if request.url.endswith("/namespaces")
+            else None
+        ),
+    )
+    return namespace_requests
+
+
+def test_namespace_is_typed_in_without_the_namespace_list(page: Page):
+    namespace_requests = disable_namespace_listing(page)
+    api = SealingApi(page)
+    page.goto("/")
+
+    # a plain text field, without the "does not exist yet" checkbox
+    namespace_input = page.locator("input#namespaceSelection")
+    expect(page.get_by_role("textbox", name="Namespace name")).to_be_visible()
+    expect(page.locator(".v-autocomplete")).to_have_count(0)
+    expect(page.locator("#newNamespaceCheckbox")).to_have_count(0)
+
+    secret_name(page)
+    add_secret_key_value(page)
+    encrypt = page.locator('button:has-text("Encrypt")')
+    namespace_input.fill("Not_Valid")
+    expect(encrypt).to_be_disabled()
+    namespace_input.fill("team-a")
+    expect(encrypt).to_be_enabled()
+    click_encrypt_button(page)
+    expect(page.locator("#sealed-secret-result")).to_be_visible()
+    assert api.only_request["namespace"] == "team-a"
+
+    # still a text field after "Clear"
+    page.get_by_role("button", name="Clear").click()
+    expect(namespace_input).to_have_value("")
+    expect(page.locator("#newNamespaceCheckbox")).to_have_count(0)
+
+    # neither requested nor reported as an error
+    expect(page.locator(".v-snackbar").get_by_text("Failed to fetch namespaces")).to_have_count(0)
+    assert namespace_requests == []
+
+
+def test_import_from_a_typed_in_namespace_without_the_namespace_list(page: Page):
+    requested_urls = enable_sealed_secret_import(page)
+    # registered last, so it is the handler that answers config.json
+    disable_namespace_listing(page, import_enabled=True)
+    page.goto("/")
+    import_button = page.get_by_role("button", name="Import existing sealed secret")
+    namespace_input = page.get_by_role("textbox", name="Namespace name")
+
+    # not for a name that is no namespace
+    namespace_input.fill("Not_Valid")
+    expect(import_button).to_have_count(0)
+
+    namespace_input.fill("team-a")
+    import_sealed_secret(page, "app-secrets")
+    assert secret_keys(page) == ["API_KEY", "TOKEN"]
+    assert requested_urls == [f"{page.url}sealed-secrets/team-a"]
+
+
 def test_secret_form_with_invalid_file(app_page: Page, tmp_path):
     page = app_page
     file_input = page.locator('input[type="file"]#fileInput-0')

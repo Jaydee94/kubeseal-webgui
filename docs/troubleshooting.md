@@ -26,6 +26,23 @@ Most common causes:
 
 See [configuration.md](configuration.md#sealed-secrets-controller).
 
+## "Failed to fetch namespaces. HTTP 500 - Can't get namespaces from cluster."
+
+The API may not list the namespaces of the cluster, usually because the
+chart's `ClusterRole` could not be installed (e.g. as an OpenShift project
+admin) or a `customServiceAccountName` lacks `list` on `namespaces`. The API
+log shows the `403` from the Kubernetes API.
+
+Sealing works without the list: tick "Namespace does not exist yet" and type
+the namespace. To make that the normal mode, without the error, set
+
+```bash
+--set enableNamespaceListing=false
+```
+
+The namespace is then always typed in. See
+[configuration.md](configuration.md#service-account-and-rbac).
+
 ## `kubeseal binary not found` or 500 errors on `POST /secrets`
 
 The API expects `kubeseal` at `KUBESEAL_BINARY`. In the published container
