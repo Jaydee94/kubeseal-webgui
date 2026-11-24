@@ -123,6 +123,13 @@ spec:
               subPath: config.json
             - name: tmp
               mountPath: /tmp
+            {{- if not .Values.ui.ipv6.enabled }}
+            # Hides the IPv6 listener of the image (listen.d/ipv6.conf), so
+            # that nginx listens on IPv4 only.
+            - name: nginx-listen
+              mountPath: /etc/nginx/listen.d
+              readOnly: true
+            {{- end }}
       volumes:
         {{- if .Values.sealedSecrets.autoFetchCert }}
         - name: sealed-secrets-certs
@@ -133,3 +140,7 @@ spec:
             name: {{ include "kubeseal-webgui.fullname" . }}
         - name: tmp
           emptyDir: {}
+        {{- if not .Values.ui.ipv6.enabled }}
+        - name: nginx-listen
+          emptyDir: {}
+        {{- end }}

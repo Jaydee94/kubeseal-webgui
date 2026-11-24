@@ -95,6 +95,27 @@ it instead:
 
 See [configuration.md](configuration.md#security-context).
 
+## UI container does not start: `Address family not supported`
+
+On nodes with IPv6 disabled in the kernel (for example `ipv6.disable=1` on
+the kernel command line) nginx cannot open its IPv6 listener, and the `ui`
+container never becomes ready. Its log shows one of:
+
+```text
+[emerg] socket() [::]:8080 failed (97: Address family not supported by protocol)
+[emerg] bind() to [::]:8080 failed (99: Cannot assign requested address)
+```
+
+Let the UI listen on IPv4 only:
+
+```bash
+--set ui.ipv6.enabled=false
+```
+
+This needs a UI image newer than 4.17.0. Outside the chart, mount an empty
+directory over `/etc/nginx/listen.d` (e.g. `docker run --tmpfs
+/etc/nginx/listen.d ...`): the IPv6 listener is the only file in it.
+
 ## Mock mode not engaging
 
 If you set `MOCK_ENABLED=true` but the API still tries to talk to a real

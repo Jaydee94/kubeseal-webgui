@@ -21,6 +21,7 @@ FROM cgr.dev/chainguard/nginx:latest@sha256:89bea6e2136cc4aaaf5f0ab3ca26372c8246
 # Files stay owned by root: the nonroot runtime user only needs to read them.
 COPY ui/nginx.conf /etc/nginx/nginx.conf
 COPY ui/nginx-default.conf /etc/nginx/conf.d/default.conf
+COPY ui/nginx-listen-ipv6.conf /etc/nginx/listen.d/ipv6.conf
 COPY --from=ui-build-stage /ui/dist /usr/share/nginx/html/
 
 EXPOSE 8080
