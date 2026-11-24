@@ -8,7 +8,7 @@ api:
   url: http://localhost:8080
   image:
     repository: ghcr.io/jaydee94/kubeseal-webgui/api
-    tag: 4.17.0
+    tag: 4.18.0
   environment: {}
   loglevel: "INFO"
   ## Log output format of the API container: "text" or "json" (one JSON object per line).
@@ -33,7 +33,7 @@ ui:
   extraVolumeMounts: []
   image:
     repository: ghcr.io/jaydee94/kubeseal-webgui/ui
-    tag: 4.17.0
+    tag: 4.18.0
   ipv6:
     # The UI's nginx listens on IPv4 and IPv6. Set to false on nodes where
     # IPv6 is disabled in the kernel (e.g. ipv6.disable=1): nginx cannot bind
