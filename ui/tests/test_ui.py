@@ -1,5 +1,6 @@
 import base64
 import json
+import pathlib
 import re
 
 import pytest
@@ -777,6 +778,34 @@ def test_configured_default_scope_is_used_at_start_and_after_clear(page: Page):
 
     # another scope can still be picked for a secret
     select_scope(page, "strict")
+    expect(selected_scope(page)).to_have_attribute("data-scope", "strict")
+
+
+def test_scope_picked_while_config_loads_is_kept(page: Page):
+    # config.json is held back until the user has picked a scope
+    held: list[Route] = []
+
+    def hold(route: Route):
+        held.append(route)
+
+    page.route("**/config.json", hold)
+    page.goto("/")
+    page.wait_for_selector(".scope-toggle")
+
+    # away from strict and back again: still a choice of the user
+    select_scope(page, "namespace-wide")
+    select_scope(page, "strict")
+
+    page.wait_for_function("() => true")  # let the request reach the route
+    assert len(held) == 1
+    config = json.loads(
+        (pathlib.Path(__file__).parent.parent / "public" / "config.json").read_text()
+    )
+    config["default_scope"] = "cluster-wide"
+    held[0].fulfill(json=config)
+
+    # the namespaces are loaded after config.json: wait for them
+    namespace_select(page)
     expect(selected_scope(page)).to_have_attribute("data-scope", "strict")
 
 

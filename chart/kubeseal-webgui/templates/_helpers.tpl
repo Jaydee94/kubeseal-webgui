@@ -80,11 +80,17 @@ instead of rendering an ingress that cannot work. Also rejected:
 
 {{/*
 The scope the UI starts with (defaultScope). A typo fails here: the UI would
-silently fall back to "strict" instead. Keep the list in step with SCOPES in
-ui/src/constants.js.
+silently fall back to "strict" instead. Only a missing (null) or empty value
+means "strict", like an empty ingress.path means "/"; anything else, false
+and 0 included, must be one of the scopes. Keep the list in step with SCOPES
+in ui/src/constants.js.
 */}}
 {{- define "kubeseal-webgui.defaultScope" -}}
-{{- $scope := .Values.defaultScope | default "strict" | toString -}}
+{{- $scope := .Values.defaultScope -}}
+{{- if or (kindIs "invalid" $scope) (eq (toString $scope) "") -}}
+{{- $scope = "strict" -}}
+{{- end -}}
+{{- $scope = toString $scope -}}
 {{- if not (has $scope (list "strict" "namespace-wide" "cluster-wide")) -}}
 {{- fail (printf "invalid defaultScope %q: use \"strict\", \"namespace-wide\" or \"cluster-wide\"" $scope) -}}
 {{- end -}}
