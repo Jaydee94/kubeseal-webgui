@@ -81,6 +81,9 @@ spec:
             {{- toYaml . | nindent 12 }}
           {{- end }}
           volumeMounts:
+           {{- with .Values.api.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+           {{- end }}
            {{- if .Values.sealedSecrets.autoFetchCert }}
             - name: sealed-secrets-certs
               mountPath: /kubeseal-webgui/cert
@@ -118,12 +121,18 @@ spec:
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
+            {{- with .Values.ui.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
             - name: sealed-secret-configmap
               mountPath: /usr/share/nginx/html/config.json
               subPath: config.json
             - name: tmp
               mountPath: /tmp
       volumes:
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
         {{- if .Values.sealedSecrets.autoFetchCert }}
         - name: sealed-secrets-certs
           emptyDir: {}

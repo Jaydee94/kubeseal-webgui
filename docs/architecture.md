@@ -53,8 +53,10 @@ encryption.
   `/usr/share/nginx/html/config.json`, so the same image can be deployed to
   any environment without rebuilding. The image has no shell and therefore
   no entrypoint hooks: to point the reverse proxy at a different API
-  upstream outside the chart, mount your own server block over
-  `/etc/nginx/conf.d/default.conf`.
+  upstream, mount your own server block over
+  `/etc/nginx/conf.d/default.conf` (with the chart: `extraVolumes` and
+  `ui.extraVolumeMounts`, see
+  [configuration.md](configuration.md#own-files-in-the-containers)).
 
 ### API container
 

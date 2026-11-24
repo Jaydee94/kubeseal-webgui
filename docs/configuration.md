@@ -84,10 +84,45 @@ grants `list` on `namespaces` and `get`/`list` on
 | `tolerations` | Pod tolerations. | `[]` |
 | `affinity` | Pod affinity rules. | `{}` |
 | `nodeSelector` | Pod node selector. | `{}` |
+| `extraVolumes` | Additional volumes of the pod (Kubernetes `volumes` entries), mounted with the two values below. | `[]` |
+| `api.extraVolumeMounts` | Additional `volumeMounts` of the `api` container. | `[]` |
+| `ui.extraVolumeMounts` | Additional `volumeMounts` of the `ui` container, e.g. an own nginx server block over `/etc/nginx/conf.d/default.conf` (see [below](#own-files-in-the-containers)). | `[]` |
 | `api.url` | Public URL of the API as seen by the browser. Rendered into the UI's `config.json` ConfigMap. | `http://localhost:8080` |
 | `api.loglevel` | Log level for the API container (`DEBUG`, `INFO`, `WARNING`, `ERROR`). | `INFO` |
 | `api.logformat` | Log output format of the API container: `text` or `json` (one JSON object per line, for log aggregators). | `text` |
 | `api.environment` | Additional environment variables for the API container as a map. | `{}` |
+
+### Own files in the containers
+
+`extraVolumes` together with `api.extraVolumeMounts` / `ui.extraVolumeMounts`
+mount files the chart does not provide, for example a custom CA bundle or an
+own nginx server block for the UI:
+
+```yaml
+extraVolumes:
+  - name: nginx-server-block
+    configMap:
+      name: my-nginx-server-block   # with a key "default.conf"
+ui:
+  extraVolumeMounts:
+    - name: nginx-server-block
+      mountPath: /etc/nginx/conf.d/default.conf
+      subPath: default.conf
+      readOnly: true
+```
+
+- A replaced server block is not updated with the image. Start from
+  [`ui/nginx-default.conf`](../ui/nginx-default.conf) of the image version
+  in use and check it again on every upgrade: the API routes and the path
+  prefix handling live in it.
+- Do not reuse a `mountPath` the chart already mounts (`/tmp`, the
+  certificate, `logging_config.yaml`, `config.json`): Kubernetes rejects a
+  pod with two mounts at the same path. Volume names must not clash with the
+  chart's own (`sealed-secret-configmap`, `sealed-secrets-certs`, `tmp`).
+- The root filesystem is read-only (`containerSecurityContext`); mount
+  writable paths as `emptyDir`.
+- Files mounted with `subPath` are not updated in a running pod when the
+  ConfigMap changes; restart the deployment.
 
 ### Security context
 
