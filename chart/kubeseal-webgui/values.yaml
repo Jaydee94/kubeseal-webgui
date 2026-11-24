@@ -13,7 +13,24 @@ api:
   loglevel: "INFO"
   ## Log output format of the API container: "text" or "json" (one JSON object per line).
   logformat: "text"
+  # Additional volumeMounts of the api container, for volumes from
+  # extraVolumes. Example (a custom CA bundle):
+  # extraVolumeMounts:
+  #   - name: ca-bundle
+  #     mountPath: /etc/ssl/custom
+  #     readOnly: true
+  extraVolumeMounts: []
 ui:
+  # Additional volumeMounts of the ui container, for volumes from
+  # extraVolumes. Example (an own nginx server block; it replaces the one of
+  # the image, so keep it in step with ui/nginx-default.conf of the image
+  # version in use):
+  # extraVolumeMounts:
+  #   - name: nginx-server-block
+  #     mountPath: /etc/nginx/conf.d/default.conf
+  #     subPath: default.conf
+  #     readOnly: true
+  extraVolumeMounts: []
   image:
     repository: ghcr.io/jaydee94/kubeseal-webgui/ui
     tag: 4.17.0
@@ -37,6 +54,13 @@ customServiceAccountName: ""
 affinity: {}
 tolerations: []
 nodeSelector: {}
+# Additional volumes of the pod, mounted with api.extraVolumeMounts and
+# ui.extraVolumeMounts. Example:
+# extraVolumes:
+#   - name: nginx-server-block
+#     configMap:
+#       name: my-nginx-server-block
+extraVolumes: []
 # Setup resources for the pod
 resources:
   limits:
