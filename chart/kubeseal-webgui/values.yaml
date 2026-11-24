@@ -34,6 +34,12 @@ ui:
   image:
     repository: ghcr.io/jaydee94/kubeseal-webgui/ui
     tag: 4.17.0
+  ipv6:
+    # The UI's nginx listens on IPv4 and IPv6. Set to false on nodes where
+    # IPv6 is disabled in the kernel (e.g. ipv6.disable=1): nginx cannot bind
+    # the IPv6 listener there and the ui container does not start. Needs a UI
+    # image newer than 4.17.0.
+    enabled: true
 image:
   pullPolicy: Always
 # Optionally provide image pull secrets for private registries.

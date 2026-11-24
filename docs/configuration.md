@@ -21,6 +21,7 @@ If anything looks out of date, the YAML file is the source of truth.
 | `api.image.tag` | API image tag. | Matches chart `appVersion` (see [Chart.yaml](../chart/kubeseal-webgui/Chart.yaml)). |
 | `ui.image.repository` | UI image repository. | `ghcr.io/jaydee94/kubeseal-webgui/ui` |
 | `ui.image.tag` | UI image tag. | Matches chart `appVersion` (see [Chart.yaml](../chart/kubeseal-webgui/Chart.yaml)). |
+| `ui.ipv6.enabled` | Let the UI's nginx listen on IPv6 in addition to IPv4. Set to `false` on nodes with IPv6 disabled in the kernel, where nginx cannot start otherwise (see [troubleshooting](troubleshooting.md#ui-container-does-not-start-address-family-not-supported)). Needs a UI image newer than 4.17.0. | `true` |
 | `image.pullPolicy` | Image pull policy. | `Always` |
 | `imagePullSecrets` | Image pull secrets for private registries. | `[]` |
 | `nameOverride` | Override the chart name component of object names. | `""` |

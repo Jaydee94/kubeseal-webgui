@@ -329,3 +329,51 @@ jobs:
           | jq -e '.[0].key == "a"'
           # the root of the host is no longer routed to kubeseal-webgui
           test "$(curl -s -o /dev/null -w '%{http_code}' "http://${HOST}:80/namespaces")" = 404
+      - name: Serve on IPv4 only
+        run: |
+          # ui.ipv6.enabled=false (issue #372): the UI's nginx starts without
+          # its IPv6 listener and serves on IPv4. The kind nodes do have IPv6,
+          # so this checks the chart and the image, not a node without IPv6.
+          HOST=$(hostname -f)
+          helm template \
+            --release-name e2e-test \
+            --namespace kubeseal-webgui \
+            --set api.image.tag=snapshot \
+            --set api.url=http://${HOST}:80 \
+            --set autoFetchCertResources=null \
+            --set image.pullPolicy=Never \
+            --set ingress.enabled=true \
+            --set ingress.hostname=${HOST} \
+            --set resources=null \
+            --set sealedSecrets.autoFetchCert=true \
+            --set ui.image.tag=snapshot \
+            --set ui.ipv6.enabled=false \
+            --set securityContext.runAsUser=1042 \
+            chart/kubeseal-webgui \
+          | kubectl apply -f - --namespace kubeseal-webgui
+          kubectl rollout status --namespace kubeseal-webgui deployment/e2e-test-kubeseal-webgui --timeout=240s
+
+          # the pod of the new revision, not one that is still terminating
+          POD=$(kubectl get pod -n kubeseal-webgui -l app=kubeseal-webgui -o json \
+            | jq -r '[.items[] | select(.metadata.deletionTimestamp == null)][0]')
+          POD_IPV4=$(echo "${POD}" | jq -r '.status.podIPs[].ip | select(contains(":") | not)')
+          POD_IPV6=$(echo "${POD}" | jq -r '.status.podIPs[].ip | select(contains(":"))')
+          test -n "${POD_IPV4}" && test -n "${POD_IPV6}"
+
+          kubectl run curl-ipv4 --image=curlimages/curl --restart=Never --command -- sleep 3600
+          kubectl wait --for=condition=ready pod/curl-ipv4 --timeout=60s
+          set -x
+          kubectl exec curl-ipv4 -- curl -sf -o /dev/null "http://${POD_IPV4}:8080/"
+          kubectl exec curl-ipv4 -- curl -sf -o /dev/null "http://${POD_IPV4}:8080/namespaces"
+          # nothing listens on IPv6 (not "! curl": bash -e ignores that)
+          if kubectl exec curl-ipv4 -- curl -s -o /dev/null -g --max-time 10 "http://[${POD_IPV6}]:8080/"; then
+            echo "the UI still answers on IPv6"
+            exit 1
+          fi
+          kubectl delete pod curl-ipv4
+          # and through the ingress, which is back at "/"
+          for i in $(seq 1 24); do
+            curl -sf "http://${HOST}:80/namespaces" > /dev/null && break
+            sleep 5
+          done
+          curl -sf "http://${HOST}:80/namespaces" | jq -e 'index("kube-system") != null'

@@ -38,7 +38,10 @@ encryption.
   image together with [`ui/nginx.conf`](../ui/nginx.conf), which moves the
   PID file and all temp paths to `/tmp` so the container runs with
   `readOnlyRootFilesystem`.
-- Listens on port 8080 (IPv4 and IPv6).
+- Listens on port 8080, IPv4 and IPv6. The IPv6 listener is a file of its
+  own (`/etc/nginx/listen.d/ipv6.conf`, from
+  [`ui/nginx-listen-ipv6.conf`](../ui/nginx-listen-ipv6.conf)); the chart
+  hides it for `ui.ipv6.enabled=false`.
 - Reverse-proxies the API routes to the in-pod API:
 
   ```nginx
