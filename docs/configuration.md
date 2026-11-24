@@ -72,6 +72,7 @@ grants `list` on `namespaces` and `get`/`list` on
 | `sealedSecrets.controllerNamespace` | Namespace of the Sealed Secrets controller. | `kube-system` |
 | `sealedSecrets.cert` | Public certificate of the controller, provided inline (used when `autoFetchCert=false`). | `""` |
 | `enableExistingSealedSecretLoading` | UI feature flag: allow importing keys from existing `SealedSecret` objects in a namespace. | `false` |
+| `defaultScope` | The scope the UI starts with and returns to on "Clear": `strict`, `namespace-wide` or `cluster-wide`. Users can still pick another scope per secret. Any other value fails the chart render. With `cluster-wide`, secrets sealed without looking at the scope can be unsealed in any namespace. | `strict` |
 
 ### Resources, scheduling, and API options
 

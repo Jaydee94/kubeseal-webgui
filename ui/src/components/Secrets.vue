@@ -21,8 +21,9 @@
               ref="formInputs"
               v-model:namespace-name="namespaceName"
               v-model:secret-name="secretName"
-              v-model:scope="scope"
+              :scope="scope"
               v-model:new-namespace="newNamespace"
+              @update:scope="pickScope"
               :namespaces="namespaces"
               :favorite-namespaces="favoriteNamespaces"
               @toggle-favorite="toggleFavorite"
@@ -251,6 +252,12 @@ const { favoriteNamespaces, toggleFavorite } = useFavoriteNamespaces()
 // in the header, see App.vue)
 const sealedSecretImportFeatureEnabled = ref(false)
 const namespaces = ref([])
+// The scope of a new form, from config.json.
+const defaultScope = ref(DEFAULT_SCOPE)
+// The form can be used while config.json loads: a scope the user picked
+// meanwhile is not replaced by the configured default, even if it is the
+// built-in one again.
+let scopePickedByUser = false
 
 // The form
 const secretName = ref('')
@@ -387,6 +394,10 @@ onBeforeMount(async () => {
     return
   }
   sealedSecretImportFeatureEnabled.value = config.importEnabled
+  defaultScope.value = config.defaultScope
+  if (!scopePickedByUser) {
+    scope.value = config.defaultScope
+  }
   await loadNamespaces()
 })
 
@@ -429,13 +440,18 @@ function showClipboardMessage(message) {
   clipboardSnackbar.value = true
 }
 
+function pickScope(newScope) {
+  scopePickedByUser = true
+  scope.value = newScope
+}
+
 function resetForm() {
   focusAfterSwap = 'form'
   displayCreateSealedSecretForm.value = true
   secretName.value = ''
   namespaceName.value = ''
   newNamespace.value = false
-  scope.value = DEFAULT_SCOPE
+  scope.value = defaultScope.value
   secrets.value = [createSecretEntry()]
   sealedSecrets.value = []
   resetSealedSecretImport()

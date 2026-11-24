@@ -1,5 +1,6 @@
 import base64
 import json
+import pathlib
 import re
 
 import pytest
@@ -742,6 +743,83 @@ def test_clear_on_result_view_returns_to_an_empty_form(app_page: Page):
     expect(page.locator(".v-autocomplete__selection-text")).to_have_text("")
     expect(page.locator("input#namespaceSelection")).to_have_value("")
     expect(page.locator('button:has-text("Encrypt")')).to_be_disabled()
+
+
+def serve_default_scope(page: Page, default_scope):
+    """Serve config.json with `default_scope` (the chart's `defaultScope`)."""
+
+    def config_json(route: Route):
+        config = route.fetch().json()
+        config["default_scope"] = default_scope
+        route.fulfill(json=config)
+
+    page.route("**/config.json", config_json)
+
+
+def selected_scope(page: Page):
+    return page.locator('.scope-toggle button[aria-pressed="true"]')
+
+
+def test_configured_default_scope_is_used_at_start_and_after_clear(page: Page):
+    serve_default_scope(page, "namespace-wide")
+    api = SealingApi(page)
+    page.goto("/")
+
+    expect(selected_scope(page)).to_have_attribute("data-scope", "namespace-wide")
+    # the secret name is optional in this scope
+    namespace_select(page)
+    add_secret_key_value(page)
+    click_encrypt_button(page)
+    assert api.only_request["scope"] == "namespace-wide"
+
+    page.get_by_role("button", name="Clear").click()
+    expect(page.locator("#sealed-secret-result")).to_have_count(0)
+    expect(selected_scope(page)).to_have_attribute("data-scope", "namespace-wide")
+
+    # another scope can still be picked for a secret
+    select_scope(page, "strict")
+    expect(selected_scope(page)).to_have_attribute("data-scope", "strict")
+
+
+def test_scope_picked_while_config_loads_is_kept(page: Page):
+    # config.json is held back until the user has picked a scope
+    held: list[Route] = []
+
+    def hold(route: Route):
+        held.append(route)
+
+    page.route("**/config.json", hold)
+    page.goto("/")
+    page.wait_for_selector(".scope-toggle")
+
+    # away from strict and back again: still a choice of the user
+    select_scope(page, "namespace-wide")
+    select_scope(page, "strict")
+
+    page.wait_for_function("() => true")  # let the request reach the route
+    assert len(held) == 1
+    config = json.loads(
+        (pathlib.Path(__file__).parent.parent / "public" / "config.json").read_text()
+    )
+    config["default_scope"] = "cluster-wide"
+    held[0].fulfill(json=config)
+
+    # the namespaces are loaded after config.json: wait for them
+    namespace_select(page)
+    expect(selected_scope(page)).to_have_attribute("data-scope", "strict")
+
+
+def test_unknown_default_scope_falls_back_to_strict(page: Page):
+    serve_default_scope(page, "global")
+    # strict is also the scope before config.json is loaded: wait for the
+    # warning, so that the check is about the loaded configuration
+    with page.expect_console_message(
+        predicate=lambda message: "Unknown default_scope" in message.text
+    ):
+        page.goto("/")
+
+    expect(selected_scope(page)).to_have_count(1)
+    expect(selected_scope(page)).to_have_attribute("data-scope", "strict")
 
 
 def test_copy_buttons_copy_the_displayed_text(app_page: Page):

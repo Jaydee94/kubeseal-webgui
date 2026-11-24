@@ -7,7 +7,14 @@ export const SCOPE_NAMESPACE_WIDE = 'namespace-wide'
 
 // In the order they are offered in the scope selection.
 export const SCOPES = [SCOPE_STRICT, SCOPE_NAMESPACE_WIDE, SCOPE_CLUSTER_WIDE]
+// The scope the form starts with when config.json names none (`defaultScope`
+// of the chart): the one that unseals in the fewest places.
 export const DEFAULT_SCOPE = SCOPE_STRICT
+
+/** `value` if it is one of the scopes, otherwise the default scope. */
+export function toScope(value) {
+  return SCOPES.includes(value) ? value : DEFAULT_SCOPE
+}
 
 /** Only the strict scope seals the secret for one specific name. */
 export function scopeNeedsName(scope) {
