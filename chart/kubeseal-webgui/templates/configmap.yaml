@@ -14,7 +14,7 @@ data:
     { 
       "api_url": {{ .Values.api.url | quote }},
       "display_name": {{ .Values.displayName | quote }},
-      "enable_existing_sealed_secret_loading": {{ .Values.enableExistingSealedSecretLoading }},
+      "enable_existing_sealed_secret_loading": {{ include "kubeseal-webgui.sealedSecretLoading" . | eq "true" }},
       "default_scope": {{ include "kubeseal-webgui.defaultScope" . | quote }},
       "enable_namespace_listing": {{ include "kubeseal-webgui.namespaceListing" . | eq "true" }},
       "kubeseal_webgui_ui_version": {{ .Values.ui.image.tag | quote}},

@@ -66,9 +66,12 @@ defaultScope: strict
 # enableExistingSealedSecretLoading=false it creates no ClusterRole or
 # ClusterRoleBinding at all.
 enableNamespaceListing: true
-# Set this value to specify a ServiceAccount that is allowed to list namespaces.
-# Leave empty to use the ServiceAccount shipped with this chart.
-# If you use a custom ServiceAccount, it must be able to list namespaces in your cluster.
+# Set this value to use an existing ServiceAccount instead of the one shipped
+# with this chart (and its ClusterRole). Leave empty to use the chart's.
+# A custom ServiceAccount needs the permissions of the features in use:
+# "list" on namespaces for enableNamespaceListing=true, and "get"/"list" on
+# sealedsecrets.bitnami.com (in the namespaces used) for
+# enableExistingSealedSecretLoading=true.
 customServiceAccountName: ""
 affinity: {}
 tolerations: []
