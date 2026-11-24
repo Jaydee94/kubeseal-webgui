@@ -9,6 +9,7 @@ const CHART_CONFIG = {
   display_name: 'Production',
   enable_existing_sealed_secret_loading: true,
   default_scope: 'namespace-wide',
+  enable_namespace_listing: false,
   kubeseal_webgui_ui_version: '4.14.0',
   kubeseal_webgui_api_version: '4.14.1'
 }
@@ -33,6 +34,7 @@ describe('normalizeConfig', () => {
       displayName: 'Production',
       importEnabled: true,
       defaultScope: 'namespace-wide',
+      namespaceListingEnabled: false,
       uiVersion: '4.14.0',
       apiVersion: '4.14.1'
     })
@@ -55,12 +57,27 @@ describe('normalizeConfig', () => {
     }
   )
 
+  // An older chart renders no such key: the namespaces are listed as before.
+  it.each([
+    [undefined, true],
+    [null, true],
+    [true, true],
+    ['true', true],
+    [false, false],
+    ['false', false],
+    ['False', false]
+  ])('lists namespaces for enable_namespace_listing %j: %s', (value, expected) => {
+    const config = { ...CHART_CONFIG, enable_namespace_listing: value }
+    expect(normalizeConfig(config).namespaceListingEnabled).toBe(expected)
+  })
+
   it.each([{}, null, undefined])('has safe defaults for %j', (raw) => {
     expect(normalizeConfig(raw)).toEqual({
       apiUrl: '',
       displayName: '',
       importEnabled: false,
       defaultScope: 'strict',
+      namespaceListingEnabled: true,
       uiVersion: undefined,
       apiVersion: undefined
     })

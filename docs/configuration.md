@@ -32,12 +32,21 @@ If anything looks out of date, the YAML file is the source of truth.
 
 | Parameter | Description | Default |
 |---|---|---|
-| `customServiceAccountName` | Use an existing `ServiceAccount` instead of the one shipped with the chart. The account must be able to list namespaces. Leave empty to use the bundled `ServiceAccount` and `ClusterRole`. | `""` |
+| `customServiceAccountName` | Use an existing `ServiceAccount` instead of the one shipped with the chart. The account must be able to list namespaces (unless `enableNamespaceListing=false`). Leave empty to use the bundled `ServiceAccount` and `ClusterRole`. | `""` |
+| `enableNamespaceListing` | Let the UI offer the namespaces of the cluster to pick from. Set to `false` where the API may not list namespaces (no cluster-wide RBAC, e.g. as an OpenShift project admin): the namespace is then typed in, nothing requests `/namespaces`, and the chart drops the `namespaces` rule from its `ClusterRole`. | `true` |
 
 The bundled `ClusterRole`
 ([`clusterrole.yaml`](../chart/kubeseal-webgui/templates/clusterrole.yaml))
 grants `list` on `namespaces` and `get`/`list` on
 `sealedsecrets.bitnami.com`.
+
+With `enableNamespaceListing=false` it only grants the `sealedsecrets`
+rule, and only if `enableExistingSealedSecretLoading=true`; with both off
+the chart creates no `ClusterRole` or `ClusterRoleBinding` and installs
+without cluster-wide RBAC. To import existing SealedSecrets without
+cluster-wide RBAC, use `customServiceAccountName` and grant `get`/`list` on
+`sealedsecrets.bitnami.com` with a `Role` and `RoleBinding` in each target
+namespace yourself: the API only reads the namespace that was entered.
 
 ### Networking
 

@@ -3,6 +3,7 @@
   "display_name": "Test",
   "enable_existing_sealed_secret_loading": false,
   "default_scope": "strict",
+  "enable_namespace_listing": true,
   "kubeseal_webgui_ui_version": "2.1.0",
   "kubeseal_webgui_api_version": "2.1.0"
 }

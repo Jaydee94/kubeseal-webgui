@@ -133,6 +133,11 @@ that grants:
 If you bring your own `ServiceAccount` via `customServiceAccountName`, you
 must grant equivalent permissions yourself.
 
+With `enableNamespaceListing=false` the UI does not call `/namespaces` (the
+namespace is typed in) and the `namespaces` rule is left out; without
+`enableExistingSealedSecretLoading` either, the chart creates no cluster-wide
+RBAC at all (see [configuration.md](configuration.md#service-account-and-rbac)).
+
 ## Mock mode
 
 Setting `MOCK_ENABLED=true` swaps the Kubernetes client and `kubeseal`

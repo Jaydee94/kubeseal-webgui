@@ -96,3 +96,26 @@ in ui/src/constants.js.
 {{- end -}}
 {{- $scope -}}
 {{- end -}}
+
+{{/*
+Whether the UI lists the namespaces of the cluster (enableNamespaceListing).
+The same spellings as toBoolean() in ui/src/config.js count as true, so that
+chart and UI agree on a quoted "false". Empty for false, as "if" expects of
+an "include".
+*/}}
+{{- define "kubeseal-webgui.namespaceListing" -}}
+{{- if has (.Values.enableNamespaceListing | toString | lower) (list "true" "1" "yes" "on") -}}
+true
+{{- end -}}
+{{- end -}}
+
+{{/*
+Whether the chart creates its ClusterRole and ClusterRoleBinding: not for a
+custom ServiceAccount, and not when nothing needs cluster-wide read access
+(neither the namespace list nor the import of existing SealedSecrets).
+*/}}
+{{- define "kubeseal-webgui.clusterRbac" -}}
+{{- if and (not .Values.customServiceAccountName) (or (include "kubeseal-webgui.namespaceListing" .) .Values.enableExistingSealedSecretLoading) -}}
+true
+{{- end -}}
+{{- end -}}

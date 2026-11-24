@@ -43,10 +43,10 @@
     <v-row dense class="target-fields">
       <v-col cols="12" sm="6">
         <v-text-field
-          v-if="newNamespace"
+          v-if="freeTextNamespace"
           id="namespaceSelection"
           :model-value="namespaceName"
-          label="New namespace name"
+          :label="newNamespace ? 'New namespace name' : 'Namespace name'"
           density="comfortable"
           autocomplete="off"
           clearable
@@ -61,7 +61,11 @@
           <template #append-inner>
             <InfoTooltip class="ml-2 info-icon">
               <span
-                >Name of a namespace that does not exist yet.<br /><i
+                >{{
+                  newNamespace
+                    ? 'Name of a namespace that does not exist yet.'
+                    : 'Name of the target namespace where the sealed secret will be deployed.'
+                }}<br /><i
                   >The secret is sealed for exactly this name, so double-check it for typos.</i
                 ></span
               >
@@ -114,7 +118,9 @@
             </InfoTooltip>
           </template>
         </v-autocomplete>
+        <!-- Without the list every namespace is typed in anyway. -->
         <v-checkbox
+          v-if="namespaceListing"
           id="newNamespaceCheckbox"
           :model-value="newNamespace"
           label="Namespace does not exist yet"
@@ -219,6 +225,13 @@ const props = defineProps({
   newNamespace: {
     type: Boolean,
     default: false
+  },
+  // Whether the namespaces of the cluster are listed to pick from
+  // (`enableNamespaceListing` of the chart). Without the list the namespace
+  // is typed in.
+  namespaceListing: {
+    type: Boolean,
+    default: true
   }
 })
 
@@ -246,6 +259,8 @@ const namespaceItems = computed(() => {
     ...(others.length ? [{ type: 'subheader', title: 'All namespaces' }, ...others] : [])
   ]
 })
+
+const freeTextNamespace = computed(() => props.newNamespace || !props.namespaceListing)
 
 // Only the strict scope seals the secret for one specific name.
 const secretNameRequired = computed(() => scopeNeedsName(props.scope))

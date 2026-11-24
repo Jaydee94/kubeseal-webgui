@@ -25,6 +25,7 @@
               v-model:new-namespace="newNamespace"
               @update:scope="pickScope"
               :namespaces="namespaces"
+              :namespace-listing="namespaceListingEnabled"
               :favorite-namespaces="favoriteNamespaces"
               @toggle-favorite="toggleFavorite"
             />
@@ -45,7 +46,7 @@
               @drop-files="importDroppedFiles"
             >
               <template
-                v-if="sealedSecretImportFeatureEnabled && namespaceName && !newNamespace"
+                v-if="sealedSecretImportFeatureEnabled && existingNamespaceEntered"
                 #header-actions
               >
                 <v-menu
@@ -251,6 +252,9 @@ const { favoriteNamespaces, toggleFavorite } = useFavoriteNamespaces()
 // Configuration and data loaded from the server (the display name is shown
 // in the header, see App.vue)
 const sealedSecretImportFeatureEnabled = ref(false)
+// Off where the API may not list the namespaces of the cluster: the namespace
+// is typed in then.
+const namespaceListingEnabled = ref(true)
 const namespaces = ref([])
 // The scope of a new form, from config.json.
 const defaultScope = ref(DEFAULT_SCOPE)
@@ -329,8 +333,18 @@ const invalidKeyData = computed(() =>
 // Two rows with the same key would end up as a duplicated key in the YAML.
 const duplicateKeys = computed(() => findDuplicateKeys(secrets.value))
 
-const invalidNewNamespace = computed(
-  () => newNamespace.value && scopeNeedsNamespace(scope.value) && !isDnsLabel(namespaceName.value)
+// A typed-in namespace: a new one, or any one without the cluster's list.
+const freeTextNamespace = computed(() => newNamespace.value || !namespaceListingEnabled.value)
+
+const invalidFreeTextNamespace = computed(
+  () =>
+    freeTextNamespace.value && scopeNeedsNamespace(scope.value) && !isDnsLabel(namespaceName.value)
+)
+
+// A namespace that may hold SealedSecrets to import from: one of the list, or
+// a valid name typed in without the list (not one that does not exist yet).
+const existingNamespaceEntered = computed(
+  () => !!namespaceName.value && !newNamespace.value && !invalidFreeTextNamespace.value
 )
 
 // Only a failed load blocks sealing; a failed attempt to seal or to copy can
@@ -354,7 +368,7 @@ const notReadyToEncode = computed(
     incompleteSecretData.value ||
     invalidKeyData.value ||
     duplicateKeys.value.size > 0 ||
-    invalidNewNamespace.value ||
+    invalidFreeTextNamespace.value ||
     invalidSecretName.value ||
     (scopeNeedsNamespace(scope.value) && namespaceName.value === '') ||
     (scopeNeedsName(scope.value) && secretName.value === '')
@@ -394,11 +408,15 @@ onBeforeMount(async () => {
     return
   }
   sealedSecretImportFeatureEnabled.value = config.importEnabled
+  namespaceListingEnabled.value = config.namespaceListingEnabled
   defaultScope.value = config.defaultScope
   if (!scopePickedByUser) {
     scope.value = config.defaultScope
   }
-  await loadNamespaces()
+  // Without the list nothing is requested, so no error is shown either.
+  if (config.namespaceListingEnabled) {
+    await loadNamespaces()
+  }
 })
 
 // A value picked from the cluster list is not valid as free text and vice
