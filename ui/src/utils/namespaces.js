@@ -12,7 +12,11 @@ export function namespacesToSeal(main, additional = []) {
   return [...unique]
 }
 
-/** The first of the names that is not a valid namespace name, or `''`. */
+/**
+ * The first of the names that is not a valid namespace name, or `''`. Empty
+ * entries are skipped: they are never sealed for (see namespacesToSeal), and
+ * `''` must only mean "no invalid name".
+ */
 export function firstInvalidNamespace(names) {
-  return names.find((name) => !isDnsLabel(name)) ?? ''
+  return names.find((name) => !!name && !isDnsLabel(name)) ?? ''
 }

@@ -9,7 +9,7 @@ data:
   clusters.json: {{ include "kubeseal-webgui.clustersJson" . | quote }}
   {{- range .Values.sealedSecrets.certs }}
   {{- if .cert }}
-  {{ printf "%s.pem" .name }}: |
+  {{ printf "%s.pem" (.name | toString) }}: |
     {{- .cert | trim | nindent 4 }}
   {{- end }}
   {{- end }}

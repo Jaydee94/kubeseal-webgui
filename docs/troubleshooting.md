@@ -54,10 +54,12 @@ rendered. See [configuration.md](configuration.md#several-clusters).
 A certificate of the wrong cluster seals without an error and fails only when
 the secret is deployed (the controller logs that it cannot decrypt it).
 Compare the SHA-256 fingerprint the UI shows for the cluster with the one of
-the cluster's own certificate:
+the cluster's own certificate. Fetch it from that cluster, not from the
+current kubectl context:
 
 ```bash
-kubeseal --fetch-cert --controller-name <name> --controller-namespace <namespace> \
+kubeseal --context <context-of-that-cluster> --fetch-cert \
+  --controller-name <name> --controller-namespace <namespace> \
   | openssl x509 -noout -fingerprint -sha256
 ```
 

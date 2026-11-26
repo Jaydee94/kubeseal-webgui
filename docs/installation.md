@@ -155,7 +155,7 @@ The chart renders the certificate into a Secret mounted at
 Every cluster has its own controller and so its own certificate: a value
 sealed for one cluster cannot be unsealed in another. To seal for several
 clusters from one installation, list them with their certificates in a values
-file (`--set-file` cannot pass a list):
+file (`--set-file` cannot pass a list), e.g. `clusters-values.yaml`:
 
 ```yaml
 sealedSecrets:
@@ -168,6 +168,17 @@ sealedSecrets:
         -----BEGIN CERTIFICATE-----
         ...
 ```
+
+Install with it, or apply it to an existing release:
+
+```bash
+helm upgrade --install kubeseal-webgui \
+  oci://ghcr.io/jaydee94/kubeseal-webgui/charts/kubeseal-webgui \
+  --namespace kubeseal-webgui --create-namespace \
+  -f clusters-values.yaml
+```
+
+The pod is restarted whenever the list or a certificate changes.
 
 The UI then shows a cluster selector, the first entry being preselected. The
 namespaces and existing SealedSecrets can only be read from the `inCluster`

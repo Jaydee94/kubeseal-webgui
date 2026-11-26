@@ -113,7 +113,9 @@ sealedSecrets:
 - Leave `certs` empty to keep a single cluster using `sealedSecrets.cert`.
 
 The certificates of other clusters are static: replace them with a
-`helm upgrade` when a controller's certificate changes. The UI shows the
+`helm upgrade` when a controller's certificate changes. A changed list or
+certificate restarts the pod (a checksum annotation), because the API reads
+the clusters once at start-up. The UI shows the
 SHA-256 fingerprint of the selected cluster's certificate, to compare with
 the one of the cluster. A certificate of the wrong cluster seals without an
 error and fails only when the secret is deployed.

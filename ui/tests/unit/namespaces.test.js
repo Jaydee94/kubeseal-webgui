@@ -26,6 +26,11 @@ describe('firstInvalidNamespace', () => {
     expect(firstInvalidNamespace(['ok', 'Not_Valid', 'also bad'])).toBe('Not_Valid')
   })
 
+  it('finds an invalid name after an empty entry', () => {
+    expect(firstInvalidNamespace(['', 'Not_Valid'])).toBe('Not_Valid')
+    expect(firstInvalidNamespace(['', 'ok'])).toBe('')
+  })
+
   it('finds nothing in valid names', () => {
     expect(firstInvalidNamespace(['a', 'team-b', '1'])).toBe('')
     expect(firstInvalidNamespace([])).toBe('')
