@@ -42,7 +42,8 @@ class Cluster:
     in_cluster: bool = False
 
 
-def _parse_entry(index: int, entry: object) -> Cluster:
+def _parse_entry(index: int, entry: object, own_cert: str) -> Cluster:
+    """One entry of the clusters file as a cluster, or say what is wrong."""
     where = f"entry {index + 1} of the clusters file"
     if not isinstance(entry, dict):
         raise ClusterConfigError(f"{where} is not an object")
@@ -58,17 +59,25 @@ def _parse_entry(index: int, entry: object) -> Cluster:
     if cert is None and in_cluster:
         # The certificate of the controller of this cluster: the configured one,
         # or the one fetched from the controller at start-up.
-        cert = settings.kubeseal_cert
+        cert = own_cert
     if not isinstance(cert, str) or not cert:
         raise ClusterConfigError(f"cluster '{name}' needs a 'cert' (a file path)")
     return Cluster(name=name, cert=cert, in_cluster=in_cluster)
 
 
-def parse_clusters(document: object) -> list[Cluster]:
-    """Turn the content of a clusters file into clusters, or say what is wrong."""
+def parse_clusters(document: object, own_cert: str | None = None) -> list[Cluster]:
+    """Turn the content of a clusters file into clusters, or say what is wrong.
+
+    ``own_cert`` is the certificate of an ``inCluster`` entry without one
+    (default: ``KUBESEAL_CERT``).
+    """
     if not isinstance(document, list) or not document:
         raise ClusterConfigError("the clusters file must be a non-empty JSON list")
-    clusters = [_parse_entry(index, entry) for index, entry in enumerate(document)]
+    if own_cert is None:
+        own_cert = settings.kubeseal_cert
+    clusters = [
+        _parse_entry(index, entry, own_cert) for index, entry in enumerate(document)
+    ]
     names = [cluster.name for cluster in clusters]
     duplicates = sorted({name for name in names if names.count(name) > 1})
     if duplicates:
@@ -78,32 +87,36 @@ def parse_clusters(document: object) -> list[Cluster]:
     return clusters
 
 
-def load_clusters() -> list[Cluster]:
-    """Read the configured clusters. The first one is the default."""
-    if not settings.kubeseal_clusters_file:
+def load_clusters(clusters_file: str, kubeseal_cert: str) -> list[Cluster]:
+    """Read the clusters of a clusters file. The first one is the default.
+
+    Without a file there is one cluster, sealed with ``kubeseal_cert``.
+    """
+    if not clusters_file:
         return [
             Cluster(
                 name=DEFAULT_CLUSTER_NAME,
-                cert=settings.kubeseal_cert,
+                cert=kubeseal_cert,
                 in_cluster=True,
             )
         ]
-    path = Path(settings.kubeseal_clusters_file)
+    path = Path(clusters_file)
     try:
         document = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError) as error:
         raise ClusterConfigError(
             f"cannot read clusters file '{path}': {error}"
         ) from None
-    return parse_clusters(document)
+    return parse_clusters(document, kubeseal_cert)
 
 
 @functools.cache
 def _cached_clusters(clusters_file: str, kubeseal_cert: str) -> tuple[Cluster, ...]:
-    # The settings are arguments, so that a changed setting is never answered
-    # with clusters read under the old one.
-    del clusters_file, kubeseal_cert
-    return tuple(load_clusters())
+    """The clusters, cached by the settings they are read with.
+
+    A changed setting is so never answered with clusters read under the old one.
+    """
+    return tuple(load_clusters(clusters_file, kubeseal_cert))
 
 
 def get_clusters() -> tuple[Cluster, ...]:

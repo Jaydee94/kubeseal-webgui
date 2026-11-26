@@ -109,7 +109,7 @@ def test_invalid_cluster_documents_are_rejected(document, message):
         parse_clusters(document)
 
 
-def test_a_broken_clusters_file_stops_the_start(clusters_file, monkeypatch):
+def test_a_broken_clusters_file_stops_the_start(clusters_file):
     path = clusters_file(TWO_CLUSTERS)
     path.write_text("not json")
 
