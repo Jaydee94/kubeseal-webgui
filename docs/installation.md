@@ -73,7 +73,7 @@ helm install kubeseal-webgui \
 - The prefix is made of the characters `A-Z a-z 0-9 . _ ~ -`, one or more
   path segments (`/tools/kubeseal-webgui` works too). Rendering fails for
   anything else, for `.` and `..` segments, and for a prefix that ends like a
-  path the UI serves itself: `/secrets`, `/namespaces`, `/config`, `/docs`,
+  path the UI serves itself: `/secrets`, `/namespaces`, `/clusters`, `/config`, `/docs`,
   `/openapi.json`, `/config.json`, `/index.html`, `/favicon.ico`,
   `/favicon.svg`, `/sealed-secrets/<name>` or `/assets/<name>` (so
   `/team/config` is rejected, `/team-config` is fine).

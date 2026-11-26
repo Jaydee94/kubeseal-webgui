@@ -43,6 +43,14 @@ the namespace. To make that the normal mode, without the error, set
 The namespace is then always typed in. See
 [configuration.md](configuration.md#service-account-and-rbac).
 
+## "Failed to fetch the clusters", and Encrypt stays disabled
+
+The UI could not ask the API which clusters it seals for (`GET /clusters`).
+Sealing is blocked then: the API would use its first cluster, without the UI
+showing which one. Check the API log and reload the page. An API older than
+the UI, which has no such endpoint (HTTP 404), is not an error: it has one
+certificate, and the UI seals with it as before.
+
 ## "Unknown cluster" when sealing, or the API does not start with several clusters
 
 `POST /secrets` only accepts the cluster names of `sealedSecrets.certs`; the

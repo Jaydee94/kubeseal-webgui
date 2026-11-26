@@ -656,6 +656,19 @@ def test_namespace_is_cleared_when_the_namespace_mode_changes(page: Page):
     expect(page.locator("input#namespaceSelection")).to_have_value("")
 
 
+def test_typed_in_namespace_is_kept_while_it_stays_typed_in(page: Page):
+    serve_clusters(page, TWO_CLUSTERS)
+    page.goto("/")
+    page.wait_for_selector("#clusterSelection")
+
+    # a new namespace is typed in, in the cluster of the API ...
+    page.locator("#newNamespaceCheckbox").check()
+    page.fill("input#namespaceSelection", "team-new")
+    # ... and is still typed in for another cluster: nothing to clear
+    pick_cluster(page, "prod")
+    expect(page.locator("input#namespaceSelection")).to_have_value("team-new")
+
+
 def test_import_is_not_offered_for_another_cluster(page: Page):
     requested_urls = enable_sealed_secret_import(page)
     serve_clusters(page, TWO_CLUSTERS)
@@ -710,11 +723,12 @@ def test_one_secret_is_sealed_for_several_typed_in_namespaces(page: Page):
     click_encrypt_button(page)
 
     expect(page.locator("#sealed-secret-result")).to_be_visible()
-    # one request per namespace, the main one first; a repeat is sealed once
+    # one request per namespace (in parallel, so in no fixed order); a repeat
+    # is sealed once
     namespaces = [request["namespace"] for request in api.requests]
     assert sorted(namespaces) == ["team-a", "team-b", "team-c"]
     assert len(api.requests) == 3
-    # one manifest per namespace, each for its own namespace
+    # one manifest per namespace, in the order of the form
     expect(page.locator(".result-card")).to_have_count(3)
     expect(page.locator("#sealed-secret-result-2")).to_be_visible()
     texts = [
@@ -751,10 +765,14 @@ def test_additional_namespaces_are_picked_from_the_list(app_page: Page):
     page.keyboard.press("Escape")
     click_encrypt_button(page)
 
+    # the requests run in parallel, so only their set is fixed; the order of
+    # the results is the order of the form, the main namespace first
     expect(page.locator(".result-card")).to_have_count(2)
-    assert len(api.requests) == 2
-    assert api.requests[0]["namespace"] == main
-    assert api.requests[1]["namespace"] != main
+    namespaces = {request["namespace"] for request in api.requests}
+    assert len(api.requests) == 2 and len(namespaces) == 2 and main in namespaces
+    assert re.search(
+        r"namespace: (\S+)", page.locator("#sealed-secret-result").inner_text()
+    ).group(1) == main
 
 
 def test_invalid_additional_namespace_blocks_sealing(page: Page):

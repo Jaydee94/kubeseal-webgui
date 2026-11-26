@@ -89,6 +89,15 @@ describe('api', () => {
     await expect(api.fetchClusters()).rejects.toThrow()
   })
 
+  it('reads only a missing endpoint as an API without clusters', () => {
+    expect(api.clustersNotSupported({ status: 404 })).toBe(true)
+    expect(api.clustersNotSupported({ status: 500 })).toBe(false)
+    expect(api.clustersNotSupported({ status: 502 })).toBe(false)
+    // a network error or an unreadable answer has no status
+    expect(api.clustersNotSupported(new Error('Invalid JSON'))).toBe(false)
+    expect(api.clustersNotSupported(undefined)).toBe(false)
+  })
+
   it('names the cluster in the sealing request, and leaves it out without one', async () => {
     stubFetch([])
     const entries = [{ id: 1, key: 'k', value: 'v', file: null, fileError: '' }]

@@ -206,7 +206,13 @@ import { ref, computed, nextTick, onBeforeMount, watch } from 'vue'
 import SecretFormInputs from './SecretFormInputs.vue'
 import SecretsList from './SecretsList.vue'
 import SecretsResults from './SecretsResults.vue'
-import { fetchClusters, fetchNamespaces, fetchSealedSecrets, sealSecrets } from '@/api'
+import {
+  clustersNotSupported,
+  fetchClusters,
+  fetchNamespaces,
+  fetchSealedSecrets,
+  sealSecrets
+} from '@/api'
 import { loadConfig } from '@/config'
 import { useFavoriteNamespaces } from '@/composables/useFavoriteNamespaces'
 import { useDroppedFiles } from '@/composables/useDroppedFiles'
@@ -288,7 +294,8 @@ const sealing = ref(false)
 // The secret is sealed and the result is about to show.
 const sealed = ref(false)
 const encryptButton = ref(null)
-// What could not be loaded at start-up: '', 'config' or 'namespaces'. Unlike
+// What could not be loaded at start-up: '', 'config', 'clusters' or
+// 'namespaces'. Unlike
 // the error message this does not go away, because nothing retries the load.
 const loadError = ref('')
 const displayCreateSealedSecretForm = ref(true)
@@ -395,6 +402,7 @@ const existingNamespaceEntered = computed(
 const blockingError = computed(
   () =>
     loadError.value === 'config' ||
+    loadError.value === 'clusters' ||
     (loadError.value === 'namespaces' &&
       namespaceListingActive.value &&
       scopeNeedsNamespace(scope.value) &&
@@ -467,6 +475,7 @@ onBeforeMount(async () => {
     scope.value = config.defaultScope
   }
   await loadClusters()
+  if (loadError.value === 'clusters') return
   // Without the list nothing is requested, so no error is shown either. Nor
   // when none of the clusters is the one of the API.
   if (config.namespaceListingEnabled && inOwnClusterConfigured()) {
@@ -483,13 +492,17 @@ async function loadClusters() {
     clusters.value = await fetchClusters()
   } catch (error) {
     clusters.value = []
-    // An API older than this UI has no such endpoint, and one cluster.
-    // Anything else is worth telling: the default cluster is used meanwhile.
-    if (error.status === 404) {
+    if (clustersNotSupported(error)) {
       log.info('The API does not list clusters, using its only one.')
     } else {
+      // Sealing now would use the API's default cluster without the user
+      // seeing which one: a certificate of the wrong cluster seals without an
+      // error and only fails when the secret is deployed. So it is blocked.
       log.error('Failed to fetch the clusters:', error)
-      setErrorMessage(`Failed to fetch the clusters. Error Message: ${error.message}.`)
+      loadError.value = 'clusters'
+      setErrorMessage(
+        `Failed to fetch the clusters, so it is unknown which certificate would seal. Error Message: ${error.message}.`
+      )
     }
   }
   selectedCluster.value = clusters.value[0]?.name ?? ''
@@ -503,11 +516,12 @@ watch(newNamespace, () => {
 })
 
 // Switching between the cluster of the API (a list) and another one (typed in)
-// changes the mode of the field, like the checkbox above.
-watch(namespaceListingActive, () => {
+// changes the mode of the field, like the checkbox above. Only a real change
+// of the mode clears it: a name typed in as a new namespace is still typed in
+// when the namespaces turn out not to be listed (e.g. while config.json loads).
+watch(freeTextNamespace, () => {
   namespaceName.value = ''
   additionalNamespaces.value = []
-  newNamespace.value = false
 })
 
 // The namespace is irrelevant for cluster-wide secrets.

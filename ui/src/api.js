@@ -50,6 +50,15 @@ export async function fetchClusters() {
   }
 }
 
+/**
+ * Whether a failed fetchClusters() means an API older than this UI, which has
+ * no such endpoint and seals with its only certificate. Any other failure
+ * leaves it unknown which certificate the API would use.
+ */
+export function clustersNotSupported(error) {
+  return error?.status === 404
+}
+
 /** The SealedSecrets of a namespace as [{ name, keys }, ...]. */
 export async function fetchSealedSecrets(namespace) {
   return requestJson(await apiUrl(`sealed-secrets/${encodeURIComponent(namespace)}`))
