@@ -45,11 +45,15 @@ The namespace is then always typed in. See
 
 ## "Failed to fetch the clusters", and Encrypt stays disabled
 
-The UI could not ask the API which clusters it seals for (`GET /clusters`).
-Sealing is blocked then: the API would use its first cluster, without the UI
-showing which one. Check the API log and reload the page. An API older than
-the UI, which has no such endpoint (HTTP 404), is not an error: it has one
-certificate, and the UI seals with it as before.
+Several clusters are configured (`sealedSecrets.certs`), but the UI could not
+ask the API which ones (`GET /clusters`). Sealing is blocked then: the API
+would use its first cluster, without the UI showing which one. Check the API
+log and reload the page. With an own nginx server block
+(`ui.extraVolumeMounts`), make sure it passes `/clusters` on to the API like
+[`ui/nginx-default.conf`](../ui/nginx-default.conf) does.
+
+An installation with one cluster never asks for clusters and cannot show this
+error.
 
 ## "Unknown cluster" when sealing, or the API does not start with several clusters
 

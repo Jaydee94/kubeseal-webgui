@@ -36,27 +36,11 @@ export async function fetchNamespaces() {
 /**
  * The clusters a secret can be sealed for, as [{ name, inCluster, fingerprint }, ...].
  * The first one is the default. `inCluster` marks the one the API runs in:
- * only for it the namespaces and SealedSecrets can be read.
+ * only for it the namespaces and SealedSecrets can be read. Only asked for
+ * when config.json says there are several (`multiple_clusters`).
  */
 export async function fetchClusters() {
-  try {
-    return await requestJson(await apiUrl('clusters'))
-  } catch (error) {
-    // The dev server runs without an API (VITE_MOCK_NAMESPACES): one cluster.
-    if (import.meta.env.VITE_MOCK_NAMESPACES === 'true') {
-      return []
-    }
-    throw error
-  }
-}
-
-/**
- * Whether a failed fetchClusters() means an API older than this UI, which has
- * no such endpoint and seals with its only certificate. Any other failure
- * leaves it unknown which certificate the API would use.
- */
-export function clustersNotSupported(error) {
-  return error?.status === 404
+  return requestJson(await apiUrl('clusters'))
 }
 
 /** The SealedSecrets of a namespace as [{ name, keys }, ...]. */

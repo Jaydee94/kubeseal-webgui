@@ -71,33 +71,6 @@ describe('api', () => {
     expect(requests).toEqual([{ url: `${API_URL}/clusters` }])
   })
 
-  it('has no clusters when the API is missing in mock mode, and fails otherwise', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async (url) => {
-        if (url === 'config.json') {
-          return new Response(JSON.stringify({ api_url: API_URL }))
-        }
-        return new Response('no API', { status: 500 })
-      })
-    )
-
-    vi.stubEnv('VITE_MOCK_NAMESPACES', 'true')
-    await expect(api.fetchClusters()).resolves.toEqual([])
-
-    vi.stubEnv('VITE_MOCK_NAMESPACES', 'false')
-    await expect(api.fetchClusters()).rejects.toThrow()
-  })
-
-  it('reads only a missing endpoint as an API without clusters', () => {
-    expect(api.clustersNotSupported({ status: 404 })).toBe(true)
-    expect(api.clustersNotSupported({ status: 500 })).toBe(false)
-    expect(api.clustersNotSupported({ status: 502 })).toBe(false)
-    // a network error or an unreadable answer has no status
-    expect(api.clustersNotSupported(new Error('Invalid JSON'))).toBe(false)
-    expect(api.clustersNotSupported(undefined)).toBe(false)
-  })
-
   it('names the cluster in the sealing request, and leaves it out without one', async () => {
     stubFetch([])
     const entries = [{ id: 1, key: 'k', value: 'v', file: null, fileError: '' }]

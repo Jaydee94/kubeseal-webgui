@@ -111,6 +111,7 @@ sealedSecrets:
   namespaces and load existing SealedSecrets (they are read through the API's
   own service account). For every other cluster the namespace is typed in.
 - Leave `certs` empty to keep a single cluster using `sealedSecrets.cert`.
+  Nothing changes then: the UI does not even ask the API for clusters.
 
 The certificates of other clusters are static: replace them with a
 `helm upgrade` when a controller's certificate changes. A changed list or
@@ -207,7 +208,7 @@ These are read directly by the API process and can be set via
 |---|---|---|
 | `KUBESEAL_BINARY` | Absolute path to the `kubeseal` executable inside the container. | `/kubeseal-webgui/bin/kubeseal` (set in `Dockerfile.api`) |
 | `KUBESEAL_CERT` | Path to the controller's public certificate. | `/kubeseal-webgui/cert/kubeseal-cert.pem` |
-| `KUBESEAL_CLUSTERS_FILE` | Path of a JSON file listing several clusters, each `{"name": ..., "cert": <path>, "inCluster": <bool>}` (`cert` can be left out for the `inCluster` entry, which then uses `KUBESEAL_CERT`). The first entry is the default. Set by the chart for `sealedSecrets.certs`. A broken file, or a missing certificate in it, stops the API at startup. Empty: one cluster named `default`, sealed with `KUBESEAL_CERT`. | empty |
+| `KUBESEAL_CLUSTERS_FILE` | Path of a JSON file listing several clusters, each `{"name": ..., "cert": <path>, "inCluster": <bool>}` (`cert` can be left out for the `inCluster` entry, which then uses `KUBESEAL_CERT`). The first entry is the default. Set by the chart for `sealedSecrets.certs`. A broken file, or a missing certificate in it, stops the API at startup. Empty: one cluster named `default`, sealed with `KUBESEAL_CERT`. Without the chart, also set `"multiple_clusters": true` in the UI's `config.json`, or the UI does not ask for the clusters. | empty |
 | `KUBESEAL_AUTOFETCH` | Set to `true` to fetch the certificate from the controller on startup. Set by the chart when `sealedSecrets.autoFetchCert=true`. A boolean: `true`/`false`, `1`/`0`, `yes`/`no`, `on`/`off` in any case; any other value stops the API at startup. | `false` |
 | `KUBESEAL_CONTROLLER_NAME` | Deployment name of the Sealed Secrets controller (used when auto-fetching). | `sealed-secrets-controller` |
 | `KUBESEAL_CONTROLLER_NAMESPACE` | Namespace of the Sealed Secrets controller (used when auto-fetching). | `sealed-secrets` in the API code, overridden to match `sealedSecrets.controllerNamespace` by the chart. |
@@ -219,6 +220,10 @@ These are read directly by the API process and can be set via
 The UI is a static SPA. The chart renders `api.url` into a `config.json`
 ConfigMap that is mounted next to the bundled HTML, so the browser knows
 where to find the API.
+
+The chart also renders `"multiple_clusters": true` into `config.json` when
+`sealedSecrets.certs` is set; only then does the UI ask the API for its
+clusters (`GET /clusters`).
 
 You only need to set one value:
 

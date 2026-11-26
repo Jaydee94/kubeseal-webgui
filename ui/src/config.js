@@ -43,6 +43,9 @@ export function normalizeConfig(raw) {
     // On unless switched off: a config.json without the key (an older chart)
     // keeps the namespace list.
     namespaceListingEnabled: toBoolean(raw?.enable_namespace_listing ?? true),
+    // Set by the chart for sealedSecrets.certs. Without it (one cluster, or an
+    // older chart) the UI does not ask the API for clusters at all.
+    multipleClusters: toBoolean(raw?.multiple_clusters),
     uiVersion: raw?.kubeseal_webgui_ui_version,
     apiVersion: raw?.kubeseal_webgui_api_version
   }

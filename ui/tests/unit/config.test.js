@@ -10,6 +10,7 @@ const CHART_CONFIG = {
   enable_existing_sealed_secret_loading: true,
   default_scope: 'namespace-wide',
   enable_namespace_listing: false,
+  multiple_clusters: true,
   kubeseal_webgui_ui_version: '4.14.0',
   kubeseal_webgui_api_version: '4.14.1'
 }
@@ -35,6 +36,7 @@ describe('normalizeConfig', () => {
       importEnabled: true,
       defaultScope: 'namespace-wide',
       namespaceListingEnabled: false,
+      multipleClusters: true,
       uiVersion: '4.14.0',
       apiVersion: '4.14.1'
     })
@@ -71,6 +73,18 @@ describe('normalizeConfig', () => {
     expect(normalizeConfig(config).namespaceListingEnabled).toBe(expected)
   })
 
+  // An older chart, or one cluster: no clusters are asked for.
+  it.each([
+    [undefined, false],
+    [false, false],
+    ['false', false],
+    [true, true],
+    ['true', true]
+  ])('asks for clusters for multiple_clusters %j: %s', (value, expected) => {
+    const config = { ...CHART_CONFIG, multiple_clusters: value }
+    expect(normalizeConfig(config).multipleClusters).toBe(expected)
+  })
+
   it.each([{}, null, undefined])('has safe defaults for %j', (raw) => {
     expect(normalizeConfig(raw)).toEqual({
       apiUrl: '',
@@ -78,6 +92,7 @@ describe('normalizeConfig', () => {
       importEnabled: false,
       defaultScope: 'strict',
       namespaceListingEnabled: true,
+      multipleClusters: false,
       uiVersion: undefined,
       apiVersion: undefined
     })

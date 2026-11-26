@@ -579,9 +579,19 @@ def test_ui_start(app_page: Page):
     assert app_page.title() == "Kubeseal WebGui - Sealed Secrets Management"
 
 
-def serve_clusters(page: Page, clusters: list[dict]):
-    """Answer `GET /clusters`: there is no API behind the dev server."""
-    page.route("**/clusters", lambda route: route.fulfill(json=clusters))
+def serve_clusters(page: Page, clusters, status: int = 200, **config):
+    """Say in config.json that there are several clusters (as the chart does
+    for sealedSecrets.certs), with further config.json keys, and answer
+    `GET /clusters`: there is no API behind the dev server."""
+
+    def config_json(route: Route):
+        body = route.fetch().json()
+        body["multiple_clusters"] = True
+        body.update(config)
+        route.fulfill(json=body)
+
+    page.route("**/config.json", config_json)
+    page.route("**/clusters", lambda route: route.fulfill(status=status, json=clusters))
 
 
 TWO_CLUSTERS = [
@@ -600,8 +610,17 @@ def pick_cluster(page: Page, name: str):
     expect(selected_cluster(page)).to_have_text(name)
 
 
-def test_there_is_no_cluster_selector_for_a_single_cluster(page: Page):
-    serve_clusters(page, [{"name": "default", "inCluster": True}])
+def test_a_single_cluster_works_as_before(page: Page):
+    # config.json of a release without sealedSecrets.certs: no multiple_clusters
+    cluster_requests = []
+    page.on(
+        "request",
+        lambda request: (
+            cluster_requests.append(request.url)
+            if request.url.endswith("/clusters")
+            else None
+        ),
+    )
     api = SealingApi(page)
     page.goto("/")
     page.wait_for_selector("#secretName")
@@ -612,8 +631,40 @@ def test_there_is_no_cluster_selector_for_a_single_cluster(page: Page):
     add_secret_key_value(page)
     click_encrypt_button(page)
     expect(page.locator("#sealed-secret-result")).to_be_visible()
-    # the one cluster is named all the same: explicit is safer than the default
-    assert api.only_request["cluster"] == "default"
+    # the same request as before, and no question about clusters
+    assert "cluster" not in api.only_request
+    assert cluster_requests == []
+    expect(page.locator(".summary-chip", has_text="default")).to_have_count(0)
+
+
+def test_one_configured_cluster_has_no_selector(page: Page):
+    serve_clusters(page, [{"name": "acc", "inCluster": True}])
+    api = SealingApi(page)
+    page.goto("/")
+    page.wait_for_selector("#secretName")
+
+    expect(page.locator("#clusterSelection")).to_have_count(0)
+    secret_name(page)
+    namespace_select(page)
+    add_secret_key_value(page)
+    click_encrypt_button(page)
+    expect(page.locator("#sealed-secret-result")).to_be_visible()
+    # named all the same: explicit is safer than the API's default
+    assert api.only_request["cluster"] == "acc"
+
+
+@pytest.mark.parametrize("status", [404, 500])
+def test_sealing_is_blocked_when_the_clusters_are_unknown(page: Page, status: int):
+    serve_clusters(page, {"detail": "nope"}, status=status)
+    page.goto("/")
+    page.wait_for_selector("#secretName")
+    # cluster-wide needs no namespace, so nothing else is missing
+    select_scope(page, "cluster-wide")
+    secret_name(page)
+    add_secret_key_value(page)
+
+    expect(page.locator(".v-snackbar")).to_contain_text("Failed to fetch the clusters")
+    expect(page.locator('button:has-text("Encrypt")')).to_be_disabled()
 
 
 def test_secret_is_sealed_for_the_picked_cluster(page: Page):
@@ -671,7 +722,8 @@ def test_typed_in_namespace_is_kept_while_it_stays_typed_in(page: Page):
 
 def test_import_is_not_offered_for_another_cluster(page: Page):
     requested_urls = enable_sealed_secret_import(page)
-    serve_clusters(page, TWO_CLUSTERS)
+    # registered last, so it answers config.json: the import stays on
+    serve_clusters(page, TWO_CLUSTERS, enable_existing_sealed_secret_loading=True)
     page.goto("/")
     page.wait_for_selector("#clusterSelection")
     import_button = page.get_by_role("button", name="Import existing sealed secret")

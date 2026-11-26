@@ -206,13 +206,7 @@ import { ref, computed, nextTick, onBeforeMount, watch } from 'vue'
 import SecretFormInputs from './SecretFormInputs.vue'
 import SecretsList from './SecretsList.vue'
 import SecretsResults from './SecretsResults.vue'
-import {
-  clustersNotSupported,
-  fetchClusters,
-  fetchNamespaces,
-  fetchSealedSecrets,
-  sealSecrets
-} from '@/api'
+import { fetchClusters, fetchNamespaces, fetchSealedSecrets, sealSecrets } from '@/api'
 import { loadConfig } from '@/config'
 import { useFavoriteNamespaces } from '@/composables/useFavoriteNamespaces'
 import { useDroppedFiles } from '@/composables/useDroppedFiles'
@@ -474,8 +468,12 @@ onBeforeMount(async () => {
   if (!scopePickedByUser) {
     scope.value = config.defaultScope
   }
-  await loadClusters()
-  if (loadError.value === 'clusters') return
+  // Only with several clusters: an installation with one cluster makes no
+  // request it did not make before.
+  if (config.multipleClusters) {
+    await loadClusters()
+    if (loadError.value === 'clusters') return
+  }
   // Without the list nothing is requested, so no error is shown either. Nor
   // when none of the clusters is the one of the API.
   if (config.namespaceListingEnabled && inOwnClusterConfigured()) {
@@ -491,19 +489,15 @@ async function loadClusters() {
   try {
     clusters.value = await fetchClusters()
   } catch (error) {
+    // Several clusters are configured, but not which: sealing now would use
+    // the API's first one without the user seeing it, and a certificate of
+    // the wrong cluster seals without an error. So it is blocked.
     clusters.value = []
-    if (clustersNotSupported(error)) {
-      log.info('The API does not list clusters, using its only one.')
-    } else {
-      // Sealing now would use the API's default cluster without the user
-      // seeing which one: a certificate of the wrong cluster seals without an
-      // error and only fails when the secret is deployed. So it is blocked.
-      log.error('Failed to fetch the clusters:', error)
-      loadError.value = 'clusters'
-      setErrorMessage(
-        `Failed to fetch the clusters, so it is unknown which certificate would seal. Error Message: ${error.message}.`
-      )
-    }
+    log.error('Failed to fetch the clusters:', error)
+    loadError.value = 'clusters'
+    setErrorMessage(
+      `Failed to fetch the clusters, so it is unknown which certificate would seal. Error Message: ${error.message}.`
+    )
   }
   selectedCluster.value = clusters.value[0]?.name ?? ''
 }
