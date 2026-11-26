@@ -682,11 +682,17 @@ def test_summary_names_the_cluster(page: Page):
     expect(page.locator(".action-bar__status")).to_contain_text("acc")
 
 
+def additional_namespace_chips(page: Page):
+    """The chips of the field for more namespaces, and no other chips."""
+    field = page.locator(".v-field", has=page.locator("input#additionalNamespaces"))
+    return field.locator(".v-chip")
+
+
 def add_additional_namespaces(page: Page, names: list[str]):
     """Type namespaces into the field for more namespaces (free text)."""
     field = page.locator("input#additionalNamespaces")
     field.fill(",".join(names) + ",")
-    expect(page.locator("#additionalNamespaces ~ .v-chip, .v-chip")).to_have_count(len(names))
+    expect(additional_namespace_chips(page)).to_have_count(len(names))
 
 
 def test_one_secret_is_sealed_for_several_typed_in_namespaces(page: Page):
@@ -806,7 +812,7 @@ def test_clear_forgets_the_additional_namespaces(page: Page):
     page.fill("input#namespaceSelection", "team-a")
 
     expect(page.locator("input#additionalNamespaces")).to_have_count(1)
-    expect(page.locator("#additionalNamespaces .v-chip, .v-field .v-chip")).to_have_count(0)
+    expect(additional_namespace_chips(page)).to_have_count(0)
 
 
 def test_secret_form_with_value(app_page: Page):
