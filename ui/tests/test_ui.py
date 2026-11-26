@@ -2056,6 +2056,19 @@ def test_remove_all_waits_for_dropped_files_that_are_still_read(app_page: Page):
     assert key_value_pairs(page) == [("", "")]
 
 
+def expect_key_value_pairs(page: Page, expected: list[tuple[str, str]]):
+    """Wait for the rows of `expected`, then compare them.
+
+    A dropped file is read asynchronously, so the rows arrive after the drop
+    event: reading them right away can see the list half updated.
+    """
+    expect(page.locator(".secret-row")).to_have_count(len(expected))
+    expect(page.locator("input#secretKey-" + str(len(expected) - 1))).to_have_value(
+        expected[-1][0]
+    )
+    assert key_value_pairs(page) == expected
+
+
 def key_value_pairs(page: Page) -> list[tuple[str, str]]:
     """(key, value) per row; the value of a row with a file is "<file>"."""
     pairs = []
@@ -2111,11 +2124,14 @@ def test_dropping_a_dotenv_file_creates_one_pair_per_variable(app_page: Page):
     drop_files(page, [(".env", env, "")])
 
     # the blank row made way for the three pairs
-    assert key_value_pairs(page) == [
-        ("DB_HOST", "db.local"),
-        ("DB_PASSWORD", "s3cr3t # not a comment"),
-        ("GREETING", "hello\nworld"),
-    ]
+    expect_key_value_pairs(
+        page,
+        [
+            ("DB_HOST", "db.local"),
+            ("DB_PASSWORD", "s3cr3t # not a comment"),
+            ("GREETING", "hello\nworld"),
+        ],
+    )
     expect(page.locator(".drop-zone")).to_have_count(0)
     expect(page.locator("div[role='status']")).to_have_text(
         re.compile(r"Imported 3 keys from \.env")
@@ -2135,11 +2151,14 @@ def test_dropped_pairs_are_appended_to_filled_rows(app_page: Page):
 
     drop_files(page, [("prod.env", "ONE=1\nTWO=2", "")])
 
-    assert key_value_pairs(page) == [
-        (SECRET_KEY, SECRET_VALUE),
-        ("ONE", "1"),
-        ("TWO", "2"),
-    ]
+    expect_key_value_pairs(
+        page,
+        [
+            (SECRET_KEY, SECRET_VALUE),
+            ("ONE", "1"),
+            ("TWO", "2"),
+        ],
+    )
     expect(page.locator("div[role='status']")).to_have_text(
         re.compile(r"Imported 2 keys from prod\.env")
     )
@@ -2155,7 +2174,7 @@ def test_dropped_pairs_replace_every_blank_row(app_page: Page):
 
     drop_files(page, [("prod.env", "ONE=1\nTWO=2", "")])
 
-    assert key_value_pairs(page) == [("ONE", "1"), ("TWO", "2")]
+    expect_key_value_pairs(page, [("ONE", "1"), ("TWO", "2")])
     # nothing incomplete is left, so the form can be sealed once it is addressed
     namespace_select(page)
     secret_name(page)
@@ -2289,7 +2308,7 @@ def test_a_file_dropped_outside_the_list_does_not_replace_the_page(app_page: Pag
     # the form is still there, and dropping on the list still imports
     expect(page.locator("input#secretKey-0")).to_have_value(SECRET_KEY)
     drop_files(page, [(".env", "A=1", "")])
-    assert key_value_pairs(page) == [(SECRET_KEY, SECRET_VALUE), ("A", "1")]
+    expect_key_value_pairs(page, [(SECRET_KEY, SECRET_VALUE), ("A", "1")])
 
 
 def test_a_file_dropped_on_the_result_view_does_not_replace_the_page(app_page: Page):
