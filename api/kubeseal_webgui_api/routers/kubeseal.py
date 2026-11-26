@@ -6,6 +6,7 @@ import time
 from fastapi import APIRouter, HTTPException
 
 from kubeseal_webgui_api.app_config import settings
+from kubeseal_webgui_api.clusters import get_cluster
 from kubeseal_webgui_api.logging_utils import LOGGER_NAME
 from kubeseal_webgui_api.routers.models import Data, KeyValuePair, Scope, Secret
 
@@ -21,12 +22,16 @@ def encrypt(data: Data) -> list[KeyValuePair]:
     # the cleartext secrets. Name and namespace are logged with %r because they
     # are client input that may not have been validated (escapes line breaks).
     try:
-        sealed_secrets = seal_secrets(data.secrets, data.namespace, data.name, scope)
+        sealed_secrets = seal_secrets(
+            data.secrets, data.namespace, data.name, scope, data.cluster
+        )
     except (KeyError, ValueError) as e:
         LOGGER.warning(
-            "Rejected sealing request for secret %r in namespace %r: %s",
+            "Rejected sealing request for secret %r in namespace %r "
+            "of cluster %r: %s",
             data.name,
             data.namespace,
+            data.cluster,
             loggable_reason(e),
         )
         raise HTTPException(400, f"Invalid data for sealing secrets: {e}") from None
@@ -82,14 +87,18 @@ def seal_secrets(
     namespace: str | None,
     name: str | None,
     scope: Scope = Scope.STRICT,
+    cluster: str | None = None,
 ) -> list[KeyValuePair]:
-    """Seal every entry for the given namespace, name and scope."""
+    """Seal every entry for the given namespace, name, scope and cluster."""
     if scope.needs_namespace():
         require_given("secret_namespace", namespace)
     if scope.needs_name():
         require_given("secret_name", name)
+    # Resolved before anything is sealed, and only from the configured
+    # clusters: the request never chooses a file.
+    cert = get_cluster(cluster).cert
 
-    return [seal_entry(entry, namespace, name, scope) for entry in entries]
+    return [seal_entry(entry, namespace, name, scope, cert) for entry in entries]
 
 
 # Names as Kubernetes defines them (RFC 1123); the UI applies the same rules.
@@ -136,6 +145,7 @@ def seal_entry(
     namespace: str | None,
     name: str | None,
     scope: Scope = Scope.STRICT,
+    cert: str | None = None,
 ) -> KeyValuePair:
     """Seal the value or file of one entry with the kubeseal binary."""
     LOGGER.debug(
@@ -150,7 +160,7 @@ def seal_entry(
         return KeyValuePair(key=entry.key, value="AgBy3... (Mock Sealed Secret)")
 
     cleartext = decode_cleartext(entry)
-    command = build_kubeseal_command(namespace, name, scope)
+    command = build_kubeseal_command(namespace, name, scope, cert)
     return KeyValuePair(key=entry.key, value=pipe_through_kubeseal(command, cleartext))
 
 
@@ -190,13 +200,14 @@ def build_kubeseal_command(
     namespace: str | None,
     name: str | None,
     scope: Scope,
+    cert: str | None = None,
 ) -> list[str]:
     command = [
         settings.kubeseal_binary,
         "--raw",
         "--from-file=/dev/stdin",
         "--cert",
-        settings.kubeseal_cert,
+        cert or settings.kubeseal_cert,
         "--scope",
         scope.value,
     ]

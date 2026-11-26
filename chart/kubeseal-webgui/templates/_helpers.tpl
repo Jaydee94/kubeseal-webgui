@@ -71,7 +71,7 @@ instead of rendering an ingress that cannot work. Also rejected:
 {{- $segments := splitList "/" $path -}}
 {{- $last := last $segments -}}
 {{- $parent := index $segments (sub (len $segments) 2) -}}
-{{- if or (has $last (list "secrets" "namespaces" "config" "docs" "openapi.json" "config.json" "favicon.ico" "favicon.svg" "index.html")) (has $parent (list "sealed-secrets" "assets")) -}}
+{{- if or (has $last (list "secrets" "namespaces" "clusters" "config" "docs" "openapi.json" "config.json" "favicon.ico" "favicon.svg" "index.html")) (has $parent (list "sealed-secrets" "assets")) -}}
 {{- fail (printf "invalid path %q: it ends like a path the UI serves itself (an API endpoint or a UI file); choose another name, e.g. \"/kubeseal-webgui\"" .) -}}
 {{- end -}}
 {{- end -}}
@@ -134,4 +134,41 @@ custom ServiceAccount, and not when nothing needs cluster-wide read access
 {{- if and (not .Values.customServiceAccountName) (or (include "kubeseal-webgui.namespaceListing" .) (include "kubeseal-webgui.sealedSecretLoading" .)) -}}
 true
 {{- end -}}
+{{- end -}}
+
+{{/*
+The clusters of sealedSecrets.certs as the JSON list the API reads
+(KUBESEAL_CLUSTERS_FILE). Fails the rendering for a list the API would refuse
+at start-up, so a mistake shows at "helm install" and not as a crashing pod.
+Certificates are mounted at /kubeseal-webgui/clusters/<name>.pem.
+*/}}
+{{- define "kubeseal-webgui.clustersJson" -}}
+{{- $clusters := list -}}
+{{- $names := list -}}
+{{- $inCluster := 0 -}}
+{{- range $index, $entry := .Values.sealedSecrets.certs -}}
+{{- $name := $entry.name | default "" | toString -}}
+{{- if not (regexMatch "^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$" $name) -}}
+{{- fail (printf "sealedSecrets.certs[%d]: 'name' must be lower case letters, digits and '-', got %q" $index $name) -}}
+{{- end -}}
+{{- if has $name $names -}}
+{{- fail (printf "sealedSecrets.certs: duplicate name %q" $name) -}}
+{{- end -}}
+{{- $names = append $names $name -}}
+{{- $item := dict "name" $name -}}
+{{- if include "kubeseal-webgui.isTrue" $entry.inCluster -}}
+{{- $inCluster = add1 $inCluster -}}
+{{- $_ := set $item "inCluster" true -}}
+{{- end -}}
+{{- if $entry.cert -}}
+{{- $_ := set $item "cert" (printf "/kubeseal-webgui/clusters/%s.pem" $name) -}}
+{{- else if not (and $item.inCluster $.Values.sealedSecrets.autoFetchCert) -}}
+{{- fail (printf "sealedSecrets.certs: %q needs a 'cert' (only an inCluster entry can leave it out, with sealedSecrets.autoFetchCert=true)" $name) -}}
+{{- end -}}
+{{- $clusters = append $clusters $item -}}
+{{- end -}}
+{{- if gt $inCluster 1 -}}
+{{- fail "sealedSecrets.certs: at most one entry can have 'inCluster: true'" -}}
+{{- end -}}
+{{- toJson $clusters -}}
 {{- end -}}

@@ -14,6 +14,16 @@ class WebGuiConfig(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
+class ClusterInfo(BaseModel):
+    """A cluster a secret can be sealed for, as the UI needs to know it."""
+
+    name: str
+    in_cluster: bool
+    # SHA-256 of the sealing certificate, to compare with the cluster's own.
+    fingerprint: str | None = None
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+
 class KeyValuePair(BaseModel):
     key: str
     value: str
@@ -56,5 +66,8 @@ class Data(BaseModel):
     # analysis mistake it for sensitive data (the values live in `secrets`).
     name: str | None = Field(default=None, alias="secret")
     namespace: str | None = None
+    # Which cluster's certificate seals the secrets. Without it: the first
+    # configured cluster.
+    cluster: str | None = None
     secrets: list[Secret]
     scope: Scope | None = None

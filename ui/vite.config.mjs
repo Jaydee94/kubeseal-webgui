@@ -12,7 +12,7 @@ export default defineConfig({
   server: {
     port: 8080,
     proxy: {
-      "^/(secrets$|namespaces$|config$|sealed-secrets/|docs|openapi\\.json)": {
+      "^/(secrets$|namespaces$|clusters$|config$|sealed-secrets/|docs|openapi\\.json)": {
         target: "http://localhost:5000",
         changeOrigin: false
       }

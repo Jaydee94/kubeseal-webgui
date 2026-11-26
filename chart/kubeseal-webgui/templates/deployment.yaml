@@ -54,6 +54,10 @@ spec:
               value: "{{ .Values.api.url }}"
             - name: KUBESEAL_CERT
               value: "/kubeseal-webgui/cert/kubeseal-cert.pem"
+            {{- if .Values.sealedSecrets.certs }}
+            - name: KUBESEAL_CLUSTERS_FILE
+              value: "/kubeseal-webgui/clusters/clusters.json"
+            {{- end }}
             {{- if .Values.sealedSecrets.autoFetchCert }}
             - name: KUBESEAL_AUTOFETCH
               value: "true"
@@ -95,6 +99,11 @@ spec:
             - name: sealed-secret-configmap
               mountPath: /kubeseal-webgui/src/config/logging_config.yaml
               subPath: logging_config.yaml
+           {{- if .Values.sealedSecrets.certs }}
+            - name: sealed-secret-clusters
+              mountPath: /kubeseal-webgui/clusters
+              readOnly: true
+           {{- end }}
             - name: tmp
               mountPath: /tmp
         - name: "ui"
@@ -147,6 +156,11 @@ spec:
         - name: sealed-secret-configmap
           configMap:
             name: {{ include "kubeseal-webgui.fullname" . }}
+        {{- if .Values.sealedSecrets.certs }}
+        - name: sealed-secret-clusters
+          configMap:
+            name: {{ include "kubeseal-webgui.fullname" . }}-clusters
+        {{- end }}
         - name: tmp
           emptyDir: {}
         {{- if not .Values.ui.ipv6.enabled }}
