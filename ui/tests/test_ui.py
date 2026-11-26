@@ -653,6 +653,30 @@ def test_one_configured_cluster_has_no_selector(page: Page):
     assert api.only_request["cluster"] == "acc"
 
 
+def test_sealing_waits_for_the_clusters(page: Page):
+    serve_clusters(page, TWO_CLUSTERS)
+    held: list[Route] = []
+    # registered last, so it answers /clusters: held until released
+    page.route("**/clusters", lambda route: held.append(route))
+    page.goto("/")
+    page.wait_for_selector("#secretName")
+    select_scope(page, "cluster-wide")
+    secret_name(page)
+    add_secret_key_value(page)
+
+    # everything is filled in, but whose certificate would seal is not known
+    expect(page.locator('button:has-text("Encrypt")')).to_be_disabled()
+    for _ in range(100):  # the request is held, not lost
+        if held:
+            break
+        page.wait_for_timeout(50)
+    assert len(held) == 1
+    held[0].fulfill(json=TWO_CLUSTERS)
+
+    expect(page.locator("#clusterSelection")).to_have_count(1)
+    expect(page.locator('button:has-text("Encrypt")')).to_be_enabled()
+
+
 @pytest.mark.parametrize("status", [404, 500])
 def test_sealing_is_blocked_when_the_clusters_are_unknown(page: Page, status: int):
     serve_clusters(page, {"detail": "nope"}, status=status)

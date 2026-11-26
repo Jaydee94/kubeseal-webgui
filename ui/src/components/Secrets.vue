@@ -222,6 +222,7 @@ import {
   scopeNeedsNamespace
 } from '@/constants'
 import { createLogger } from '@/utils/logger'
+import { mapWithLimit } from '@/utils/concurrency'
 import { firstInvalidNamespace, namespacesToSeal } from '@/utils/namespaces'
 import { renderSealedSecretYaml } from '@/utils/sealedSecretYaml'
 import {
@@ -244,6 +245,9 @@ defineOptions({
 
 const log = createLogger('Secrets')
 
+// Sealing requests sent at the same time for several namespaces.
+const PARALLEL_SEALING_REQUESTS = 4
+
 // Mac users know the command key, everyone else Ctrl.
 const SHORTCUT_LABEL = /Mac|iPhone|iPad/i.test(
   navigator.userAgentData?.platform ?? navigator.platform ?? ''
@@ -263,6 +267,8 @@ const namespaces = ref([])
 // know them: it has one cluster, and nothing is sent about it.
 const clusters = ref([])
 const selectedCluster = ref('')
+// Only while GET /clusters is answered (only with several clusters).
+const clustersLoading = ref(false)
 // The scope of a new form, from config.json.
 const defaultScope = ref(DEFAULT_SCOPE)
 // The form can be used while config.json loads: a scope the user picked
@@ -410,6 +416,7 @@ const invalidSecretName = computed(() => !!secretName.value && !isDnsSubdomain(s
 const notReadyToEncode = computed(
   () =>
     blockingError.value ||
+    clustersLoading.value ||
     pendingImports.value > 0 ||
     incompleteSecretData.value ||
     invalidKeyData.value ||
@@ -486,6 +493,9 @@ function inOwnClusterConfigured() {
 }
 
 async function loadClusters() {
+  // Until the clusters are known, sealing would go to the API's first one,
+  // whichever the user meant to pick.
+  clustersLoading.value = true
   try {
     clusters.value = await fetchClusters()
   } catch (error) {
@@ -498,6 +508,8 @@ async function loadClusters() {
     setErrorMessage(
       `Failed to fetch the clusters, so it is unknown which certificate would seal. Error Message: ${error.message}.`
     )
+  } finally {
+    clustersLoading.value = false
   }
   selectedCluster.value = clusters.value[0]?.name ?? ''
 }
@@ -699,9 +711,15 @@ async function seal() {
   sealing.value = true
   try {
     // One request per namespace: it is part of what a value is sealed for.
-    // The result shows only when all of them succeeded, so that a namespace
-    // is never silently missing from it.
-    sealedByNamespace.value = await Promise.all(targetNamespaces.value.map(sealForNamespace))
+    // A few at a time, so that a long list neither floods the API with
+    // kubeseal processes nor keeps going after one failed. The result shows
+    // only when all of them succeeded, so that a namespace is never silently
+    // missing from it.
+    sealedByNamespace.value = await mapWithLimit(
+      targetNamespaces.value,
+      PARALLEL_SEALING_REQUESTS,
+      sealForNamespace
+    )
     sealedForCluster.value = clusters.value.length > 1 ? selectedCluster.value : ''
     sealed.value = true
     await new Promise((resolve) => setTimeout(resolve, POST_SEAL_DELAY_MS))
