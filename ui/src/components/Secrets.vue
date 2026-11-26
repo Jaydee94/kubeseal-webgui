@@ -269,6 +269,8 @@ const clusters = ref([])
 const selectedCluster = ref('')
 // Only while GET /clusters is answered (only with several clusters).
 const clustersLoading = ref(false)
+// GET /clusters has answered.
+const clustersKnown = ref(false)
 // The scope of a new form, from config.json.
 const defaultScope = ref(DEFAULT_SCOPE)
 // The form can be used while config.json loads: a scope the user picked
@@ -498,6 +500,7 @@ async function loadClusters() {
   clustersLoading.value = true
   try {
     clusters.value = await fetchClusters()
+    clustersKnown.value = true
   } catch (error) {
     // Several clusters are configured, but not which: sealing now would use
     // the API's first one without the user seeing it, and a certificate of
@@ -709,6 +712,15 @@ async function seal() {
     return
   }
   sealing.value = true
+  // The form can be filled in while config.json loads. With several clusters
+  // nothing is sent before they are known: the user has not seen which one
+  // the secret would be sealed for. (With one cluster this seals as before.)
+  const config = await loadConfig().catch(() => null)
+  if (config?.multipleClusters && !clustersKnown.value) {
+    sealing.value = false
+    await restoreFocus()
+    return
+  }
   try {
     // One request per namespace: it is part of what a value is sealed for.
     // A few at a time, so that a long list neither floods the API with

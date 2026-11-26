@@ -580,9 +580,11 @@ def test_ui_start(app_page: Page):
 
 
 def serve_clusters(page: Page, clusters, status: int = 200, **config):
-    """Say in config.json that there are several clusters (as the chart does
-    for sealedSecrets.certs), with further config.json keys, and answer
-    `GET /clusters`: there is no API behind the dev server."""
+    """Say in config.json that there are several clusters.
+
+    As the chart does for sealedSecrets.certs, with further config.json keys.
+    Also answers `GET /clusters`: there is no API behind the dev server.
+    """
 
     def config_json(route: Route):
         body = route.fetch().json()
@@ -656,8 +658,12 @@ def test_one_configured_cluster_has_no_selector(page: Page):
 def test_sealing_waits_for_the_clusters(page: Page):
     serve_clusters(page, TWO_CLUSTERS)
     held: list[Route] = []
+
+    def hold(route: Route):
+        held.append(route)
+
     # registered last, so it answers /clusters: held until released
-    page.route("**/clusters", lambda route: held.append(route))
+    page.route("**/clusters", hold)
     page.goto("/")
     page.wait_for_selector("#secretName")
     select_scope(page, "cluster-wide")
@@ -1109,6 +1115,74 @@ def test_configured_default_scope_is_used_at_start_and_after_clear(page: Page):
     # another scope can still be picked for a secret
     select_scope(page, "strict")
     expect(selected_scope(page)).to_have_attribute("data-scope", "strict")
+
+
+def held_config_json(page: Page) -> list[Route]:
+    """Hold config.json back; the routes are answered by the test."""
+    held: list[Route] = []
+
+    def hold(route: Route):
+        held.append(route)
+
+    page.route("**/config.json", hold)
+    return held
+
+
+def development_config() -> dict:
+    return json.loads(
+        (pathlib.Path(__file__).parent.parent / "public" / "config.json").read_text()
+    )
+
+
+def fill_cluster_wide_secret(page: Page):
+    """A form complete without config.json: cluster-wide needs no namespace."""
+    page.wait_for_selector(".scope-toggle")
+    select_scope(page, "cluster-wide")
+    secret_name(page)
+    add_secret_key_value(page)
+
+
+def wait_for_held(page: Page, held: list[Route]):
+    for _ in range(100):  # the request is held, not lost
+        if held:
+            return
+        page.wait_for_timeout(50)
+    raise AssertionError("the request was not sent")
+
+
+def test_sealing_before_config_json_is_not_sent_for_several_clusters(page: Page):
+    page.route("**/clusters", lambda route: route.fulfill(json=TWO_CLUSTERS))
+    api = SealingApi(page)
+    held = held_config_json(page)
+    page.goto("/")
+    fill_cluster_wide_secret(page)
+
+    page.locator('button:has-text("Encrypt")').click()
+    wait_for_held(page, held)
+    config = development_config()
+    config["multiple_clusters"] = True
+    held[0].fulfill(json=config)
+
+    # nothing sealed: the user has not seen which cluster it would be for
+    expect(page.locator("#clusterSelection")).to_have_count(1)
+    expect(page.locator('button:has-text("Encrypt")')).to_be_enabled()
+    expect(page.locator("#sealed-secret-result")).to_have_count(0)
+    assert api.requests == []
+
+
+def test_sealing_before_config_json_still_works_for_one_cluster(page: Page):
+    api = SealingApi(page)
+    held = held_config_json(page)
+    page.goto("/")
+    fill_cluster_wide_secret(page)
+
+    page.locator('button:has-text("Encrypt")').click()
+    wait_for_held(page, held)
+    held[0].fulfill(json=development_config())
+
+    # as before: sealed once config.json is there
+    expect(page.locator("#sealed-secret-result")).to_be_visible()
+    assert "cluster" not in api.only_request
 
 
 def test_scope_picked_while_config_loads_is_kept(page: Page):
