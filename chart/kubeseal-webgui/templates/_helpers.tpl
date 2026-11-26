@@ -54,7 +54,9 @@ instead of rendering an ingress that cannot work. Also rejected:
   such as "/config", "/sealed-secrets/<name>", or a UI file such as
   "/assets/<name>"): without the trailing slash such a prefix would reach that
   path instead of being redirected to the start page. Keep this list in step
-  with ui/nginx-default.conf.
+  with ui/nginx-default.conf, with one exception: "/clusters" came later and
+  is not rejected, so that releases with such a prefix still render. Only the
+  prefix without its trailing slash reaches the API there.
 */}}
 {{- define "kubeseal-webgui.servedPath" -}}
 {{- $path := . | default "/" | toString -}}
@@ -71,7 +73,7 @@ instead of rendering an ingress that cannot work. Also rejected:
 {{- $segments := splitList "/" $path -}}
 {{- $last := last $segments -}}
 {{- $parent := index $segments (sub (len $segments) 2) -}}
-{{- if or (has $last (list "secrets" "namespaces" "clusters" "config" "docs" "openapi.json" "config.json" "favicon.ico" "favicon.svg" "index.html")) (has $parent (list "sealed-secrets" "assets")) -}}
+{{- if or (has $last (list "secrets" "namespaces" "config" "docs" "openapi.json" "config.json" "favicon.ico" "favicon.svg" "index.html")) (has $parent (list "sealed-secrets" "assets")) -}}
 {{- fail (printf "invalid path %q: it ends like a path the UI serves itself (an API endpoint or a UI file); choose another name, e.g. \"/kubeseal-webgui\"" .) -}}
 {{- end -}}
 {{- end -}}
