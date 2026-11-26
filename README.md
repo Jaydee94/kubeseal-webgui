@@ -18,7 +18,7 @@ Container Registry.
 
 ## Demo
 
-![kubeseal-webgui demo](demo/kubeseal-webgui-demo-4.6.0.gif)
+![kubeseal-webgui demo](demo/kubeseal-webgui-demo-4.18.0.gif)
 
 ## Prerequisites
 
