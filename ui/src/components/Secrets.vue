@@ -21,11 +21,13 @@
               ref="formInputs"
               v-model:namespace-name="namespaceName"
               v-model:secret-name="secretName"
+              v-model:cluster="selectedCluster"
+              :clusters="clusters"
               :scope="scope"
               v-model:new-namespace="newNamespace"
               @update:scope="pickScope"
               :namespaces="namespaces"
-              :namespace-listing="namespaceListingEnabled"
+              :namespace-listing="namespaceListingActive"
               :favorite-namespaces="favoriteNamespaces"
               @toggle-favorite="toggleFavorite"
             />
@@ -151,6 +153,7 @@
         :secret-name="secretName"
         :namespace="namespaceName"
         :scope="scope"
+        :cluster="sealedForCluster"
         @copied="showClipboardMessage"
         @downloaded="showClipboardMessage"
         @copy-failed="setErrorMessage"
@@ -204,7 +207,7 @@ import { ref, computed, nextTick, onBeforeMount, watch } from 'vue'
 import SecretFormInputs from './SecretFormInputs.vue'
 import SecretsList from './SecretsList.vue'
 import SecretsResults from './SecretsResults.vue'
-import { fetchNamespaces, fetchSealedSecrets, sealSecrets } from '@/api'
+import { fetchClusters, fetchNamespaces, fetchSealedSecrets, sealSecrets } from '@/api'
 import { loadConfig } from '@/config'
 import { useFavoriteNamespaces } from '@/composables/useFavoriteNamespaces'
 import { useDroppedFiles } from '@/composables/useDroppedFiles'
@@ -256,6 +259,10 @@ const sealedSecretImportFeatureEnabled = ref(false)
 // is typed in then.
 const namespaceListingEnabled = ref(true)
 const namespaces = ref([])
+// The clusters to seal for, and the one picked. Empty for an API that does not
+// know them: it has one cluster, and nothing is sent about it.
+const clusters = ref([])
+const selectedCluster = ref('')
 // The scope of a new form, from config.json.
 const defaultScope = ref(DEFAULT_SCOPE)
 // The form can be used while config.json loads: a scope the user picked
@@ -284,6 +291,8 @@ const encryptButton = ref(null)
 const loadError = ref('')
 const displayCreateSealedSecretForm = ref(true)
 const sealedSecrets = ref([])
+// The cluster that sealed them, shown in the result. Empty for a single cluster.
+const sealedForCluster = ref('')
 
 // Feedback
 const errorMessage = ref('')
@@ -333,8 +342,17 @@ const invalidKeyData = computed(() =>
 // Two rows with the same key would end up as a duplicated key in the YAML.
 const duplicateKeys = computed(() => findDuplicateKeys(secrets.value))
 
+// The API can only list namespaces and read SealedSecrets of the cluster it
+// runs in. For any other cluster the namespace is typed in, whatever
+// enableNamespaceListing says. Without a cluster list there is one cluster,
+// and it is that one.
+const inOwnCluster = computed(
+  () => clusters.value.find((entry) => entry.name === selectedCluster.value)?.inCluster ?? true
+)
+const namespaceListingActive = computed(() => namespaceListingEnabled.value && inOwnCluster.value)
+
 // A typed-in namespace: a new one, or any one without the cluster's list.
-const freeTextNamespace = computed(() => newNamespace.value || !namespaceListingEnabled.value)
+const freeTextNamespace = computed(() => newNamespace.value || !namespaceListingActive.value)
 
 const invalidFreeTextNamespace = computed(
   () =>
@@ -344,7 +362,11 @@ const invalidFreeTextNamespace = computed(
 // A namespace that may hold SealedSecrets to import from: one of the list, or
 // a valid name typed in without the list (not one that does not exist yet).
 const existingNamespaceEntered = computed(
-  () => !!namespaceName.value && !newNamespace.value && !invalidFreeTextNamespace.value
+  () =>
+    inOwnCluster.value &&
+    !!namespaceName.value &&
+    !newNamespace.value &&
+    !invalidFreeTextNamespace.value
 )
 
 // Only a failed load blocks sealing; a failed attempt to seal or to copy can
@@ -354,7 +376,10 @@ const existingNamespaceEntered = computed(
 const blockingError = computed(
   () =>
     loadError.value === 'config' ||
-    (loadError.value === 'namespaces' && scopeNeedsNamespace(scope.value) && !newNamespace.value)
+    (loadError.value === 'namespaces' &&
+      namespaceListingActive.value &&
+      scopeNeedsNamespace(scope.value) &&
+      !newNamespace.value)
 )
 
 // A secret name is optional outside the strict scope, but a name that is not
@@ -378,6 +403,7 @@ const notReadyToEncode = computed(
 const readySummary = computed(() => {
   const count = secrets.value.length
   const parts = [`${count} ${count === 1 ? 'key' : 'keys'}`]
+  if (clusters.value.length > 1) parts.push(selectedCluster.value)
   if (scopeNeedsNamespace(scope.value) && namespaceName.value) parts.push(namespaceName.value)
   parts.push(scope.value)
   return parts.join(' · ')
@@ -413,16 +439,46 @@ onBeforeMount(async () => {
   if (!scopePickedByUser) {
     scope.value = config.defaultScope
   }
-  // Without the list nothing is requested, so no error is shown either.
-  if (config.namespaceListingEnabled) {
+  await loadClusters()
+  // Without the list nothing is requested, so no error is shown either. Nor
+  // when none of the clusters is the one of the API.
+  if (config.namespaceListingEnabled && inOwnClusterConfigured()) {
     await loadNamespaces()
   }
 })
+
+function inOwnClusterConfigured() {
+  return clusters.value.length === 0 || clusters.value.some((entry) => entry.inCluster)
+}
+
+async function loadClusters() {
+  try {
+    clusters.value = await fetchClusters()
+  } catch (error) {
+    clusters.value = []
+    // An API older than this UI has no such endpoint, and one cluster.
+    // Anything else is worth telling: the default cluster is used meanwhile.
+    if (error.status === 404) {
+      log.info('The API does not list clusters, using its only one.')
+    } else {
+      log.error('Failed to fetch the clusters:', error)
+      setErrorMessage(`Failed to fetch the clusters. Error Message: ${error.message}.`)
+    }
+  }
+  selectedCluster.value = clusters.value[0]?.name ?? ''
+}
 
 // A value picked from the cluster list is not valid as free text and vice
 // versa, so start from an empty field whenever the mode changes.
 watch(newNamespace, () => {
   namespaceName.value = ''
+})
+
+// Switching between the cluster of the API (a list) and another one (typed in)
+// changes the mode of the field, like the checkbox above.
+watch(namespaceListingActive, () => {
+  namespaceName.value = ''
+  newNamespace.value = false
 })
 
 // The namespace is irrelevant for cluster-wide secrets.
@@ -608,8 +664,10 @@ async function seal() {
       secretName: secretName.value,
       namespaceName: namespaceName.value,
       scope: scope.value,
-      entries: secrets.value
+      entries: secrets.value,
+      cluster: selectedCluster.value
     })
+    sealedForCluster.value = clusters.value.length > 1 ? selectedCluster.value : ''
     sealed.value = true
     await new Promise((resolve) => setTimeout(resolve, POST_SEAL_DELAY_MS))
     // `sealing` stays on until the form is back (see the watcher), so that the
@@ -620,7 +678,8 @@ async function seal() {
   } catch (error) {
     // Only the error is logged -- never the submitted secrets.
     log.error(
-      `Failed to seal secret "${secretName.value}" in namespace "${namespaceName.value}":`,
+      `Failed to seal secret "${secretName.value}" in namespace "${namespaceName.value}"` +
+        (selectedCluster.value ? ` of cluster "${selectedCluster.value}":` : ':'),
       error
     )
     setErrorMessage(`Failed to seal secrets. Error Message: ${error.message || error}.`)

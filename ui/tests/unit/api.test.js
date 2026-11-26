@@ -61,6 +61,56 @@ describe('api', () => {
     expect(requests).toEqual([{ url: `${API_URL}/sealed-secrets/team%20a%2Fb` }])
   })
 
+  it('fetches the clusters to seal for', async () => {
+    const clusters = [
+      { name: 'acc', inCluster: true, fingerprint: 'AA:BB' },
+      { name: 'prod', inCluster: false, fingerprint: null }
+    ]
+    stubFetch(clusters)
+    await expect(api.fetchClusters()).resolves.toEqual(clusters)
+    expect(requests).toEqual([{ url: `${API_URL}/clusters` }])
+  })
+
+  it('has no clusters when the API is missing in mock mode, and fails otherwise', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url) => {
+        if (url === 'config.json') {
+          return new Response(JSON.stringify({ api_url: API_URL }))
+        }
+        return new Response('no API', { status: 500 })
+      })
+    )
+
+    vi.stubEnv('VITE_MOCK_NAMESPACES', 'true')
+    await expect(api.fetchClusters()).resolves.toEqual([])
+
+    vi.stubEnv('VITE_MOCK_NAMESPACES', 'false')
+    await expect(api.fetchClusters()).rejects.toThrow()
+  })
+
+  it('names the cluster in the sealing request, and leaves it out without one', async () => {
+    stubFetch([])
+    const entries = [{ id: 1, key: 'k', value: 'v', file: null, fileError: '' }]
+    const seal = (cluster) =>
+      api.sealSecrets({
+        secretName: 'name',
+        namespaceName: 'ns',
+        scope: 'strict',
+        entries,
+        cluster
+      })
+
+    await seal('prod')
+    await seal('')
+    await seal(undefined)
+
+    const bodies = requests.map((request) => JSON.parse(request.body))
+    expect(bodies[0].cluster).toBe('prod')
+    expect(bodies[1]).not.toHaveProperty('cluster')
+    expect(bodies[2]).not.toHaveProperty('cluster')
+  })
+
   it('fetches the API settings', async () => {
     stubFetch({ kubesealVersion: '0.27.1' })
     await expect(api.fetchApiConfig()).resolves.toEqual({ kubesealVersion: '0.27.1' })

@@ -5,6 +5,7 @@
       :secret-name="secretName"
       :namespace="namespace"
       :scope="scope"
+      :cluster="cluster"
       :key-count="sealedSecrets.length"
       @copied="$emit('copied', $event)"
       @copy-failed="$emit('copy-failed', $event)"
@@ -77,6 +78,11 @@ defineProps({
   scope: {
     type: String,
     required: true
+  },
+  // The cluster that sealed the values, or empty for a single cluster.
+  cluster: {
+    type: String,
+    default: ''
   }
 })
 

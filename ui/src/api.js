@@ -33,6 +33,23 @@ export async function fetchNamespaces() {
   return requestJson(await apiUrl('namespaces'))
 }
 
+/**
+ * The clusters a secret can be sealed for, as [{ name, inCluster, fingerprint }, ...].
+ * The first one is the default. `inCluster` marks the one the API runs in:
+ * only for it the namespaces and SealedSecrets can be read.
+ */
+export async function fetchClusters() {
+  try {
+    return await requestJson(await apiUrl('clusters'))
+  } catch (error) {
+    // The dev server runs without an API (VITE_MOCK_NAMESPACES): one cluster.
+    if (import.meta.env.VITE_MOCK_NAMESPACES === 'true') {
+      return []
+    }
+    throw error
+  }
+}
+
 /** The SealedSecrets of a namespace as [{ name, keys }, ...]. */
 export async function fetchSealedSecrets(namespace) {
   return requestJson(await apiUrl(`sealed-secrets/${encodeURIComponent(namespace)}`))
@@ -57,11 +74,13 @@ async function toRequestEntry(entry) {
  * Seal the entries (each with a `value` or a `file`) and return the sealed
  * values as [{ key, value }, ...].
  */
-export async function sealSecrets({ secretName, namespaceName, scope, entries }) {
+export async function sealSecrets({ secretName, namespaceName, scope, entries, cluster }) {
   const sealingRequest = {
     secret: secretName,
     namespace: namespaceName,
     scope,
+    // Left out for an API that lists no clusters: it then uses its only one.
+    ...(cluster ? { cluster } : {}),
     secrets: await Promise.all(entries.map(toRequestEntry))
   }
 

@@ -80,6 +80,12 @@ const props = defineProps({
   keyCount: {
     type: Number,
     required: true
+  },
+  // The cluster whose certificate sealed the secret. Empty for a single
+  // cluster, where there is nothing to tell apart.
+  cluster: {
+    type: String,
+    default: ''
   }
 })
 
@@ -92,11 +98,13 @@ const chips = computed(() => {
     icon: 'mdi-key-variant',
     text: `${props.keyCount} ${props.keyCount === 1 ? 'key' : 'keys'}`
   }
+  const cluster = props.cluster ? [{ icon: 'mdi-server', text: props.cluster }] : []
   if (props.scope === SCOPE_CLUSTER_WIDE) {
-    return [keys, { icon: 'mdi-shield-lock-outline', text: SCOPE_CLUSTER_WIDE }]
+    return [keys, ...cluster, { icon: 'mdi-shield-lock-outline', text: SCOPE_CLUSTER_WIDE }]
   }
   return [
     keys,
+    ...cluster,
     { icon: 'mdi-folder-outline', text: props.namespace },
     { icon: 'mdi-shield-lock-outline', text: `${props.scope} scope` }
   ]

@@ -1,6 +1,38 @@
 <template>
   <div>
-    <!-- First, because it decides what the fields below need: the namespace
+    <!-- Only with several clusters. First of all, because the cluster decides
+         whose certificate seals the secret, and whether its namespaces can be
+         listed. -->
+    <div v-if="clusters.length > 1" class="cluster-picker mb-5">
+      <v-select
+        id="clusterSelection"
+        :model-value="cluster"
+        :items="clusters"
+        item-title="name"
+        item-value="name"
+        label="Cluster"
+        density="comfortable"
+        variant="outlined"
+        class="modern-input"
+        color="primary"
+        prepend-inner-icon="mdi-server"
+        :hint="clusterHint"
+        persistent-hint
+        @update:model-value="$emit('update:cluster', $event)"
+      >
+        <template #append-inner>
+          <InfoTooltip class="ml-2 info-icon">
+            <span
+              >The secret is sealed with the certificate of this cluster and can only be unsealed
+              there.<br /><i v-if="fingerprint"
+                >Certificate SHA-256: <code>{{ fingerprint }}</code></i
+              ></span
+            >
+          </InfoTooltip>
+        </template>
+      </v-select>
+    </div>
+    <!-- Decides what the fields below need: the namespace
          and the secret name. -->
     <div class="scope-picker mb-5">
       <div class="d-flex align-center mb-2">
@@ -232,6 +264,16 @@ const props = defineProps({
   namespaceListing: {
     type: Boolean,
     default: true
+  },
+  // The clusters to seal for, [{ name, inCluster, fingerprint }, ...]. The
+  // selector is shown for more than one.
+  clusters: {
+    type: Array,
+    default: () => []
+  },
+  cluster: {
+    type: String,
+    default: ''
   }
 })
 
@@ -240,8 +282,25 @@ const emit = defineEmits([
   'update:secretName',
   'update:scope',
   'update:newNamespace',
+  'update:cluster',
   'toggle-favorite'
 ])
+
+const selectedCluster = computed(() => props.clusters.find((entry) => entry.name === props.cluster))
+
+const fingerprint = computed(() => selectedCluster.value?.fingerprint ?? '')
+
+// The start of the fingerprint is enough to tell certificates apart at a
+// glance; the tooltip has all of it.
+const clusterHint = computed(() => {
+  const parts = []
+  if (fingerprint.value)
+    parts.push(`Certificate ${fingerprint.value.split(':').slice(0, 6).join(':')}…`)
+  if (selectedCluster.value && !selectedCluster.value.inCluster) {
+    parts.push('namespaces of this cluster are typed in')
+  }
+  return parts.join(' · ')
+})
 
 const favoritesInList = computed(() =>
   props.namespaces.filter((namespace) => props.favoriteNamespaces.has(namespace))

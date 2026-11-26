@@ -579,6 +579,109 @@ def test_ui_start(app_page: Page):
     assert app_page.title() == "Kubeseal WebGui - Sealed Secrets Management"
 
 
+def serve_clusters(page: Page, clusters: list[dict]):
+    """Answer `GET /clusters`: there is no API behind the dev server."""
+    page.route("**/clusters", lambda route: route.fulfill(json=clusters))
+
+
+TWO_CLUSTERS = [
+    {"name": "acc", "inCluster": True, "fingerprint": "AA:BB:CC:DD:EE:FF:00:11"},
+    {"name": "prod", "inCluster": False, "fingerprint": "11:22:33:44:55:66:77:88"},
+]
+
+
+def selected_cluster(page: Page):
+    return page.locator(".cluster-picker .v-select__selection-text")
+
+
+def pick_cluster(page: Page, name: str):
+    page.locator(".cluster-picker .v-field").click()
+    page.get_by_role("option", name=name).click()
+    expect(selected_cluster(page)).to_have_text(name)
+
+
+def test_there_is_no_cluster_selector_for_a_single_cluster(page: Page):
+    serve_clusters(page, [{"name": "default", "inCluster": True}])
+    api = SealingApi(page)
+    page.goto("/")
+    page.wait_for_selector("#secretName")
+
+    expect(page.locator("#clusterSelection")).to_have_count(0)
+    secret_name(page)
+    namespace_select(page)
+    add_secret_key_value(page)
+    click_encrypt_button(page)
+    expect(page.locator("#sealed-secret-result")).to_be_visible()
+    # the one cluster is named all the same: explicit is safer than the default
+    assert api.only_request["cluster"] == "default"
+
+
+def test_secret_is_sealed_for_the_picked_cluster(page: Page):
+    serve_clusters(page, TWO_CLUSTERS)
+    api = SealingApi(page)
+    page.goto("/")
+    page.wait_for_selector("#clusterSelection")
+
+    # the first cluster is preselected, and it is the one of the API: a list
+    expect(selected_cluster(page)).to_have_text("acc")
+    expect(page.locator(".v-autocomplete")).to_have_count(1)
+
+    pick_cluster(page, "prod")
+    # the namespaces of another cluster are not known: a text field
+    expect(page.locator(".v-autocomplete")).to_have_count(0)
+    expect(page.get_by_text("namespaces of this cluster are typed in")).to_be_visible()
+    secret_name(page)
+    page.fill("input#namespaceSelection", "team-a")
+    add_secret_key_value(page)
+    click_encrypt_button(page)
+
+    expect(page.locator("#sealed-secret-result")).to_be_visible()
+    assert api.only_request["cluster"] == "prod"
+    assert api.only_request["namespace"] == "team-a"
+    # the result says which cluster sealed it
+    expect(page.locator(".summary-chip", has_text="prod")).to_be_visible()
+
+
+def test_namespace_is_cleared_when_the_namespace_mode_changes(page: Page):
+    serve_clusters(page, TWO_CLUSTERS)
+    page.goto("/")
+    page.wait_for_selector("#clusterSelection")
+
+    pick_cluster(page, "prod")
+    page.fill("input#namespaceSelection", "team-a")
+
+    # a typed-in name is no entry of the list, so back to the list it starts empty
+    pick_cluster(page, "acc")
+    expect(page.locator(".v-autocomplete")).to_have_count(1)
+    expect(page.locator("input#namespaceSelection")).to_have_value("")
+
+
+def test_import_is_not_offered_for_another_cluster(page: Page):
+    requested_urls = enable_sealed_secret_import(page)
+    serve_clusters(page, TWO_CLUSTERS)
+    page.goto("/")
+    page.wait_for_selector("#clusterSelection")
+    import_button = page.get_by_role("button", name="Import existing sealed secret")
+
+    pick_cluster(page, "prod")
+    page.fill("input#namespaceSelection", "team-a")
+    expect(import_button).to_have_count(0)
+    assert requested_urls == []
+
+
+def test_summary_names_the_cluster(page: Page):
+    serve_clusters(page, TWO_CLUSTERS)
+    SealingApi(page)
+    page.goto("/")
+    page.wait_for_selector("#clusterSelection")
+
+    secret_name(page)
+    namespace_select(page)
+    add_secret_key_value(page)
+
+    expect(page.locator(".action-bar__status")).to_contain_text("acc")
+
+
 def test_secret_form_with_value(app_page: Page):
     page = app_page
     api = SealingApi(page)
