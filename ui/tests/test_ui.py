@@ -682,6 +682,133 @@ def test_summary_names_the_cluster(page: Page):
     expect(page.locator(".action-bar__status")).to_contain_text("acc")
 
 
+def add_additional_namespaces(page: Page, names: list[str]):
+    """Type namespaces into the field for more namespaces (free text)."""
+    field = page.locator("input#additionalNamespaces")
+    field.fill(",".join(names) + ",")
+    expect(page.locator("#additionalNamespaces ~ .v-chip, .v-chip")).to_have_count(len(names))
+
+
+def test_one_secret_is_sealed_for_several_typed_in_namespaces(page: Page):
+    disable_namespace_listing(page)
+    api = SealingApi(page)
+    page.goto("/")
+    secret_name(page)
+    add_secret_key_value(page)
+
+    # offered only once there is a main namespace
+    expect(page.locator("input#additionalNamespaces")).to_have_count(0)
+    page.fill("input#namespaceSelection", "team-a")
+    add_additional_namespaces(page, ["team-b", "team-c", "team-a"])
+    expect(page.locator(".action-bar__status")).to_contain_text("3 namespaces")
+    click_encrypt_button(page)
+
+    expect(page.locator("#sealed-secret-result")).to_be_visible()
+    # one request per namespace, the main one first; a repeat is sealed once
+    namespaces = [request["namespace"] for request in api.requests]
+    assert sorted(namespaces) == ["team-a", "team-b", "team-c"]
+    assert len(api.requests) == 3
+    # one manifest per namespace, each for its own namespace
+    expect(page.locator(".result-card")).to_have_count(3)
+    expect(page.locator("#sealed-secret-result-2")).to_be_visible()
+    texts = [
+        page.locator(selector).inner_text()
+        for selector in (
+            "#sealed-secret-result",
+            "#sealed-secret-result-2",
+            "#sealed-secret-result-3",
+        )
+    ]
+    assert [re.search(r"namespace: (\S+)", text).group(1) for text in texts] == [
+        "team-a",
+        "team-b",
+        "team-c",
+    ]
+    # buttons of the cards can be told apart
+    expect(page.get_by_role("button", name="Copy manifest of team-b")).to_be_visible()
+
+
+def test_additional_namespaces_are_picked_from_the_list(app_page: Page):
+    page = app_page
+    api = SealingApi(page)
+    secret_name(page)
+    add_secret_key_value(page)
+    main = namespace_select(page)
+
+    page.locator("input#additionalNamespaces").click()
+    active_list = page.locator(".v-overlay--active .v-list-item")
+    expect(active_list.first).to_be_visible()
+    offered = page.locator(".v-overlay--active .v-list-item-title").all_inner_texts()
+    # the main namespace is not offered a second time
+    assert offered and main not in offered
+    active_list.first.click()
+    page.keyboard.press("Escape")
+    click_encrypt_button(page)
+
+    expect(page.locator(".result-card")).to_have_count(2)
+    assert len(api.requests) == 2
+    assert api.requests[0]["namespace"] == main
+    assert api.requests[1]["namespace"] != main
+
+
+def test_invalid_additional_namespace_blocks_sealing(page: Page):
+    disable_namespace_listing(page)
+    SealingApi(page)
+    page.goto("/")
+    secret_name(page)
+    add_secret_key_value(page)
+    page.fill("input#namespaceSelection", "team-a")
+
+    add_additional_namespaces(page, ["Not_Valid"])
+
+    expect(page.get_by_text('"Not_Valid" is not a valid namespace name')).to_be_visible()
+    expect(page.locator('button:has-text("Encrypt")')).to_be_disabled()
+
+
+def test_additional_namespaces_are_not_offered_for_cluster_wide_secrets(app_page: Page):
+    page = app_page
+    namespace_select(page)
+    expect(page.locator("input#additionalNamespaces")).to_have_count(1)
+
+    select_scope(page, "cluster-wide")
+
+    expect(page.locator("input#additionalNamespaces")).to_have_count(0)
+
+
+def test_failed_sealing_for_one_of_several_namespaces_names_it(page: Page):
+    disable_namespace_listing(page)
+    SealingApi(page, status=500, body={"detail": "Failed to seal secrets."})
+    page.goto("/")
+    secret_name(page)
+    add_secret_key_value(page)
+    page.fill("input#namespaceSelection", "team-a")
+    add_additional_namespaces(page, ["team-b"])
+    click_encrypt_button(page)
+
+    expect(page.locator(".v-snackbar")).to_contain_text('for namespace "team-')
+    # nothing is shown for the namespaces that did work
+    expect(page.locator(".result-card")).to_have_count(0)
+    expect(page.locator('button:has-text("Encrypt")')).to_be_enabled()
+
+
+def test_clear_forgets_the_additional_namespaces(page: Page):
+    disable_namespace_listing(page)
+    SealingApi(page)
+    page.goto("/")
+    secret_name(page)
+    add_secret_key_value(page)
+    page.fill("input#namespaceSelection", "team-a")
+    add_additional_namespaces(page, ["team-b"])
+    click_encrypt_button(page)
+    expect(page.locator(".result-card")).to_have_count(2)
+
+    page.get_by_role("button", name="Clear").click()
+    page.fill("input#namespaceSelection", "team-a")
+
+    expect(page.locator("input#additionalNamespaces")).to_have_count(1)
+    expect(page.locator("#additionalNamespaces .v-chip, .v-field .v-chip")).to_have_count(0)
+
+
 def test_secret_form_with_value(app_page: Page):
     page = app_page
     api = SealingApi(page)

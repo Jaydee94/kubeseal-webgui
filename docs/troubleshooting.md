@@ -43,6 +43,24 @@ the namespace. To make that the normal mode, without the error, set
 The namespace is then always typed in. See
 [configuration.md](configuration.md#service-account-and-rbac).
 
+## "Unknown cluster" when sealing, or the API does not start with several clusters
+
+`POST /secrets` only accepts the cluster names of `sealedSecrets.certs`; the
+error lists the known ones. If the API does not start, its log says what is
+wrong with the cluster list (a duplicate name, a missing `cert`, a certificate
+file that does not exist). The chart refuses most of these already when it is
+rendered. See [configuration.md](configuration.md#several-clusters).
+
+A certificate of the wrong cluster seals without an error and fails only when
+the secret is deployed (the controller logs that it cannot decrypt it).
+Compare the SHA-256 fingerprint the UI shows for the cluster with the one of
+the cluster's own certificate:
+
+```bash
+kubeseal --fetch-cert --controller-name <name> --controller-namespace <namespace> \
+  | openssl x509 -noout -fingerprint -sha256
+```
+
 ## `kubeseal binary not found` or 500 errors on `POST /secrets`
 
 The API expects `kubeseal` at `KUBESEAL_BINARY`. In the published container

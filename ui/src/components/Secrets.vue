@@ -22,6 +22,7 @@
               v-model:namespace-name="namespaceName"
               v-model:secret-name="secretName"
               v-model:cluster="selectedCluster"
+              v-model:additional-namespaces="additionalNamespaces"
               :clusters="clusters"
               :scope="scope"
               v-model:new-namespace="newNamespace"
@@ -148,10 +149,8 @@
 
       <SecretsResults
         v-else
-        :sealed-secrets="sealedSecrets"
-        :manifest="sealedSecretYaml"
+        :results="sealedResults"
         :secret-name="secretName"
-        :namespace="namespaceName"
         :scope="scope"
         :cluster="sealedForCluster"
         @copied="showClipboardMessage"
@@ -223,6 +222,7 @@ import {
   scopeNeedsNamespace
 } from '@/constants'
 import { createLogger } from '@/utils/logger'
+import { firstInvalidNamespace, namespacesToSeal } from '@/utils/namespaces'
 import { renderSealedSecretYaml } from '@/utils/sealedSecretYaml'
 import {
   createSecretEntry,
@@ -275,6 +275,8 @@ const secretName = ref('')
 const namespaceName = ref('')
 const scope = ref(DEFAULT_SCOPE)
 const newNamespace = ref(false)
+// More namespaces to seal the same secret for, next to the main one.
+const additionalNamespaces = ref([])
 const secrets = ref([createSecretEntry()])
 const secretsList = ref(null)
 const form = ref(null)
@@ -290,7 +292,8 @@ const encryptButton = ref(null)
 // the error message this does not go away, because nothing retries the load.
 const loadError = ref('')
 const displayCreateSealedSecretForm = ref(true)
-const sealedSecrets = ref([])
+// What was sealed, one entry per namespace: [{ namespace, entries }, ...].
+const sealedByNamespace = ref([])
 // The cluster that sealed them, shown in the result. Empty for a single cluster.
 const sealedForCluster = ref('')
 
@@ -359,6 +362,22 @@ const invalidFreeTextNamespace = computed(
     freeTextNamespace.value && scopeNeedsNamespace(scope.value) && !isDnsLabel(namespaceName.value)
 )
 
+// Every namespace the secret is sealed for. A cluster-wide secret has none of
+// its own.
+const targetNamespaces = computed(() =>
+  scopeNeedsNamespace(scope.value)
+    ? namespacesToSeal(namespaceName.value, additionalNamespaces.value)
+    : [namespaceName.value]
+)
+
+// Typed-in names are checked, those of the list are valid by being in it.
+const invalidAdditionalNamespace = computed(
+  () =>
+    freeTextNamespace.value &&
+    scopeNeedsNamespace(scope.value) &&
+    firstInvalidNamespace(additionalNamespaces.value) !== ''
+)
+
 // A namespace that may hold SealedSecrets to import from: one of the list, or
 // a valid name typed in without the list (not one that does not exist yet).
 const existingNamespaceEntered = computed(
@@ -394,6 +413,7 @@ const notReadyToEncode = computed(
     invalidKeyData.value ||
     duplicateKeys.value.size > 0 ||
     invalidFreeTextNamespace.value ||
+    invalidAdditionalNamespace.value ||
     invalidSecretName.value ||
     (scopeNeedsNamespace(scope.value) && namespaceName.value === '') ||
     (scopeNeedsName(scope.value) && secretName.value === '')
@@ -404,7 +424,10 @@ const readySummary = computed(() => {
   const count = secrets.value.length
   const parts = [`${count} ${count === 1 ? 'key' : 'keys'}`]
   if (clusters.value.length > 1) parts.push(selectedCluster.value)
-  if (scopeNeedsNamespace(scope.value) && namespaceName.value) parts.push(namespaceName.value)
+  if (scopeNeedsNamespace(scope.value) && namespaceName.value) {
+    const namespaceCount = targetNamespaces.value.length
+    parts.push(namespaceCount > 1 ? `${namespaceCount} namespaces` : namespaceName.value)
+  }
   parts.push(scope.value)
   return parts.join(' · ')
 })
@@ -414,13 +437,17 @@ const sealStatus = computed(() => {
   return sealing.value ? 'Sealing…' : ''
 })
 
-const sealedSecretYaml = computed(() =>
-  renderSealedSecretYaml({
-    name: secretName.value,
-    namespace: namespaceName.value,
-    scope: scope.value,
-    entries: sealedSecrets.value
-  })
+const sealedResults = computed(() =>
+  sealedByNamespace.value.map(({ namespace, entries }) => ({
+    namespace,
+    entries,
+    manifest: renderSealedSecretYaml({
+      name: secretName.value,
+      namespace,
+      scope: scope.value,
+      entries
+    })
+  }))
 )
 
 onBeforeMount(async () => {
@@ -472,12 +499,14 @@ async function loadClusters() {
 // versa, so start from an empty field whenever the mode changes.
 watch(newNamespace, () => {
   namespaceName.value = ''
+  additionalNamespaces.value = []
 })
 
 // Switching between the cluster of the API (a list) and another one (typed in)
 // changes the mode of the field, like the checkbox above.
 watch(namespaceListingActive, () => {
   namespaceName.value = ''
+  additionalNamespaces.value = []
   newNamespace.value = false
 })
 
@@ -524,10 +553,11 @@ function resetForm() {
   displayCreateSealedSecretForm.value = true
   secretName.value = ''
   namespaceName.value = ''
+  additionalNamespaces.value = []
   newNamespace.value = false
   scope.value = defaultScope.value
   secrets.value = [createSecretEntry()]
-  sealedSecrets.value = []
+  sealedByNamespace.value = []
   resetSealedSecretImport()
   setErrorMessage('')
 }
@@ -660,13 +690,10 @@ async function seal() {
   }
   sealing.value = true
   try {
-    sealedSecrets.value = await sealSecrets({
-      secretName: secretName.value,
-      namespaceName: namespaceName.value,
-      scope: scope.value,
-      entries: secrets.value,
-      cluster: selectedCluster.value
-    })
+    // One request per namespace: it is part of what a value is sealed for.
+    // The result shows only when all of them succeeded, so that a namespace
+    // is never silently missing from it.
+    sealedByNamespace.value = await Promise.all(targetNamespaces.value.map(sealForNamespace))
     sealedForCluster.value = clusters.value.length > 1 ? selectedCluster.value : ''
     sealed.value = true
     await new Promise((resolve) => setTimeout(resolve, POST_SEAL_DELAY_MS))
@@ -678,14 +705,35 @@ async function seal() {
   } catch (error) {
     // Only the error is logged -- never the submitted secrets.
     log.error(
-      `Failed to seal secret "${secretName.value}" in namespace "${namespaceName.value}"` +
+      `Failed to seal secret "${secretName.value}" in namespace "${error.namespace ?? namespaceName.value}"` +
         (selectedCluster.value ? ` of cluster "${selectedCluster.value}":` : ':'),
       error
     )
-    setErrorMessage(`Failed to seal secrets. Error Message: ${error.message || error}.`)
+    // With several namespaces, say which one failed.
+    const where = error.namespace ? ` for namespace "${error.namespace}"` : ''
+    setErrorMessage(`Failed to seal secrets${where}. Error Message: ${error.message || error}.`)
     sealing.value = false
     sealed.value = false
     await restoreFocus()
+  }
+}
+
+async function sealForNamespace(namespace) {
+  try {
+    const entries = await sealSecrets({
+      secretName: secretName.value,
+      namespaceName: namespace,
+      scope: scope.value,
+      entries: secrets.value,
+      cluster: selectedCluster.value
+    })
+    return { namespace, entries }
+  } catch (error) {
+    // Only for several namespaces: a single one needs no pointer to itself.
+    if (targetNamespaces.value.length > 1 && error && typeof error === 'object') {
+      error.namespace = namespace
+    }
+    throw error
   }
 }
 

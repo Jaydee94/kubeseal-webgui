@@ -150,6 +150,30 @@ helm install kubeseal-webgui \
 The chart renders the certificate into a Secret mounted at
 `/kubeseal-webgui/cert/kubeseal-cert.pem` inside the API container.
 
+### Several clusters
+
+Every cluster has its own controller and so its own certificate: a value
+sealed for one cluster cannot be unsealed in another. To seal for several
+clusters from one installation, list them with their certificates in a values
+file (`--set-file` cannot pass a list):
+
+```yaml
+sealedSecrets:
+  autoFetchCert: true
+  certs:
+    - name: acc
+      inCluster: true # the cluster of this release; its certificate is auto-fetched
+    - name: prod
+      cert: |
+        -----BEGIN CERTIFICATE-----
+        ...
+```
+
+The UI then shows a cluster selector, the first entry being preselected. The
+namespaces and existing SealedSecrets can only be read from the `inCluster`
+cluster; for the others the namespace is typed in. The full reference is in
+[configuration.md](configuration.md#several-clusters).
+
 ## Verifying the install
 
 ```bash

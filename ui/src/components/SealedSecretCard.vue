@@ -12,7 +12,7 @@
         <CopyButton
           :text="manifest"
           caption="Copy"
-          accessible-name="Copy manifest"
+          :accessible-name="manifestLabel('Copy manifest')"
           variant="outlined"
           @copied="$emit('copied', 'Sealed secret copied to clipboard!')"
           @copy-failed="$emit('copy-failed', 'Failed to copy sealed secret to clipboard.')"
@@ -23,6 +23,7 @@
           color="primary"
           size="small"
           class="result-action"
+          :aria-label="label ? `Download .yaml of ${label}` : undefined"
           @click="download"
         >
           Download .yaml
@@ -45,7 +46,7 @@
           {{ chip.text }}
         </v-chip>
       </div>
-      <pre class="result-code"><YamlCode id="sealed-secret-result" :text="manifest" /></pre>
+      <pre class="result-code"><YamlCode :id="resultId" :text="manifest" /></pre>
     </v-card-text>
   </v-card>
 </template>
@@ -86,6 +87,18 @@ const props = defineProps({
   cluster: {
     type: String,
     default: ''
+  },
+  // The id of the manifest text. Unique per card, for results of several
+  // namespaces.
+  resultId: {
+    type: String,
+    default: 'sealed-secret-result'
+  },
+  // Names the namespace in the accessible names, so that the buttons of
+  // several cards can be told apart. Empty for the only card.
+  label: {
+    type: String,
+    default: ''
   }
 })
 
@@ -110,8 +123,12 @@ const chips = computed(() => {
   ]
 })
 
+function manifestLabel(text) {
+  return props.label ? `${text} of ${props.label}` : text
+}
+
 function download() {
-  const fileName = manifestFileName(props.secretName)
+  const fileName = manifestFileName(props.secretName, props.label)
   downloadTextFile(fileName, props.manifest)
   emit('downloaded', `Downloaded ${fileName}`)
 }

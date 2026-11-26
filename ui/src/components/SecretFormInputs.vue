@@ -163,6 +163,46 @@
           :disabled="!namespaceNeeded"
           @update:model-value="$emit('update:newNamespace', !!$event)"
         />
+        <!-- The same secret for more namespaces, each sealed on its own. After
+             the main one, which is picked as ever, so that everything that
+             depends on it (the import, a new namespace) works as before. -->
+        <template v-if="namespaceNeeded && namespaceName">
+          <v-combobox
+            v-if="freeTextNamespace"
+            id="additionalNamespaces"
+            :model-value="additionalNamespaces"
+            :delimiters="[',', ' ']"
+            label="Also seal for these namespaces (optional)"
+            multiple
+            chips
+            closable-chips
+            density="comfortable"
+            autocomplete="off"
+            variant="outlined"
+            class="modern-input mt-3"
+            color="primary"
+            :error-messages="additionalNamespaceError"
+            hide-details="auto"
+            @update:model-value="$emit('update:additionalNamespaces', $event)"
+          />
+          <v-autocomplete
+            v-else
+            id="additionalNamespaces"
+            :model-value="additionalNamespaces"
+            :items="additionalNamespaceItems"
+            label="Also seal for these namespaces (optional)"
+            multiple
+            chips
+            closable-chips
+            density="comfortable"
+            autocomplete="off"
+            variant="outlined"
+            class="modern-input mt-3"
+            color="primary"
+            hide-details="auto"
+            @update:model-value="$emit('update:additionalNamespaces', $event)"
+          />
+        </template>
       </v-col>
       <v-col cols="12" sm="6">
         <v-text-field
@@ -225,6 +265,7 @@ import {
   scopeNeedsName,
   scopeNeedsNamespace
 } from '@/constants'
+import { firstInvalidNamespace } from '@/utils/namespaces'
 import { firstRuleMessage, isDnsSubdomain, rules, toDnsSubdomain } from '@/utils/validation'
 
 const SCOPE_DESCRIPTIONS = {
@@ -265,6 +306,11 @@ const props = defineProps({
     type: Boolean,
     default: true
   },
+  // More namespaces to seal the same secret for, next to the main one.
+  additionalNamespaces: {
+    type: Array,
+    default: () => []
+  },
   // The clusters to seal for, [{ name, inCluster, fingerprint }, ...]. The
   // selector is shown for more than one.
   clusters: {
@@ -283,6 +329,7 @@ const emit = defineEmits([
   'update:scope',
   'update:newNamespace',
   'update:cluster',
+  'update:additionalNamespaces',
   'toggle-favorite'
 ])
 
@@ -366,6 +413,17 @@ const secretNameSuggestion = computed(() =>
 
 // The namespace is irrelevant for cluster-wide secrets.
 const namespaceNeeded = computed(() => scopeNeedsNamespace(props.scope))
+
+// The main namespace is sealed anyway, so it is not offered again.
+const additionalNamespaceItems = computed(() =>
+  props.namespaces.filter((namespace) => namespace !== props.namespaceName)
+)
+
+// Typed-in names are checked as the main one is.
+const additionalNamespaceError = computed(() => {
+  const invalid = firstInvalidNamespace(props.additionalNamespaces)
+  return invalid ? `"${invalid}" is not a valid namespace name` : ''
+})
 
 // A new favorite moves to the favorites at the top of the list. Go there with
 // it, so that the user sees where it went. (The list is virtual: the moved

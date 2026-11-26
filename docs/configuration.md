@@ -225,3 +225,13 @@ You only need to set one value:
   [`ui/nginx-default.conf`](../ui/nginx-default.conf)).
   Under a path prefix it includes the path. An empty value makes the UI call
   the API relative to its own address.
+
+### Several namespaces
+
+For a scope with a namespace, the UI offers "Also seal for these namespaces"
+below the namespace field. The same secret is then sealed once per namespace
+(the namespace is part of what a value is sealed for), and the result shows
+one manifest and one list of sealed values per namespace. Names that are typed
+in (another cluster, or "Namespace does not exist yet") are checked like the
+main one. If sealing fails for one namespace, nothing is shown and the error
+names that namespace. This needs no configuration.

@@ -1,35 +1,42 @@
 <template>
   <div class="secrets-results">
-    <SealedSecretCard
-      :manifest="manifest"
-      :secret-name="secretName"
-      :namespace="namespace"
-      :scope="scope"
-      :cluster="cluster"
-      :key-count="sealedSecrets.length"
-      @copied="$emit('copied', $event)"
-      @copy-failed="$emit('copy-failed', $event)"
-      @downloaded="$emit('downloaded', $event)"
-    />
-    <!-- The sealed value of each key on its own, e.g. to patch a manifest
-         that already exists. -->
-    <section class="panel keys-panel mt-3" aria-labelledby="keysTitle">
-      <div class="panel__header px-5 pt-4 pb-1">
-        <h2 id="keysTitle" class="panel__title">Sealed values</h2>
-        <span class="count-badge" aria-hidden="true">{{ sealedSecrets.length }}</span>
-      </div>
-      <div class="key-cards">
-        <SecretKeyCard
-          v-for="secret in sealedSecrets"
-          :key="secret.key"
-          class="key-cards__card"
-          :secret-key="secret.key"
-          :secret-value="secret.value"
-          @copied="$emit('copied', keyCopiedMessage(secret.key))"
-          @copy-failed="$emit('copy-failed', 'Failed to copy secret value to clipboard.')"
-        />
-      </div>
-    </section>
+    <!-- One manifest, with the sealed value of each key on its own (e.g. to
+         patch a manifest that already exists), for every namespace sealed for. -->
+    <template v-for="(result, index) in results" :key="result.namespace">
+      <SealedSecretCard
+        :class="{ 'mt-3': index > 0 }"
+        :manifest="result.manifest"
+        :secret-name="secretName"
+        :namespace="result.namespace"
+        :scope="scope"
+        :cluster="cluster"
+        :key-count="result.entries.length"
+        :result-id="index === 0 ? 'sealed-secret-result' : `sealed-secret-result-${index + 1}`"
+        :label="results.length > 1 ? result.namespace : ''"
+        @copied="$emit('copied', $event)"
+        @copy-failed="$emit('copy-failed', $event)"
+        @downloaded="$emit('downloaded', $event)"
+      />
+      <section class="panel keys-panel mt-3" :aria-labelledby="`keysTitle-${index}`">
+        <div class="panel__header px-5 pt-4 pb-1">
+          <h2 :id="`keysTitle-${index}`" class="panel__title">
+            Sealed values<template v-if="results.length > 1"> · {{ result.namespace }}</template>
+          </h2>
+          <span class="count-badge" aria-hidden="true">{{ result.entries.length }}</span>
+        </div>
+        <div class="key-cards">
+          <SecretKeyCard
+            v-for="secret in result.entries"
+            :key="secret.key"
+            class="key-cards__card"
+            :secret-key="secret.key"
+            :secret-value="secret.value"
+            @copied="$emit('copied', keyCopiedMessage(secret.key))"
+            @copy-failed="$emit('copy-failed', 'Failed to copy secret value to clipboard.')"
+          />
+        </div>
+      </section>
+    </template>
     <div class="panel result-nav mt-3">
       <v-btn
         variant="text"
@@ -56,22 +63,16 @@ import SealedSecretCard from './SealedSecretCard.vue'
 import SecretKeyCard from './SecretKeyCard.vue'
 
 defineProps({
-  // The sealed values as returned by the API: [{ key, value }, ...].
-  sealedSecrets: {
+  // What was sealed, one entry per namespace:
+  // [{ namespace, entries: [{ key, value }, ...], manifest }, ...]. `entries`
+  // are the sealed values as returned by the API, `manifest` the complete
+  // SealedSecret as YAML text.
+  results: {
     type: Array,
-    required: true
-  },
-  // The complete SealedSecret manifest as YAML text.
-  manifest: {
-    type: String,
     required: true
   },
   // What was sealed, for the summary and the name of the download.
   secretName: {
-    type: String,
-    default: ''
-  },
-  namespace: {
     type: String,
     default: ''
   },
