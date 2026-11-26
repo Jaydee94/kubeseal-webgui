@@ -1170,6 +1170,28 @@ def test_sealing_before_config_json_is_not_sent_for_several_clusters(page: Page)
     assert api.requests == []
 
 
+def test_sealing_stops_when_config_json_fails(page: Page):
+    page.route("**/clusters", lambda route: route.fulfill(json=TWO_CLUSTERS))
+    api = SealingApi(page)
+    held = held_config_json(page)
+    page.goto("/")
+    fill_cluster_wide_secret(page)
+
+    page.locator('button:has-text("Encrypt")').click()
+    wait_for_held(page, held)
+    # any later request for config.json would succeed, with several clusters
+    config = development_config()
+    config["multiple_clusters"] = True
+    page.unroute("**/config.json")
+    page.route("**/config.json", lambda route: route.fulfill(json=config))
+    held[0].fulfill(status=500, body="down")
+
+    expect(page.locator(".v-snackbar")).to_contain_text("Failed to load the UI configuration")
+    expect(page.locator('button:has-text("Encrypt")')).to_be_disabled()
+    page.wait_for_timeout(500)  # a retry and a sealing request would be quick
+    assert api.requests == []
+
+
 def test_sealing_before_config_json_still_works_for_one_cluster(page: Page):
     api = SealingApi(page)
     held = held_config_json(page)

@@ -715,8 +715,16 @@ async function seal() {
   // The form can be filled in while config.json loads. With several clusters
   // nothing is sent before they are known: the user has not seen which one
   // the secret would be sealed for. (With one cluster this seals as before.)
-  const config = await loadConfig().catch(() => null)
-  if (config?.multipleClusters && !clustersKnown.value) {
+  // A failed config.json stops it too: sealSecrets() would ask again, and a
+  // retry that succeeds could seal for several clusters without one. The
+  // failure itself is reported, and blocks the form, at start-up.
+  let config
+  try {
+    config = await loadConfig()
+  } catch {
+    config = null
+  }
+  if (!config || (config.multipleClusters && !clustersKnown.value)) {
     sealing.value = false
     await restoreFocus()
     return
