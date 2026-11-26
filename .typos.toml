@@ -1,7 +1,8 @@
 [files]
 # Ignore files or directories
 extend-exclude = [
-    "chart/kubeseal-webgui/values.yaml"
+    "chart/kubeseal-webgui/values.yaml",
+    "chart/kubeseal-webgui/ci/clusters.yaml"
 ]
 
 [default]
