@@ -151,6 +151,29 @@ sealedSecrets:
   autoFetchCert: false
   controllerName: sealed-secrets-controller
   controllerNamespace: kube-system
+  ## Several clusters, each with the certificate of its own Sealed-Secrets
+  ## controller: a value sealed for one cluster cannot be unsealed in another.
+  ## The UI then offers a cluster selector (the first entry is preselected).
+  ## Leave empty to use "cert" below as the only cluster.
+  ##
+  ## Each entry has a "name" (lower case letters, digits and "-") and a "cert"
+  ## (PEM). "inCluster: true" marks the cluster this release runs in; at most
+  ## one entry can have it. Only for that one the UI can list namespaces and
+  ## load existing SealedSecrets; for all others the namespace is typed in.
+  ## Its "cert" can be left out with autoFetchCert=true: the certificate is
+  ## then fetched from the controller at start-up.
+  ##
+  ## certs:
+  ##   - name: acc
+  ##     inCluster: true
+  ##     cert: |
+  ##       -----BEGIN CERTIFICATE-----
+  ##       ...
+  ##   - name: prod
+  ##     cert: |
+  ##       -----BEGIN CERTIFICATE-----
+  ##       ...
+  certs: []
   ## Public Certificate of your Sealed-Secrets Controller.
   ## Login to your cluster with kubectl.
   ## Run kubeseal --fetch-cert --controller-name <your-sealed-secrets-controller> --controller-namespace <sealed-secrets-controller-namespace>

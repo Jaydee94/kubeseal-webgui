@@ -1,0 +1,15 @@
+---
+
+sealedSecrets:
+  autoFetchCert: true
+  controllerName: seal
+  controllerNamespace: secrets
+  certs:
+    - name: acc
+      inCluster: true
+    - name: prod
+      # A placeholder: the chart only passes the text on.
+      cert: |
+        -----BEGIN CERTIFICATE-----
+        cGxhY2Vob2xkZXIgY2VydGlmaWNhdGU=
+        -----END CERTIFICATE-----

@@ -76,7 +76,9 @@ helm install kubeseal-webgui \
   path the UI serves itself: `/secrets`, `/namespaces`, `/config`, `/docs`,
   `/openapi.json`, `/config.json`, `/index.html`, `/favicon.ico`,
   `/favicon.svg`, `/sealed-secrets/<name>` or `/assets/<name>` (so
-  `/team/config` is rejected, `/team-config` is fine).
+  `/team/config` is rejected, `/team-config` is fine). A prefix ending in
+  `/clusters` still renders, for releases that already use one, but open it
+  with the trailing slash: without it, the request reaches the API.
 - No rewrite annotation is needed: the UI's nginx accepts requests with and
   without the prefix. An ingress or gateway that strips the prefix (e.g.
   `nginx.ingress.kubernetes.io/rewrite-target`, a Traefik `StripPrefix`
@@ -149,6 +151,41 @@ helm install kubeseal-webgui \
 
 The chart renders the certificate into a Secret mounted at
 `/kubeseal-webgui/cert/kubeseal-cert.pem` inside the API container.
+
+### Several clusters
+
+Every cluster has its own controller and so its own certificate: a value
+sealed for one cluster cannot be unsealed in another. To seal for several
+clusters from one installation, list them with their certificates in a values
+file (`--set-file` cannot pass a list), e.g. `clusters-values.yaml`:
+
+```yaml
+sealedSecrets:
+  autoFetchCert: true
+  certs:
+    - name: acc
+      inCluster: true # the cluster of this release; its certificate is auto-fetched
+    - name: prod
+      cert: |
+        -----BEGIN CERTIFICATE-----
+        ...
+```
+
+Install with it, or apply it to an existing release:
+
+```bash
+helm upgrade --install kubeseal-webgui \
+  oci://ghcr.io/jaydee94/kubeseal-webgui/charts/kubeseal-webgui \
+  --namespace kubeseal-webgui --create-namespace \
+  -f clusters-values.yaml
+```
+
+The pod is restarted whenever the list or a certificate changes.
+
+The UI then shows a cluster selector, the first entry being preselected. The
+namespaces and existing SealedSecrets can only be read from the `inCluster`
+cluster; for the others the namespace is typed in. The full reference is in
+[configuration.md](configuration.md#several-clusters).
 
 ## Verifying the install
 

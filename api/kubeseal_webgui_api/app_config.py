@@ -25,6 +25,9 @@ class AppSettings(BaseSettings):
 
     kubeseal_binary: str = "/bin/false"
     kubeseal_cert: str = "/kubeseal-webgui/cert/kubeseal-cert.pem"
+    # JSON file listing several clusters, each with its own sealing certificate
+    # (see kubeseal_webgui_api.clusters). Empty: one cluster, kubeseal_cert.
+    kubeseal_clusters_file: str = ""
     kubeseal_autofetch: bool = False
     kubeseal_controller_namespace: str = "sealed-secrets"
     kubeseal_controller_name: str = "sealed-secrets-controller"

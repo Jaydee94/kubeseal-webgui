@@ -44,7 +44,12 @@ export function renderSealedSecretYaml({ name, namespace, scope, entries }) {
   return `${header.join('\n')}\n${data.join('\n')}`
 }
 
-/** The download is named after the secret, or generically without a name. */
-export function manifestFileName(name) {
-  return `${name || 'sealed-secret'}.yaml`
+/**
+ * The download is named after the secret, or generically without a name. With
+ * several namespaces the file also names its namespace, so that the downloads
+ * do not replace each other.
+ */
+export function manifestFileName(name, namespace = '') {
+  const base = name || 'sealed-secret'
+  return `${namespace ? `${base}-${namespace}` : base}.yaml`
 }

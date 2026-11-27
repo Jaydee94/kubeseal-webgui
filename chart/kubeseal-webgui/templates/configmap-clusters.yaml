@@ -1,0 +1,16 @@
+{{- if .Values.sealedSecrets.certs }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "kubeseal-webgui.fullname" . }}-clusters
+  labels:
+  {{- include "kubeseal-webgui.labels" . | nindent 4 }}
+data:
+  clusters.json: {{ include "kubeseal-webgui.clustersJson" . | quote }}
+  {{- range .Values.sealedSecrets.certs }}
+  {{- if .cert }}
+  {{ printf "%s.pem" (.name | toString) }}: |
+    {{- .cert | trim | nindent 4 }}
+  {{- end }}
+  {{- end }}
+{{- end }}

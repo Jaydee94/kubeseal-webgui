@@ -33,6 +33,16 @@ export async function fetchNamespaces() {
   return requestJson(await apiUrl('namespaces'))
 }
 
+/**
+ * The clusters a secret can be sealed for, as [{ name, inCluster, fingerprint }, ...].
+ * The first one is the default. `inCluster` marks the one the API runs in:
+ * only for it the namespaces and SealedSecrets can be read. Only asked for
+ * when config.json says there are several (`multiple_clusters`).
+ */
+export async function fetchClusters() {
+  return requestJson(await apiUrl('clusters'))
+}
+
 /** The SealedSecrets of a namespace as [{ name, keys }, ...]. */
 export async function fetchSealedSecrets(namespace) {
   return requestJson(await apiUrl(`sealed-secrets/${encodeURIComponent(namespace)}`))
@@ -54,15 +64,34 @@ async function toRequestEntry(entry) {
 }
 
 /**
- * Seal the entries (each with a `value` or a `file`) and return the sealed
- * values as [{ key, value }, ...].
+ * The entries as the API takes them, with values and files base64-encoded.
+ * Done once for a secret sealed for several namespaces: files are read and
+ * encoded only once.
  */
-export async function sealSecrets({ secretName, namespaceName, scope, entries }) {
+export function encodeEntries(entries) {
+  return Promise.all(entries.map(toRequestEntry))
+}
+
+/**
+ * Seal the entries (each with a `value` or a `file`) and return the sealed
+ * values as [{ key, value }, ...]. `encodedEntries` (from encodeEntries())
+ * are sent as they are, instead of encoding `entries` again.
+ */
+export async function sealSecrets({
+  secretName,
+  namespaceName,
+  scope,
+  entries,
+  encodedEntries,
+  cluster
+}) {
   const sealingRequest = {
     secret: secretName,
     namespace: namespaceName,
     scope,
-    secrets: await Promise.all(entries.map(toRequestEntry))
+    // Left out for an API that lists no clusters: it then uses its only one.
+    ...(cluster ? { cluster } : {}),
+    secrets: encodedEntries ?? (await encodeEntries(entries))
   }
 
   // requestJson logs method, URL and status only -- never this body, which

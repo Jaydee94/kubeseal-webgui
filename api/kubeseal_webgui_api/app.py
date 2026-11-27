@@ -1,5 +1,6 @@
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import fastapi
 from fastapi.exception_handlers import request_validation_exception_handler
@@ -14,10 +15,37 @@ from .app_config import (
     get_kubeseal_version,
     settings,
 )
+from .clusters import ClusterConfigError, get_clusters
 from .logging_utils import LOGGER_NAME, REQUEST_ID_HEADER, RequestIdMiddleware
-from .routers import config, kubernetes, kubeseal
+from .routers import clusters, config, kubernetes, kubeseal
 
 LOGGER = logging.getLogger(LOGGER_NAME)
+
+
+def check_clusters() -> None:
+    """Fail at start-up, not on the first request, if a cluster is unusable."""
+    try:
+        configured = get_clusters()
+    except ClusterConfigError as error:
+        LOGGER.error("Invalid cluster configuration: %s", error)
+        raise
+    for cluster in configured:
+        LOGGER.info(
+            "Cluster '%s': certificate '%s'%s",
+            cluster.name,
+            cluster.cert,
+            ", in this cluster" if cluster.in_cluster else "",
+        )
+        # Only for an explicit list: without one, a missing certificate stays
+        # what it always was, an error of the first sealing request.
+        explicit = bool(settings.kubeseal_clusters_file)
+        if explicit and not settings.mock_enabled and not Path(cluster.cert).is_file():
+            message = (
+                f"The certificate '{cluster.cert}' of cluster '{cluster.name}' "
+                "does not exist."
+            )
+            LOGGER.error(message)
+            raise ClusterConfigError(message)
 
 
 @asynccontextmanager
@@ -39,6 +67,7 @@ async def lifespan(fastapi_app: fastapi.FastAPI):  # noqa: ANN201 skipcq: PYL-W0
         ", ".join(origins) or "nowhere (ORIGIN_URL is not an absolute URL)",
     )
     fetch_sealed_secrets_cert()
+    check_clusters()
     LOGGER.info("Startup tasks complete.")
     yield
     LOGGER.info("Shutting down kubeseal-webgui API.")
@@ -88,6 +117,9 @@ app.include_router(
 )
 app.include_router(
     config.router,
+)
+app.include_router(
+    clusters.router,
 )
 app.include_router(
     kubeseal.router,

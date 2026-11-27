@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from kubeseal_webgui_api.app_config import settings
 from kubeseal_webgui_api.routers.kubeseal import (
     Scope,
     build_kubeseal_command,
@@ -141,7 +142,9 @@ def test_run_kubeseal_with_scope(mock_run_command: MagicMock, scope: Scope):
         "name",
         scope,
     )
-    mock_run_command.assert_called_with(secrets[0], "namespace", "name", scope)
+    mock_run_command.assert_called_with(
+        secrets[0], "namespace", "name", scope, settings.kubeseal_cert
+    )
 
 
 @patch("kubeseal_webgui_api.routers.kubeseal.seal_entry")
@@ -170,7 +173,9 @@ def test_run_kubeseal_with_scope_needed_params_only(
         name,
         scope,
     )
-    mock_run_command.assert_called_with(secrets[0], namespace, name, scope)
+    mock_run_command.assert_called_with(
+        secrets[0], namespace, name, scope, settings.kubeseal_cert
+    )
 
 
 @pytest.mark.container()

@@ -579,6 +579,342 @@ def test_ui_start(app_page: Page):
     assert app_page.title() == "Kubeseal WebGui - Sealed Secrets Management"
 
 
+def serve_clusters(page: Page, clusters, status: int = 200, **config):
+    """Say in config.json that there are several clusters.
+
+    As the chart does for sealedSecrets.certs, with further config.json keys.
+    Also answers `GET /clusters`: there is no API behind the dev server.
+    """
+
+    def config_json(route: Route):
+        body = route.fetch().json()
+        body["multiple_clusters"] = True
+        body.update(config)
+        route.fulfill(json=body)
+
+    page.route("**/config.json", config_json)
+    page.route("**/clusters", lambda route: route.fulfill(status=status, json=clusters))
+
+
+TWO_CLUSTERS = [
+    {"name": "acc", "inCluster": True, "fingerprint": "AA:BB:CC:DD:EE:FF:00:11"},
+    {"name": "prod", "inCluster": False, "fingerprint": "11:22:33:44:55:66:77:88"},
+]
+
+
+def selected_cluster(page: Page):
+    return page.locator(".cluster-picker .v-select__selection-text")
+
+
+def pick_cluster(page: Page, name: str):
+    page.locator(".cluster-picker .v-field").click()
+    page.get_by_role("option", name=name).click()
+    expect(selected_cluster(page)).to_have_text(name)
+
+
+def test_a_single_cluster_works_as_before(page: Page):
+    # config.json of a release without sealedSecrets.certs: no multiple_clusters
+    cluster_requests = []
+    page.on(
+        "request",
+        lambda request: (
+            cluster_requests.append(request.url)
+            if request.url.endswith("/clusters")
+            else None
+        ),
+    )
+    api = SealingApi(page)
+    page.goto("/")
+    page.wait_for_selector("#secretName")
+
+    expect(page.locator("#clusterSelection")).to_have_count(0)
+    secret_name(page)
+    namespace_select(page)
+    add_secret_key_value(page)
+    click_encrypt_button(page)
+    expect(page.locator("#sealed-secret-result")).to_be_visible()
+    # the same request as before, and no question about clusters
+    assert "cluster" not in api.only_request
+    assert cluster_requests == []
+    expect(page.locator(".summary-chip", has_text="default")).to_have_count(0)
+
+
+def test_one_configured_cluster_has_no_selector(page: Page):
+    serve_clusters(page, [{"name": "acc", "inCluster": True}])
+    api = SealingApi(page)
+    page.goto("/")
+    page.wait_for_selector("#secretName")
+
+    expect(page.locator("#clusterSelection")).to_have_count(0)
+    secret_name(page)
+    namespace_select(page)
+    add_secret_key_value(page)
+    click_encrypt_button(page)
+    expect(page.locator("#sealed-secret-result")).to_be_visible()
+    # named all the same: explicit is safer than the API's default
+    assert api.only_request["cluster"] == "acc"
+
+
+def test_sealing_waits_for_the_clusters(page: Page):
+    serve_clusters(page, TWO_CLUSTERS)
+    held: list[Route] = []
+
+    def hold(route: Route):
+        held.append(route)
+
+    # registered last, so it answers /clusters: held until released
+    page.route("**/clusters", hold)
+    page.goto("/")
+    page.wait_for_selector("#secretName")
+    select_scope(page, "cluster-wide")
+    secret_name(page)
+    add_secret_key_value(page)
+
+    # everything is filled in, but whose certificate would seal is not known
+    expect(page.locator('button:has-text("Encrypt")')).to_be_disabled()
+    for _ in range(100):  # the request is held, not lost
+        if held:
+            break
+        page.wait_for_timeout(50)
+    assert len(held) == 1
+    held[0].fulfill(json=TWO_CLUSTERS)
+
+    expect(page.locator("#clusterSelection")).to_have_count(1)
+    expect(page.locator('button:has-text("Encrypt")')).to_be_enabled()
+
+
+@pytest.mark.parametrize("status", [404, 500])
+def test_sealing_is_blocked_when_the_clusters_are_unknown(page: Page, status: int):
+    serve_clusters(page, {"detail": "nope"}, status=status)
+    page.goto("/")
+    page.wait_for_selector("#secretName")
+    # cluster-wide needs no namespace, so nothing else is missing
+    select_scope(page, "cluster-wide")
+    secret_name(page)
+    add_secret_key_value(page)
+
+    expect(page.locator(".v-snackbar")).to_contain_text("Failed to fetch the clusters")
+    expect(page.locator('button:has-text("Encrypt")')).to_be_disabled()
+
+
+def test_secret_is_sealed_for_the_picked_cluster(page: Page):
+    serve_clusters(page, TWO_CLUSTERS)
+    api = SealingApi(page)
+    page.goto("/")
+    page.wait_for_selector("#clusterSelection")
+
+    # the first cluster is preselected, and it is the one of the API: a list
+    expect(selected_cluster(page)).to_have_text("acc")
+    expect(page.locator(".v-autocomplete")).to_have_count(1)
+
+    pick_cluster(page, "prod")
+    # the namespaces of another cluster are not known: a text field
+    expect(page.locator(".v-autocomplete")).to_have_count(0)
+    expect(page.get_by_text("Namespaces of this cluster are typed in.")).to_be_visible()
+    secret_name(page)
+    page.fill("input#namespaceSelection", "team-a")
+    add_secret_key_value(page)
+    click_encrypt_button(page)
+
+    expect(page.locator("#sealed-secret-result")).to_be_visible()
+    assert api.only_request["cluster"] == "prod"
+    assert api.only_request["namespace"] == "team-a"
+    # the result says which cluster sealed it
+    expect(page.locator(".summary-chip", has_text="prod")).to_be_visible()
+
+
+def test_namespace_is_cleared_when_the_namespace_mode_changes(page: Page):
+    serve_clusters(page, TWO_CLUSTERS)
+    page.goto("/")
+    page.wait_for_selector("#clusterSelection")
+
+    pick_cluster(page, "prod")
+    page.fill("input#namespaceSelection", "team-a")
+
+    # a typed-in name is no entry of the list, so back to the list it starts empty
+    pick_cluster(page, "acc")
+    expect(page.locator(".v-autocomplete")).to_have_count(1)
+    expect(page.locator("input#namespaceSelection")).to_have_value("")
+
+
+def test_typed_in_namespace_is_kept_while_it_stays_typed_in(page: Page):
+    serve_clusters(page, TWO_CLUSTERS)
+    page.goto("/")
+    page.wait_for_selector("#clusterSelection")
+
+    # a new namespace is typed in, in the cluster of the API ...
+    page.locator("#newNamespaceCheckbox").check()
+    page.fill("input#namespaceSelection", "team-new")
+    # ... and is still typed in for another cluster: nothing to clear
+    pick_cluster(page, "prod")
+    expect(page.locator("input#namespaceSelection")).to_have_value("team-new")
+
+
+def test_import_is_not_offered_for_another_cluster(page: Page):
+    requested_urls = enable_sealed_secret_import(page)
+    # registered last, so it answers config.json: the import stays on
+    serve_clusters(page, TWO_CLUSTERS, enable_existing_sealed_secret_loading=True)
+    page.goto("/")
+    page.wait_for_selector("#clusterSelection")
+    import_button = page.get_by_role("button", name="Import existing sealed secret")
+
+    pick_cluster(page, "prod")
+    page.fill("input#namespaceSelection", "team-a")
+    expect(import_button).to_have_count(0)
+    assert requested_urls == []
+
+
+def test_summary_names_the_cluster(page: Page):
+    serve_clusters(page, TWO_CLUSTERS)
+    SealingApi(page)
+    page.goto("/")
+    page.wait_for_selector("#clusterSelection")
+
+    secret_name(page)
+    namespace_select(page)
+    add_secret_key_value(page)
+
+    expect(page.locator(".action-bar__status")).to_contain_text("acc")
+
+
+def additional_namespace_chips(page: Page):
+    """The chips of the field for more namespaces, and no other chips."""
+    field = page.locator(".v-field", has=page.locator("input#additionalNamespaces"))
+    return field.locator(".v-chip")
+
+
+def add_additional_namespaces(page: Page, names: list[str]):
+    """Type namespaces into the field for more namespaces (free text)."""
+    field = page.locator("input#additionalNamespaces")
+    field.fill(",".join(names) + ",")
+    expect(additional_namespace_chips(page)).to_have_count(len(names))
+
+
+def test_one_secret_is_sealed_for_several_typed_in_namespaces(page: Page):
+    disable_namespace_listing(page)
+    api = SealingApi(page)
+    page.goto("/")
+    secret_name(page)
+    add_secret_key_value(page)
+
+    # offered only once there is a main namespace
+    expect(page.locator("input#additionalNamespaces")).to_have_count(0)
+    page.fill("input#namespaceSelection", "team-a")
+    add_additional_namespaces(page, ["team-b", "team-c", "team-a"])
+    expect(page.locator(".action-bar__status")).to_contain_text("3 namespaces")
+    click_encrypt_button(page)
+
+    expect(page.locator("#sealed-secret-result")).to_be_visible()
+    # one request per namespace (in parallel, so in no fixed order); a repeat
+    # is sealed once
+    namespaces = [request["namespace"] for request in api.requests]
+    assert sorted(namespaces) == ["team-a", "team-b", "team-c"]
+    assert len(api.requests) == 3
+    # one manifest per namespace, in the order of the form
+    expect(page.locator(".result-card")).to_have_count(3)
+    expect(page.locator("#sealed-secret-result-2")).to_be_visible()
+    texts = [
+        page.locator(selector).inner_text()
+        for selector in (
+            "#sealed-secret-result",
+            "#sealed-secret-result-2",
+            "#sealed-secret-result-3",
+        )
+    ]
+    assert [re.search(r"namespace: (\S+)", text).group(1) for text in texts] == [
+        "team-a",
+        "team-b",
+        "team-c",
+    ]
+    # buttons of the cards can be told apart
+    expect(page.get_by_role("button", name="Copy manifest of team-b")).to_be_visible()
+
+
+def test_additional_namespaces_are_picked_from_the_list(app_page: Page):
+    page = app_page
+    api = SealingApi(page)
+    secret_name(page)
+    add_secret_key_value(page)
+    main = namespace_select(page)
+
+    page.locator("input#additionalNamespaces").click()
+    active_list = page.locator(".v-overlay--active .v-list-item")
+    expect(active_list.first).to_be_visible()
+    offered = page.locator(".v-overlay--active .v-list-item-title").all_inner_texts()
+    # the main namespace is not offered a second time
+    assert offered and main not in offered
+    active_list.first.click()
+    page.keyboard.press("Escape")
+    click_encrypt_button(page)
+
+    # the requests run in parallel, so only their set is fixed; the order of
+    # the results is the order of the form, the main namespace first
+    expect(page.locator(".result-card")).to_have_count(2)
+    namespaces = {request["namespace"] for request in api.requests}
+    assert len(api.requests) == 2 and len(namespaces) == 2 and main in namespaces
+    assert re.search(
+        r"namespace: (\S+)", page.locator("#sealed-secret-result").inner_text()
+    ).group(1) == main
+
+
+def test_invalid_additional_namespace_blocks_sealing(page: Page):
+    disable_namespace_listing(page)
+    SealingApi(page)
+    page.goto("/")
+    secret_name(page)
+    add_secret_key_value(page)
+    page.fill("input#namespaceSelection", "team-a")
+
+    add_additional_namespaces(page, ["Not_Valid"])
+
+    expect(page.get_by_text('"Not_Valid" is not a valid namespace name')).to_be_visible()
+    expect(page.locator('button:has-text("Encrypt")')).to_be_disabled()
+
+
+def test_additional_namespaces_are_not_offered_for_cluster_wide_secrets(app_page: Page):
+    page = app_page
+    namespace_select(page)
+    expect(page.locator("input#additionalNamespaces")).to_have_count(1)
+
+    select_scope(page, "cluster-wide")
+
+    expect(page.locator("input#additionalNamespaces")).to_have_count(0)
+
+
+def test_failed_sealing_for_one_of_several_namespaces_names_it(page: Page):
+    disable_namespace_listing(page)
+    SealingApi(page, status=500, body={"detail": "Failed to seal secrets."})
+    page.goto("/")
+    secret_name(page)
+    add_secret_key_value(page)
+    page.fill("input#namespaceSelection", "team-a")
+    add_additional_namespaces(page, ["team-b"])
+    click_encrypt_button(page)
+
+    expect(page.locator(".v-snackbar")).to_contain_text('for namespace "team-')
+    # nothing is shown for the namespaces that did work
+    expect(page.locator(".result-card")).to_have_count(0)
+    expect(page.locator('button:has-text("Encrypt")')).to_be_enabled()
+
+
+def test_clear_forgets_the_additional_namespaces(page: Page):
+    disable_namespace_listing(page)
+    SealingApi(page)
+    page.goto("/")
+    secret_name(page)
+    add_secret_key_value(page)
+    page.fill("input#namespaceSelection", "team-a")
+    add_additional_namespaces(page, ["team-b"])
+    click_encrypt_button(page)
+    expect(page.locator(".result-card")).to_have_count(2)
+
+    page.get_by_role("button", name="Clear").click()
+    page.fill("input#namespaceSelection", "team-a")
+
+    expect(page.locator("input#additionalNamespaces")).to_have_count(1)
+    expect(additional_namespace_chips(page)).to_have_count(0)
+
+
 def test_secret_form_with_value(app_page: Page):
     page = app_page
     api = SealingApi(page)
@@ -779,6 +1115,122 @@ def test_configured_default_scope_is_used_at_start_and_after_clear(page: Page):
     # another scope can still be picked for a secret
     select_scope(page, "strict")
     expect(selected_scope(page)).to_have_attribute("data-scope", "strict")
+
+
+def held_config_json(page: Page) -> list[Route]:
+    """Hold config.json back; the routes are answered by the test."""
+    held: list[Route] = []
+
+    def hold(route: Route):
+        held.append(route)
+
+    page.route("**/config.json", hold)
+    return held
+
+
+def development_config() -> dict:
+    return json.loads(
+        (pathlib.Path(__file__).parent.parent / "public" / "config.json").read_text()
+    )
+
+
+def fill_cluster_wide_secret(page: Page):
+    """A form complete without config.json: cluster-wide needs no namespace."""
+    page.wait_for_selector(".scope-toggle")
+    select_scope(page, "cluster-wide")
+    secret_name(page)
+    add_secret_key_value(page)
+
+
+def wait_for_held(page: Page, held: list[Route]):
+    for _ in range(100):  # the request is held, not lost
+        if held:
+            return
+        page.wait_for_timeout(50)
+    raise AssertionError("the request was not sent")
+
+
+def test_sealing_before_config_json_is_not_sent_for_several_clusters(page: Page):
+    page.route("**/clusters", lambda route: route.fulfill(json=TWO_CLUSTERS))
+    api = SealingApi(page)
+    held = held_config_json(page)
+    page.goto("/")
+    fill_cluster_wide_secret(page)
+
+    page.locator('button:has-text("Encrypt")').click()
+    wait_for_held(page, held)
+    config = development_config()
+    config["multiple_clusters"] = True
+    held[0].fulfill(json=config)
+
+    # nothing sealed: the user has not seen which cluster it would be for
+    expect(page.locator("#clusterSelection")).to_have_count(1)
+    expect(page.locator('button:has-text("Encrypt")')).to_be_enabled()
+    expect(page.locator("#sealed-secret-result")).to_have_count(0)
+    assert api.requests == []
+
+
+def test_sealing_before_config_json_keeps_the_scope_of_the_click(page: Page):
+    api = SealingApi(page)
+    held = held_config_json(page)
+    page.goto("/")
+    page.wait_for_selector(".scope-toggle")
+    # strict, as shown before config.json is there, for a typed-in namespace
+    page.locator("#newNamespaceCheckbox").check()
+    page.fill("input#namespaceSelection", "team-a")
+    secret_name(page)
+    add_secret_key_value(page)
+
+    page.locator('button:has-text("Encrypt")').click()
+    wait_for_held(page, held)
+    # the configured default arrives only now, and would widen the scope
+    config = development_config()
+    config["default_scope"] = "cluster-wide"
+    held[0].fulfill(json=config)
+
+    expect(page.locator("#sealed-secret-result")).to_be_visible()
+    assert api.only_request["scope"] == "strict"
+    assert api.only_request["namespace"] == "team-a"
+    manifest = page.locator("#sealed-secret-result").inner_text()
+    assert "namespace: team-a" in manifest
+    assert "cluster-wide" not in manifest
+
+
+def test_sealing_stops_when_config_json_fails(page: Page):
+    page.route("**/clusters", lambda route: route.fulfill(json=TWO_CLUSTERS))
+    api = SealingApi(page)
+    held = held_config_json(page)
+    page.goto("/")
+    fill_cluster_wide_secret(page)
+
+    page.locator('button:has-text("Encrypt")').click()
+    wait_for_held(page, held)
+    # any later request for config.json would succeed, with several clusters
+    config = development_config()
+    config["multiple_clusters"] = True
+    page.unroute("**/config.json")
+    page.route("**/config.json", lambda route: route.fulfill(json=config))
+    held[0].fulfill(status=500, body="down")
+
+    expect(page.locator(".v-snackbar")).to_contain_text("Failed to load the UI configuration")
+    expect(page.locator('button:has-text("Encrypt")')).to_be_disabled()
+    page.wait_for_timeout(500)  # a retry and a sealing request would be quick
+    assert api.requests == []
+
+
+def test_sealing_before_config_json_still_works_for_one_cluster(page: Page):
+    api = SealingApi(page)
+    held = held_config_json(page)
+    page.goto("/")
+    fill_cluster_wide_secret(page)
+
+    page.locator('button:has-text("Encrypt")').click()
+    wait_for_held(page, held)
+    held[0].fulfill(json=development_config())
+
+    # as before: sealed once config.json is there
+    expect(page.locator("#sealed-secret-result")).to_be_visible()
+    assert "cluster" not in api.only_request
 
 
 def test_scope_picked_while_config_loads_is_kept(page: Page):
@@ -1820,6 +2272,19 @@ def test_remove_all_waits_for_dropped_files_that_are_still_read(app_page: Page):
     assert key_value_pairs(page) == [("", "")]
 
 
+def expect_key_value_pairs(page: Page, expected: list[tuple[str, str]]):
+    """Wait for the rows of `expected`, then compare them.
+
+    A dropped file is read asynchronously, so the rows arrive after the drop
+    event: reading them right away can see the list half updated.
+    """
+    expect(page.locator(".secret-row")).to_have_count(len(expected))
+    expect(page.locator("input#secretKey-" + str(len(expected) - 1))).to_have_value(
+        expected[-1][0]
+    )
+    assert key_value_pairs(page) == expected
+
+
 def key_value_pairs(page: Page) -> list[tuple[str, str]]:
     """(key, value) per row; the value of a row with a file is "<file>"."""
     pairs = []
@@ -1875,11 +2340,14 @@ def test_dropping_a_dotenv_file_creates_one_pair_per_variable(app_page: Page):
     drop_files(page, [(".env", env, "")])
 
     # the blank row made way for the three pairs
-    assert key_value_pairs(page) == [
-        ("DB_HOST", "db.local"),
-        ("DB_PASSWORD", "s3cr3t # not a comment"),
-        ("GREETING", "hello\nworld"),
-    ]
+    expect_key_value_pairs(
+        page,
+        [
+            ("DB_HOST", "db.local"),
+            ("DB_PASSWORD", "s3cr3t # not a comment"),
+            ("GREETING", "hello\nworld"),
+        ],
+    )
     expect(page.locator(".drop-zone")).to_have_count(0)
     expect(page.locator("div[role='status']")).to_have_text(
         re.compile(r"Imported 3 keys from \.env")
@@ -1899,11 +2367,14 @@ def test_dropped_pairs_are_appended_to_filled_rows(app_page: Page):
 
     drop_files(page, [("prod.env", "ONE=1\nTWO=2", "")])
 
-    assert key_value_pairs(page) == [
-        (SECRET_KEY, SECRET_VALUE),
-        ("ONE", "1"),
-        ("TWO", "2"),
-    ]
+    expect_key_value_pairs(
+        page,
+        [
+            (SECRET_KEY, SECRET_VALUE),
+            ("ONE", "1"),
+            ("TWO", "2"),
+        ],
+    )
     expect(page.locator("div[role='status']")).to_have_text(
         re.compile(r"Imported 2 keys from prod\.env")
     )
@@ -1919,7 +2390,7 @@ def test_dropped_pairs_replace_every_blank_row(app_page: Page):
 
     drop_files(page, [("prod.env", "ONE=1\nTWO=2", "")])
 
-    assert key_value_pairs(page) == [("ONE", "1"), ("TWO", "2")]
+    expect_key_value_pairs(page, [("ONE", "1"), ("TWO", "2")])
     # nothing incomplete is left, so the form can be sealed once it is addressed
     namespace_select(page)
     secret_name(page)
@@ -2053,7 +2524,7 @@ def test_a_file_dropped_outside_the_list_does_not_replace_the_page(app_page: Pag
     # the form is still there, and dropping on the list still imports
     expect(page.locator("input#secretKey-0")).to_have_value(SECRET_KEY)
     drop_files(page, [(".env", "A=1", "")])
-    assert key_value_pairs(page) == [(SECRET_KEY, SECRET_VALUE), ("A", "1")]
+    expect_key_value_pairs(page, [(SECRET_KEY, SECRET_VALUE), ("A", "1")])
 
 
 def test_a_file_dropped_on_the_result_view_does_not_replace_the_page(app_page: Page):

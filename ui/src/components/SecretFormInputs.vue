@@ -1,6 +1,38 @@
 <template>
   <div>
-    <!-- First, because it decides what the fields below need: the namespace
+    <!-- Only with several clusters. First of all, because the cluster decides
+         whose certificate seals the secret, and whether its namespaces can be
+         listed. -->
+    <div v-if="clusters.length > 1" class="cluster-picker mb-5">
+      <v-select
+        id="clusterSelection"
+        :model-value="cluster"
+        :items="clusters"
+        item-title="name"
+        item-value="name"
+        label="Cluster"
+        density="comfortable"
+        variant="outlined"
+        class="modern-input"
+        color="primary"
+        prepend-inner-icon="mdi-server"
+        :hint="clusterHint"
+        persistent-hint
+        @update:model-value="$emit('update:cluster', $event)"
+      >
+        <template #append-inner>
+          <InfoTooltip class="ml-2 info-icon">
+            <span
+              >The secret is sealed with the certificate of this cluster and can only be unsealed
+              there.<br /><i v-if="fingerprint"
+                >Certificate SHA-256: <code>{{ fingerprint }}</code></i
+              ></span
+            >
+          </InfoTooltip>
+        </template>
+      </v-select>
+    </div>
+    <!-- Decides what the fields below need: the namespace
          and the secret name. -->
     <div class="scope-picker mb-5">
       <div class="d-flex align-center mb-2">
@@ -131,6 +163,46 @@
           :disabled="!namespaceNeeded"
           @update:model-value="$emit('update:newNamespace', !!$event)"
         />
+        <!-- The same secret for more namespaces, each sealed on its own. After
+             the main one, which is picked as ever, so that everything that
+             depends on it (the import, a new namespace) works as before. -->
+        <template v-if="namespaceNeeded && namespaceName">
+          <v-combobox
+            v-if="freeTextNamespace"
+            id="additionalNamespaces"
+            :model-value="additionalNamespaces"
+            :delimiters="[',', ' ']"
+            label="Also seal for these namespaces (optional)"
+            multiple
+            chips
+            closable-chips
+            density="comfortable"
+            autocomplete="off"
+            variant="outlined"
+            class="modern-input mt-3"
+            color="primary"
+            :error-messages="additionalNamespaceError"
+            hide-details="auto"
+            @update:model-value="$emit('update:additionalNamespaces', $event)"
+          />
+          <v-autocomplete
+            v-else
+            id="additionalNamespaces"
+            :model-value="additionalNamespaces"
+            :items="additionalNamespaceItems"
+            label="Also seal for these namespaces (optional)"
+            multiple
+            chips
+            closable-chips
+            density="comfortable"
+            autocomplete="off"
+            variant="outlined"
+            class="modern-input mt-3"
+            color="primary"
+            hide-details="auto"
+            @update:model-value="$emit('update:additionalNamespaces', $event)"
+          />
+        </template>
       </v-col>
       <v-col cols="12" sm="6">
         <v-text-field
@@ -193,6 +265,7 @@ import {
   scopeNeedsName,
   scopeNeedsNamespace
 } from '@/constants'
+import { firstInvalidNamespace } from '@/utils/namespaces'
 import { firstRuleMessage, isDnsSubdomain, rules, toDnsSubdomain } from '@/utils/validation'
 
 const SCOPE_DESCRIPTIONS = {
@@ -232,6 +305,21 @@ const props = defineProps({
   namespaceListing: {
     type: Boolean,
     default: true
+  },
+  // More namespaces to seal the same secret for, next to the main one.
+  additionalNamespaces: {
+    type: Array,
+    default: () => []
+  },
+  // The clusters to seal for, [{ name, inCluster, fingerprint }, ...]. The
+  // selector is shown for more than one.
+  clusters: {
+    type: Array,
+    default: () => []
+  },
+  cluster: {
+    type: String,
+    default: ''
   }
 })
 
@@ -240,8 +328,21 @@ const emit = defineEmits([
   'update:secretName',
   'update:scope',
   'update:newNamespace',
+  'update:cluster',
+  'update:additionalNamespaces',
   'toggle-favorite'
 ])
+
+const selectedCluster = computed(() => props.clusters.find((entry) => entry.name === props.cluster))
+
+const fingerprint = computed(() => selectedCluster.value?.fingerprint ?? '')
+
+// The fingerprint is in the tooltip, where it can be compared in full.
+const clusterHint = computed(() =>
+  selectedCluster.value && !selectedCluster.value.inCluster
+    ? 'Namespaces of this cluster are typed in.'
+    : ''
+)
 
 const favoritesInList = computed(() =>
   props.namespaces.filter((namespace) => props.favoriteNamespaces.has(namespace))
@@ -307,6 +408,17 @@ const secretNameSuggestion = computed(() =>
 
 // The namespace is irrelevant for cluster-wide secrets.
 const namespaceNeeded = computed(() => scopeNeedsNamespace(props.scope))
+
+// The main namespace is sealed anyway, so it is not offered again.
+const additionalNamespaceItems = computed(() =>
+  props.namespaces.filter((namespace) => namespace !== props.namespaceName)
+)
+
+// Typed-in names are checked as the main one is.
+const additionalNamespaceError = computed(() => {
+  const invalid = firstInvalidNamespace(props.additionalNamespaces)
+  return invalid ? `"${invalid}" is not a valid namespace name` : ''
+})
 
 // A new favorite moves to the favorites at the top of the list. Go there with
 // it, so that the user sees where it went. (The list is virtual: the moved

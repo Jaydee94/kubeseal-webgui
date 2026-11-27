@@ -13,8 +13,20 @@ spec:
     metadata:
       labels:
         {{- include "kubeseal-webgui.labels" . | nindent 8 }}
+      {{- if .Values.sealedSecrets.certs }}
+      annotations:
+        {{- with .Values.annotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        # The API reads the clusters once at start-up: a changed list or
+        # certificate has to roll the pod, which a changed ConfigMap alone
+        # does not.
+        checksum/clusters: {{ include (print $.Template.BasePath "/configmap-clusters.yaml") . | sha256sum | quote }}
+      {{- else }}
+      {{- /* Unchanged for a single cluster. */}}
       annotations:
         {{ toYaml .Values.annotations | nindent 8 }}
+      {{- end }}
     spec:
       {{- if .Values.securityContext.enabled }}
       securityContext:
@@ -54,6 +66,10 @@ spec:
               value: "{{ .Values.api.url }}"
             - name: KUBESEAL_CERT
               value: "/kubeseal-webgui/cert/kubeseal-cert.pem"
+            {{- if .Values.sealedSecrets.certs }}
+            - name: KUBESEAL_CLUSTERS_FILE
+              value: "/kubeseal-webgui/clusters/clusters.json"
+            {{- end }}
             {{- if .Values.sealedSecrets.autoFetchCert }}
             - name: KUBESEAL_AUTOFETCH
               value: "true"
@@ -95,6 +111,11 @@ spec:
             - name: sealed-secret-configmap
               mountPath: /kubeseal-webgui/src/config/logging_config.yaml
               subPath: logging_config.yaml
+           {{- if .Values.sealedSecrets.certs }}
+            - name: sealed-secret-clusters
+              mountPath: /kubeseal-webgui/clusters
+              readOnly: true
+           {{- end }}
             - name: tmp
               mountPath: /tmp
         - name: "ui"
@@ -147,6 +168,11 @@ spec:
         - name: sealed-secret-configmap
           configMap:
             name: {{ include "kubeseal-webgui.fullname" . }}
+        {{- if .Values.sealedSecrets.certs }}
+        - name: sealed-secret-clusters
+          configMap:
+            name: {{ include "kubeseal-webgui.fullname" . }}-clusters
+        {{- end }}
         - name: tmp
           emptyDir: {}
         {{- if not .Values.ui.ipv6.enabled }}

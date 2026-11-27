@@ -45,7 +45,7 @@ encryption.
 - Reverse-proxies the API routes to the in-pod API:
 
   ```nginx
-  location ~ /(sealed-secrets|secrets|namespaces|config|docs|openapi.json)(/.*)?$ {
+  location ~ /(sealed-secrets|secrets|namespaces|clusters|config|docs|openapi.json)(/.*)?$ {
       proxy_pass http://localhost:5000;
   }
   ```
@@ -114,9 +114,10 @@ decryptable by the controller.
 |---|---|---|---|
 | `GET` | `/` | Health check. Returns `{"status": "Kubeseal-WebGui API"}`. | `app.py` |
 | `GET` | `/config` | Reports the `kubeseal` binary version and other static config. | `routers/config.py` |
+| `GET` | `/clusters` | Lists the clusters a secret can be sealed for (name, whether the API runs in it, certificate fingerprint). The first one is the default. | `routers/clusters.py` |
 | `GET` | `/namespaces` | Lists namespaces visible to the service account. | `routers/kubernetes.py` |
 | `GET` | `/sealed-secrets/{namespace}` | Lists existing `SealedSecret` objects in a namespace. Only enabled when `enableExistingSealedSecretLoading=true`. | `routers/kubernetes.py` |
-| `POST` | `/secrets` | Encrypts a payload and returns the encrypted key/value pairs. | `routers/kubeseal.py` |
+| `POST` | `/secrets` | Encrypts a payload and returns the encrypted key/value pairs. The optional `cluster` selects the certificate (default: the first cluster). | `routers/kubeseal.py` |
 
 OpenAPI documentation is served at `/docs` (Swagger UI) and `/openapi.json`
 when the API is reachable.

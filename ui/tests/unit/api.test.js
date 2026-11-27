@@ -61,6 +61,70 @@ describe('api', () => {
     expect(requests).toEqual([{ url: `${API_URL}/sealed-secrets/team%20a%2Fb` }])
   })
 
+  it('fetches the clusters to seal for', async () => {
+    const clusters = [
+      { name: 'acc', inCluster: true, fingerprint: 'AA:BB' },
+      { name: 'prod', inCluster: false, fingerprint: null }
+    ]
+    stubFetch(clusters)
+    await expect(api.fetchClusters()).resolves.toEqual(clusters)
+    expect(requests).toEqual([{ url: `${API_URL}/clusters` }])
+  })
+
+  it('encodes entries once and sends encoded entries as they are', async () => {
+    stubFetch([])
+    const file = new Blob([new Uint8Array([1, 2, 3])])
+    const read = vi.spyOn(file, 'arrayBuffer')
+    const entries = [
+      { id: 1, key: 'text', value: 'v', file: null, fileError: '' },
+      { id: 2, key: 'bin', value: '', file, fileError: '' }
+    ]
+
+    const encoded = await api.encodeEntries(entries)
+    expect(encoded).toEqual([
+      { key: 'text', value: 'dg==' },
+      { key: 'bin', file: 'AQID' }
+    ])
+    for (const namespace of ['a', 'b', 'c']) {
+      await api.sealSecrets({
+        secretName: 'name',
+        namespaceName: namespace,
+        scope: 'strict',
+        encodedEntries: encoded
+      })
+    }
+
+    // the file was read once, for all three requests
+    expect(read).toHaveBeenCalledTimes(1)
+    expect(requests.map((request) => JSON.parse(request.body).secrets)).toEqual([
+      encoded,
+      encoded,
+      encoded
+    ])
+  })
+
+  it('names the cluster in the sealing request, and leaves it out without one', async () => {
+    stubFetch([])
+    const entries = [{ id: 1, key: 'k', value: 'v', file: null, fileError: '' }]
+    const seal = (cluster) =>
+      api.sealSecrets({
+        secretName: 'name',
+        namespaceName: 'ns',
+        scope: 'strict',
+        entries,
+        cluster
+      })
+
+    await seal('prod')
+    await seal('')
+    await seal(undefined)
+
+    const bodies = requests.map((request) => JSON.parse(request.body))
+    expect(bodies[0].cluster).toBe('prod')
+    expect(bodies[1]).not.toHaveProperty('cluster')
+    expect(bodies[2]).not.toHaveProperty('cluster')
+  })
+
   it('fetches the API settings', async () => {
     stubFetch({ kubesealVersion: '0.27.1' })
     await expect(api.fetchApiConfig()).resolves.toEqual({ kubesealVersion: '0.27.1' })
