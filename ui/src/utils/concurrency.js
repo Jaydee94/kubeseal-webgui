@@ -7,6 +7,10 @@
  * already running are left to finish).
  */
 export async function mapWithLimit(items, limit, fn) {
+  // With no worker nothing would run, and the result would be silently empty.
+  if (!Number.isInteger(limit) || limit < 1) {
+    throw new RangeError(`limit must be a positive integer, got ${limit}`)
+  }
   const results = new Array(items.length)
   let next = 0
   let failed = false

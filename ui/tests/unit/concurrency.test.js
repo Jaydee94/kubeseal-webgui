@@ -36,6 +36,10 @@ describe('mapWithLimit', () => {
     expect(started).toEqual([1, 2])
   })
 
+  it.each([0, -1, 1.5, NaN, undefined])('rejects the limit %j', async (limit) => {
+    await expect(mapWithLimit([1], limit, async () => 1)).rejects.toThrow(RangeError)
+  })
+
   it('has nothing to do for no items', async () => {
     await expect(mapWithLimit([], 4, async () => 1)).resolves.toEqual([])
   })
