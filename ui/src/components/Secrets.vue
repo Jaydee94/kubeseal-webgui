@@ -590,6 +590,7 @@ function resetForm() {
   scope.value = defaultScope.value
   secrets.value = [createSecretEntry()]
   sealedByNamespace.value = []
+  sealedSubmission.value = { secretName: '', scope: DEFAULT_SCOPE }
   resetSealedSecretImport()
   setErrorMessage('')
 }
@@ -761,7 +762,8 @@ async function seal() {
       PARALLEL_SEALING_REQUESTS,
       (namespace) => sealForNamespace(namespace, submission)
     )
-    sealedSubmission.value = submission
+    // Only what the result shows: the values themselves are not kept.
+    sealedSubmission.value = { secretName: submission.secretName, scope: submission.scope }
     sealedForCluster.value = clusters.value.length > 1 ? selectedCluster.value : ''
     sealed.value = true
     await new Promise((resolve) => setTimeout(resolve, POST_SEAL_DELAY_MS))
