@@ -337,17 +337,12 @@ const selectedCluster = computed(() => props.clusters.find((entry) => entry.name
 
 const fingerprint = computed(() => selectedCluster.value?.fingerprint ?? '')
 
-// The start of the fingerprint is enough to tell certificates apart at a
-// glance; the tooltip has all of it.
-const clusterHint = computed(() => {
-  const parts = []
-  if (fingerprint.value)
-    parts.push(`Certificate ${fingerprint.value.split(':').slice(0, 6).join(':')}…`)
-  if (selectedCluster.value && !selectedCluster.value.inCluster) {
-    parts.push('namespaces of this cluster are typed in')
-  }
-  return parts.join(' · ')
-})
+// The fingerprint is in the tooltip, where it can be compared in full.
+const clusterHint = computed(() =>
+  selectedCluster.value && !selectedCluster.value.inCluster
+    ? 'Namespaces of this cluster are typed in.'
+    : ''
+)
 
 const favoritesInList = computed(() =>
   props.namespaces.filter((namespace) => props.favoriteNamespaces.has(namespace))

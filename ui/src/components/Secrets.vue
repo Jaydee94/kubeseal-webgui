@@ -206,7 +206,13 @@ import { ref, computed, nextTick, onBeforeMount, watch } from 'vue'
 import SecretFormInputs from './SecretFormInputs.vue'
 import SecretsList from './SecretsList.vue'
 import SecretsResults from './SecretsResults.vue'
-import { fetchClusters, fetchNamespaces, fetchSealedSecrets, sealSecrets } from '@/api'
+import {
+  encodeEntries,
+  fetchClusters,
+  fetchNamespaces,
+  fetchSealedSecrets,
+  sealSecrets
+} from '@/api'
 import { loadConfig } from '@/config'
 import { useFavoriteNamespaces } from '@/composables/useFavoriteNamespaces'
 import { useDroppedFiles } from '@/composables/useDroppedFiles'
@@ -748,6 +754,8 @@ async function seal() {
     // kubeseal processes nor keeps going after one failed. The result shows
     // only when all of them succeeded, so that a namespace is never silently
     // missing from it.
+    // Files are read and encoded once, not once per namespace.
+    submission.encodedEntries = await encodeEntries(submission.entries)
     sealedByNamespace.value = await mapWithLimit(
       submission.namespaces,
       PARALLEL_SEALING_REQUESTS,
@@ -784,7 +792,7 @@ async function sealForNamespace(namespace, submission) {
       secretName: submission.secretName,
       namespaceName: namespace,
       scope: submission.scope,
-      entries: submission.entries,
+      encodedEntries: submission.encodedEntries,
       cluster: submission.cluster
     })
     return { namespace, entries }

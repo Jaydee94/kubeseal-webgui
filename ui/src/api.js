@@ -64,17 +64,34 @@ async function toRequestEntry(entry) {
 }
 
 /**
- * Seal the entries (each with a `value` or a `file`) and return the sealed
- * values as [{ key, value }, ...].
+ * The entries as the API takes them, with values and files base64-encoded.
+ * Done once for a secret sealed for several namespaces: files are read and
+ * encoded only once.
  */
-export async function sealSecrets({ secretName, namespaceName, scope, entries, cluster }) {
+export function encodeEntries(entries) {
+  return Promise.all(entries.map(toRequestEntry))
+}
+
+/**
+ * Seal the entries (each with a `value` or a `file`) and return the sealed
+ * values as [{ key, value }, ...]. `encodedEntries` (from encodeEntries())
+ * are sent as they are, instead of encoding `entries` again.
+ */
+export async function sealSecrets({
+  secretName,
+  namespaceName,
+  scope,
+  entries,
+  encodedEntries,
+  cluster
+}) {
   const sealingRequest = {
     secret: secretName,
     namespace: namespaceName,
     scope,
     // Left out for an API that lists no clusters: it then uses its only one.
     ...(cluster ? { cluster } : {}),
-    secrets: await Promise.all(entries.map(toRequestEntry))
+    secrets: encodedEntries ?? (await encodeEntries(entries))
   }
 
   // requestJson logs method, URL and status only -- never this body, which

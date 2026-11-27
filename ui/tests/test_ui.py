@@ -710,7 +710,7 @@ def test_secret_is_sealed_for_the_picked_cluster(page: Page):
     pick_cluster(page, "prod")
     # the namespaces of another cluster are not known: a text field
     expect(page.locator(".v-autocomplete")).to_have_count(0)
-    expect(page.get_by_text("namespaces of this cluster are typed in")).to_be_visible()
+    expect(page.get_by_text("Namespaces of this cluster are typed in.")).to_be_visible()
     secret_name(page)
     page.fill("input#namespaceSelection", "team-a")
     add_secret_key_value(page)
