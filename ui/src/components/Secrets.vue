@@ -150,8 +150,8 @@
       <SecretsResults
         v-else
         :results="sealedResults"
-        :secret-name="secretName"
-        :scope="scope"
+        :secret-name="sealedSubmission.secretName"
+        :scope="sealedSubmission.scope"
         :cluster="sealedForCluster"
         @copied="showClipboardMessage"
         @downloaded="showClipboardMessage"
@@ -303,6 +303,9 @@ const loadError = ref('')
 const displayCreateSealedSecretForm = ref(true)
 // What was sealed, one entry per namespace: [{ namespace, entries }, ...].
 const sealedByNamespace = ref([])
+// The name and scope it was sealed with, for the result (the form may have
+// changed meanwhile, see seal()).
+const sealedSubmission = ref({ secretName: '', scope: DEFAULT_SCOPE })
 // The cluster that sealed them, shown in the result. Empty for a single cluster.
 const sealedForCluster = ref('')
 
@@ -453,9 +456,9 @@ const sealedResults = computed(() =>
     namespace,
     entries,
     manifest: renderSealedSecretYaml({
-      name: secretName.value,
+      name: sealedSubmission.value.secretName,
       namespace,
-      scope: scope.value,
+      scope: sealedSubmission.value.scope,
       entries
     })
   }))
@@ -712,6 +715,16 @@ async function seal() {
     return
   }
   sealing.value = true
+  // What is sealed is what the form showed at the click: config.json may
+  // still set the default scope (and with it clear the namespace) while the
+  // seal waits for it below.
+  const submission = {
+    secretName: secretName.value,
+    scope: scope.value,
+    namespaces: targetNamespaces.value,
+    entries: [...secrets.value],
+    cluster: selectedCluster.value
+  }
   // The form can be filled in while config.json loads. With several clusters
   // nothing is sent before they are known: the user has not seen which one
   // the secret would be sealed for. (With one cluster this seals as before.)
@@ -736,10 +749,11 @@ async function seal() {
     // only when all of them succeeded, so that a namespace is never silently
     // missing from it.
     sealedByNamespace.value = await mapWithLimit(
-      targetNamespaces.value,
+      submission.namespaces,
       PARALLEL_SEALING_REQUESTS,
-      sealForNamespace
+      (namespace) => sealForNamespace(namespace, submission)
     )
+    sealedSubmission.value = submission
     sealedForCluster.value = clusters.value.length > 1 ? selectedCluster.value : ''
     sealed.value = true
     await new Promise((resolve) => setTimeout(resolve, POST_SEAL_DELAY_MS))
@@ -764,19 +778,19 @@ async function seal() {
   }
 }
 
-async function sealForNamespace(namespace) {
+async function sealForNamespace(namespace, submission) {
   try {
     const entries = await sealSecrets({
-      secretName: secretName.value,
+      secretName: submission.secretName,
       namespaceName: namespace,
-      scope: scope.value,
-      entries: secrets.value,
-      cluster: selectedCluster.value
+      scope: submission.scope,
+      entries: submission.entries,
+      cluster: submission.cluster
     })
     return { namespace, entries }
   } catch (error) {
     // Only for several namespaces: a single one needs no pointer to itself.
-    if (targetNamespaces.value.length > 1 && error && typeof error === 'object') {
+    if (submission.namespaces.length > 1 && error && typeof error === 'object') {
       error.namespace = namespace
     }
     throw error

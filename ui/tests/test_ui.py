@@ -1170,6 +1170,32 @@ def test_sealing_before_config_json_is_not_sent_for_several_clusters(page: Page)
     assert api.requests == []
 
 
+def test_sealing_before_config_json_keeps_the_scope_of_the_click(page: Page):
+    api = SealingApi(page)
+    held = held_config_json(page)
+    page.goto("/")
+    page.wait_for_selector(".scope-toggle")
+    # strict, as shown before config.json is there, for a typed-in namespace
+    page.locator("#newNamespaceCheckbox").check()
+    page.fill("input#namespaceSelection", "team-a")
+    secret_name(page)
+    add_secret_key_value(page)
+
+    page.locator('button:has-text("Encrypt")').click()
+    wait_for_held(page, held)
+    # the configured default arrives only now, and would widen the scope
+    config = development_config()
+    config["default_scope"] = "cluster-wide"
+    held[0].fulfill(json=config)
+
+    expect(page.locator("#sealed-secret-result")).to_be_visible()
+    assert api.only_request["scope"] == "strict"
+    assert api.only_request["namespace"] == "team-a"
+    manifest = page.locator("#sealed-secret-result").inner_text()
+    assert "namespace: team-a" in manifest
+    assert "cluster-wide" not in manifest
+
+
 def test_sealing_stops_when_config_json_fails(page: Page):
     page.route("**/clusters", lambda route: route.fulfill(json=TWO_CLUSTERS))
     api = SealingApi(page)

@@ -40,6 +40,26 @@ describe('mapWithLimit', () => {
     await expect(mapWithLimit([1], limit, async () => 1)).rejects.toThrow(RangeError)
   })
 
+  it('rejects only after the calls already running have finished', async () => {
+    const finished = []
+    const promise = mapWithLimit([1, 2, 3], 3, async (n) => {
+      if (n === 1) throw new Error('failed for 1')
+      await new Promise((resolve) => setTimeout(resolve, 5))
+      finished.push(n)
+    })
+    await expect(promise).rejects.toThrow('failed for 1')
+    expect(finished.sort()).toEqual([2, 3])
+  })
+
+  it('rejects with the first error when several calls fail', async () => {
+    await expect(
+      mapWithLimit([1, 2], 2, async (n) => {
+        await new Promise((resolve) => setTimeout(resolve, n === 1 ? 1 : 5))
+        throw new Error(`failed for ${n}`)
+      })
+    ).rejects.toThrow('failed for 1')
+  })
+
   it('has nothing to do for no items', async () => {
     await expect(mapWithLimit([], 4, async () => 1)).resolves.toEqual([])
   })
