@@ -16,7 +16,7 @@ RUN npm run build && \
 # mechanism: the configuration is static. ui/nginx.conf moves every runtime
 # write to /tmp (readOnlyRootFilesystem-compatible); the SPA's config.json is
 # provided by the Helm chart's ConfigMap.
-FROM cgr.dev/chainguard/nginx:latest@sha256:89bea6e2136cc4aaaf5f0ab3ca26372c82462d9b145e755eede6fc5ff96e7f74 AS ui-production-stage
+FROM cgr.dev/chainguard/nginx:latest@sha256:07295c9284f8db3f8ed77b74ee8ee5284e4372e05851aa2288bcbc881ebf8acf AS ui-production-stage
 
 # Files stay owned by root: the nonroot runtime user only needs to read them.
 COPY ui/nginx.conf /etc/nginx/nginx.conf
